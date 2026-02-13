@@ -1,0 +1,334 @@
+/* Import the separate code block theme - must be first */
+@import './styles/code-theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 
+     * Sci-Fi Dark Theme Palette 
+     * Base: #050505 (Deep Black)
+     * Surface: #0a0a0a (Dark Metal)
+     * Primary: #00f0ff (Neon Cyan)
+     * Secondary: #0066ff (Electric Blue)
+     */
+    --background: 0 0% 2%;
+    /* #050505 */
+    --foreground: 210 40% 98%;
+
+    --card: 0 0% 4%;
+    /* #0a0a0a */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 4%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 184 100% 50%;
+    /* #00f0ff - Cyan */
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 216 100% 50%;
+    /* #0066ff - Electric Blue */
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 10%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 10%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 184 100% 50%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+
+  /* Prose styles for markdown content */
+  .prose {
+    @apply text-foreground;
+  }
+
+  .prose h1 {
+    @apply text-4xl font-bold tracking-tight mb-6 mt-0;
+  }
+
+  .prose h2 {
+    @apply text-2xl font-semibold tracking-tight mt-12 mb-4 pb-2 border-b border-border;
+  }
+
+  .prose h3 {
+    @apply text-xl font-semibold tracking-tight mt-8 mb-4;
+  }
+
+  .prose h4 {
+    @apply text-lg font-semibold tracking-tight mt-6 mb-3;
+  }
+
+  .prose p {
+    @apply leading-7 mb-4;
+  }
+
+  .prose ul {
+    @apply list-disc pl-6 mb-4 space-y-2;
+  }
+
+  .prose ol {
+    @apply list-decimal pl-6 mb-4 space-y-2;
+  }
+
+  .prose li {
+    @apply leading-7;
+  }
+
+  .prose a {
+    @apply text-primary underline underline-offset-4 hover:text-primary/80 transition-colors;
+  }
+
+  .prose strong {
+    @apply font-semibold;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-primary/30 pl-4 italic text-muted-foreground my-6;
+  }
+
+  .prose hr {
+    @apply border-border my-8;
+  }
+
+  .prose table {
+    @apply w-full border-collapse mb-6;
+  }
+
+  .prose th {
+    @apply border border-border px-4 py-2 text-left font-semibold bg-muted/50;
+  }
+
+  .prose td {
+    @apply border border-border px-4 py-2;
+  }
+
+  .prose tr:nth-child(even) {
+    @apply bg-muted/20;
+  }
+
+  /* Gradient text utility */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl border-b border-white/5 will-change-transform;
+  }
+
+  /* Docs page background */
+  .bg-docs {
+    background-color: #0c0c0e;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
+  }
+
+  /* Glow effects */
+  .glow-blue {
+    box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.3);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.3);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 40px -10px rgba(6, 182, 212, 0.3);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  /* Animated gradient background */
+  .animated-gradient {
+    background: linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #1e1b4b);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  /* Shimmer effect */
+  .shimmer {
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.05),
+        transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
+  .animate-lightning {
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    stroke-linecap: round;
+    animation: energy-surge linear infinite;
+    transform-origin: center;
+  }
+
+  /* 3D Perspective and Cuboid Button */
+  .perspective-2000 {
+    perspective: 2000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  /* Project Card 3D Pop-Out System */
+  .project-card-3d {
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-style: preserve-3d;
+    transform: translateZ(0);
+  }
+
+  .group:hover .project-card-3d {
+    transform: translateZ(60px) rotateX(2deg);
+  }
+
+  .project-card-depth {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, #111, #000);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: inherit;
+    transform: translateZ(-20px) translateY(10px);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
+  }
+
+  .group:hover .project-card-depth {
+    transform: translateZ(-30px) translateY(15px);
+    background: color-mix(in srgb, var(--project-color), black 80%);
+    border-color: color-mix(in srgb, var(--project-color), transparent 50%);
+    box-shadow:
+      0 30px 60px -15px rgba(0, 0, 0, 0.9),
+      0 0 60px -10px color-mix(in srgb, var(--project-color), transparent 40%);
+  }
+
+  /* Slide in from left */
+  .slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+@layer utilities {
+
+  /* Text balance for better typography */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -1,0 +1,35 @@
+[
+    {
+        "github-user": "mqzn",
+        "display-name": "Mqzen",
+        "discord-user": "mqzen",
+        "role-description": "Lead Developer",
+        "github": "https://github.com/mqzn",
+        "avatar": "https://github.com/mqzn.png",
+        "color": "#180303",
+        "electric": true,
+        "electric-color": "#8b0000"
+    },
+    {
+        "github-user": "iiAhmedYT",
+        "display-name": "iiAhmedYT",
+        "discord-user": "iiahmedyt",
+        "role-description": "Lead Developer",
+        "github": "https://github.com/iiAhmedYT",
+        "avatar": "https://github.com/iiAhmedYT.png",
+        "color": "#1e293b",
+        "electric": true,
+        "electric-color": "#3b82f6"
+    },
+    {
+        "github-user": "FlameyosSnowy",
+        "display-name": "FlameyosSnowy",
+        "discord-user": "wildered.da.programmer",
+        "role-description": "Java Developer",
+        "github": "https://github.com/FlameyosSnowy",
+        "avatar": "https://github.com/FlameyosSnowy.png",
+        "color": "#111827",
+        "electric": false,
+        "electric-color": "#10b981"
+    }
+]
