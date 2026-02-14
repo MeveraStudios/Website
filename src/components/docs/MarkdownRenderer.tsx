@@ -11,15 +11,14 @@
 
 import { memo, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
 import rehypeRaw from 'rehype-raw';
 import remarkAdmonitions from './remark-admonitions';
 import { CodeBlock } from './CodeBlock';
 import { Admonition } from './Admonition';
-import { Tabs, TabItem } from './Tabs';
-import LatestVersionBlock from '@/components/LatestVersionBlock';
+import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
+import LatestVersionBlockComponent from '@/components/LatestVersionBlock';
 import { cn } from '@/lib/utils';
 import '@/styles/admonitions.css';
 import '@/styles/code-theme.css';
@@ -66,7 +65,7 @@ function Heading({ level, children }: HeadingProps) {
 /**
  * Custom components mapping for react-markdown
  */
-const components: Components = {
+const components = {
   // Code blocks with syntax highlighting
   code({ className, children, inline, ...props }: any) {
     if (inline || !className) {
@@ -84,12 +83,12 @@ const components: Components = {
   },
 
   // Headings with anchor links
-  h1: ({ children }) => <Heading level={1}>{children}</Heading>,
-  h2: ({ children }) => <Heading level={2}>{children}</Heading>,
-  h3: ({ children }) => <Heading level={3}>{children}</Heading>,
-  h4: ({ children }) => <Heading level={4}>{children}</Heading>,
-  h5: ({ children }) => <Heading level={5}>{children}</Heading>,
-  h6: ({ children }) => <Heading level={6}>{children}</Heading>,
+  h1: ({ children }: any) => <Heading level={1}>{children}</Heading>,
+  h2: ({ children }: any) => <Heading level={2}>{children}</Heading>,
+  h3: ({ children }: any) => <Heading level={3}>{children}</Heading>,
+  h4: ({ children }: any) => <Heading level={4}>{children}</Heading>,
+  h5: ({ children }: any) => <Heading level={5}>{children}</Heading>,
+  h6: ({ children }: any) => <Heading level={6}>{children}</Heading>,
 
   // Handle divs - for admonitions and other custom components
   div({ className, children, ...props }: any) {
@@ -104,36 +103,36 @@ const components: Components = {
 
   // Custom JSX components (for when they're written directly in markdown)
   Tabs: ({ defaultValue, children, className }: any) => (
-    <Tabs defaultValue={defaultValue} className={className}>
+    <TabsComponent defaultValue={defaultValue} className={className}>
       {children}
-    </Tabs>
+    </TabsComponent>
   ),
   
   TabItem: ({ value, label, icon, children }: any) => (
-    <TabItem value={value} label={label} icon={icon}>
+    <TabItemComponent value={value} label={label} icon={icon}>
       {children}
-    </TabItem>
+    </TabItemComponent>
   ),
   
   LatestVersionBlock: ({ owner, repo, group, id }: any) => (
-    <LatestVersionBlock owner={owner} repo={repo} group={group} id={id} />
+    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} />
   ),
 
   // Handle lowercase JSX elements (from rehype-raw)
   latestversionblock: ({ owner, repo, group, id }: any) => (
-    <LatestVersionBlock owner={owner} repo={repo} group={group} id={id} />
+    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} />
   ),
   
   tabs: ({ defaultvalue, children, className }: any) => (
-    <Tabs defaultValue={defaultvalue} className={className}>
+    <TabsComponent defaultValue={defaultvalue} className={className}>
       {children}
-    </Tabs>
+    </TabsComponent>
   ),
   
   tabitem: ({ value, label, icon, children }: any) => (
-    <TabItem value={value} label={label} icon={icon}>
+    <TabItemComponent value={value} label={label} icon={icon}>
       {children}
-    </TabItem>
+    </TabItemComponent>
   ),
 
   // Enhanced links - open external links in new tab
@@ -206,7 +205,7 @@ export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererPr
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
-        components={components}
+        components={components as any}
       >
         {content}
       </ReactMarkdown>
