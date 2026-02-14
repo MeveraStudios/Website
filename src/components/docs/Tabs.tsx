@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 interface TabItemProps {
   value: string;
-  label: string;
+  label: ReactNode;
   icon?: string;
   children: ReactNode;
 }
@@ -13,6 +13,7 @@ interface TabsProps {
   defaultValue?: string;
   children: ReactNode;
   className?: string;
+  groupId?: string;
 }
 
 /**
@@ -45,7 +46,7 @@ export function Tabs({ defaultValue, children, className }: TabsProps) {
   return (
     <div className={cn('tabs-container my-6', className)}>
       {/* Tab headers */}
-      <div className="tabs-list flex flex-wrap gap-1 border-b border-border/50 mb-4">
+      <div className="tabs-list flex flex-wrap gap-1 mb-4">
         {tabs.map((tab) => {
           if (!isValidElement(tab)) return null;
           const { value, label, icon } = tab.props as TabItemProps;
@@ -55,11 +56,8 @@ export function Tabs({ defaultValue, children, className }: TabsProps) {
               key={value}
               onClick={() => setActiveTab(value)}
               className={cn(
-                'tab-trigger px-4 py-2 text-sm font-medium transition-all relative',
-                'hover:text-foreground',
-                activeTab === value
-                  ? 'text-foreground border-b-2 border-primary'
-                  : 'text-muted-foreground'
+                'tab-trigger',
+                activeTab === value && 'active'
               )}
             >
               <span className="flex items-center gap-2">
