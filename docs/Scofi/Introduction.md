@@ -1,7 +1,6 @@
 ---
 title: Getting Started
 description: Starting on Scofi
-category: Core Concepts
 order: 1
 ---
 

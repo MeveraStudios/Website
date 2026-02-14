@@ -14,6 +14,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
 import { MarkdownRenderer } from '@/components/docs/MarkdownRenderer';
+import { MDXRenderer } from '@/components/docs/MDXRenderer';
 import { TableOfContents } from '@/components/docs/TableOfContents';
 import { DocNavigation } from '@/components/docs/DocNavigation';
 import { SearchDialog } from '@/components/docs/SearchDialog';
@@ -142,7 +143,11 @@ export function Docs() {
             <Separator className="mb-8" />
 
             {/* Document Content */}
-            <MarkdownRenderer content={doc.content} />
+            {doc.extension === '.mdx' ? (
+              <MDXRenderer content={doc.content} />
+            ) : (
+              <MarkdownRenderer content={doc.content} />
+            )}
 
             {/* Document Navigation */}
             <DocNavigation

@@ -288,6 +288,10 @@ function precompileDocs() {
 
         console.log(`📁 Processing project: ${projectId}`);
 
+        // Check for root-level _category_.yml for files directly in the project folder
+        const rootCategoryMetadata = getCategoryMetadata(projectId, '');
+        const rootCategoryName = rootCategoryMetadata?.label || 'General';
+
         // Find all markdown files
         const markdownFiles = findMarkdownFiles(projectDir);
 
@@ -326,7 +330,7 @@ function precompileDocs() {
             const { frontmatter, body } = parseFrontmatter(content);
 
             // Determine category
-            let categoryName = frontmatter.category || 'General';
+            let categoryName = frontmatter.category || rootCategoryName;
 
             if (parts.length > 1) {
                 const categoryPath = parts.slice(0, -1).join('/');
@@ -336,7 +340,11 @@ function precompileDocs() {
                 if (metadata) {
                     categoryName = metadata.label;
                 }
+            } else if (frontmatter.category) {
+                // If frontmatter has explicit category, use it
+                categoryName = frontmatter.category;
             }
+            // Otherwise, use rootCategoryName from _category_.yml in project root
 
             const docFile: DocFile = {
                 slug,

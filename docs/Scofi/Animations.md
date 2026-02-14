@@ -1,7 +1,6 @@
 ---
 title: Animations
 description: Animations are a sequence of changes that happens to a scoreboard entity
-category: Core Concepts
 order: 2
 ---
 
