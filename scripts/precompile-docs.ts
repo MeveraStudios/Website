@@ -190,7 +190,7 @@ function getCategoryMetadata(projectId: string, categoryPath: string): { label?:
 
     return {
         label: metadata.label as string | undefined,
-        position: metadata.position as number | undefined
+        position: (metadata.order || metadata.position) as number | undefined
     };
 }
 
@@ -384,13 +384,15 @@ function precompileDocs() {
             const categoryName = doc.category;
 
             if (!categoriesMap.has(categoryName)) {
-                let categoryOrder = doc.frontmatter.order || 999;
-
-                categoryMetadataMap.forEach((metadata, key) => {
+                // Find the category metadata by searching for matching label
+                let categoryOrder = 999;
+                
+                for (const [key, metadata] of categoryMetadataMap) {
                     if (key.startsWith(`${project.id}/`) && metadata.label === categoryName) {
                         categoryOrder = metadata.position;
+                        break;
                     }
-                });
+                }
 
                 categoriesMap.set(categoryName, {
                     name: categoryName,
