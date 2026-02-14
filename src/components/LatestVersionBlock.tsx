@@ -1,6 +1,6 @@
 import LatestVersion from './LatestVersion.tsx';
 import { Tabs, TabItem } from './docs/Tabs.tsx';
-import { CodeBlock } from './docs/MarkdownRenderer.tsx';
+import { CodeBlock } from './docs/CodeBlock.tsx';
 
 interface LatestVersionBlockProps {
   owner: string;
