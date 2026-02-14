@@ -159,7 +159,7 @@ export function Docs() {
 
           {/* Table of Contents */}
           {FEATURES.tableOfContents && (
-            <TableOfContents items={toc} />
+            <TableOfContents key={doc.slug} items={toc} />
           )}
         </div>
       </div>

@@ -1,0 +1,82 @@
+---
+title: Relational Placeholders
+description: Placeholders working with two users
+order: 3
+---
+
+Relational placeholders work with two users and are useful for comparisons or relationships.
+
+---
+### Creating Relational Placeholders
+
+```java
+public class RelationNeuron extends BukkitNeuron {
+    
+    public RelationNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("rel"));
+        
+        // Compare player names
+        registerRelational("same_name", context -> {
+            String name1 = context.user().getName();
+            String name2 = context.other().getName();
+            return name1.equals(name2) ? "yes" : "no";
+        });
+        
+        // Distance between players - requires both to be players
+        registerRelational("distance", context -> {
+            Player player1 = context.user().requirePlayer();
+            Player player2 = context.other().requirePlayer();
+            
+            Location loc1 = player1.getLocation();
+            Location loc2 = player2.getLocation();
+            double distance = loc1.distance(loc2);
+            return String.format("%.2f", distance);
+        });
+        
+        // Mixed example - check if users are in same world
+        registerRelational("same_world", context -> {
+            Player player1 = context.user().requirePlayer();
+            Player player2 = context.other().requirePlayer();
+            
+            return player1.getWorld().equals(player2.getWorld()) ? "yes" : "no";
+        });
+    }
+}
+```
+
+**Usage:**
+```java
+String same = synapse.translate("Same name: ${rel.same_name}", player1, player2);
+// Result: "Same name: no"
+
+String distance = synapse.translate("Distance: ${rel.distance} blocks", player1, player2);
+// Result: "Distance: 15.67 blocks"
+```
+
+---
+
+### Relational Placeholder Options
+
+Relational placeholders also support caching, but with both users considered:
+
+```java
+registerRelational("friendship_level", context -> {
+    return calculateRelationship(
+        context.user().getUniqueId(),
+        context.other().getUniqueId()
+    );
+}, options -> {
+    options.cache(true);                    // Cache relationship data
+    options.cacheTTL(10, TimeUnit.MINUTES); // Cache for 10 minutes
+});
+```
+
+**Available Options:**
+- `cache(boolean)` - Enable result caching per user pair (default: `false`)
+- `cacheTTL(long, TimeUnit)` - How long to cache results (default: 20 seconds)
+
+**Caching Behavior:**
+- Cache key includes both user IDs, namespace, placeholder name, and arguments
+- Cached from the perspective of the primary user
+- Different user pairs create separate cache entries
+- Expensive relationship calculations benefit most from caching

@@ -1,0 +1,261 @@
+---
+title: Neurons
+description: Creating and registering placeholder providers
+order: 3
+---
+
+# Creating Neurons
+
+Neurons are the core components of Synapse that process and resolve placeholders. This guide covers everything you need to know about creating custom neurons and registering different types of placeholders.
+
+---
+## Understanding Neurons
+
+A **Neuron** is a platform-specific placeholder processor that:
+- Handles placeholder resolution for a specific namespace
+- Manages placeholder registration and lifecycle
+- Provides context-aware placeholder processing
+- Supports both synchronous and asynchronous operations
+
+## Namespace Management
+Namespaces help organize placeholders and avoid naming conflicts. When creating a neuron, you can define one or more namespaces that it will handle.
+
+### Single Namespace
+
+```java
+public class SimpleNeuron extends BukkitNeuron {
+    public SimpleNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("simple"));
+        // Accessible as: ${simple.placeholder}
+    }
+}
+```
+
+### Multiple Namespaces
+
+```java
+public class MultiNeuron extends BukkitNeuron {
+    public MultiNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("multi", "m", "multiple"));
+        // Accessible as: ${multi.placeholder}, ${m.placeholder}, or ${multiple.placeholder}
+    }
+}
+```
+
+---
+## Creating Your First Neuron
+
+<Tabs groupId="synapse-platforms">
+  <TabItem 
+    value="hytale" 
+    label={
+      <>
+        <img src="/assets/hytale.png" alt="Hytale Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Hytale
+      </>
+    }
+  >
+
+```java
+public class MyCustomNeuron extends HytaleNeuron {
+    
+    public MyCustomNeuron(JavaPlugin plugin) {
+        super(plugin, Namespace.of("custom"));
+        registerPlaceholders();
+    }
+    
+    private void registerPlaceholders() {
+        // Register your placeholders here
+        register("hello", "Hello World!");
+        register("server_name", () -> HytaleServer.get().getName());
+    }
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="bukkit" 
+    label={
+      <>
+        <img src="/assets/bukkit.png" alt="Bukkit Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Bukkit/Paper
+      </>
+    }
+  >
+
+```java
+public class MyCustomNeuron extends BukkitNeuron {
+    
+    public MyCustomNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("custom"));
+        registerPlaceholders();
+    }
+    
+    private void registerPlaceholders() {
+        // Register your placeholders here
+        register("hello", "Hello World!");
+        register("server_name", () -> getPlugin().getServer().getName());
+    }
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="bungee" 
+    label={
+      <>
+        <img src="/assets/bungeecord.png" alt="BungeeCord Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 4 }} />
+        BungeeCord
+      </>
+    }
+  >
+
+```java
+public class MyCustomNeuron extends BungeeNeuron {
+    
+    public MyCustomNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("custom"));
+        registerPlaceholders();
+    }
+    
+    private void registerPlaceholders() {
+        register("hello", "Hello World!");
+        register("proxy_name", () -> getPlugin().getProxy().getName());
+    }
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="velocity" 
+    label={
+      <>
+        <img src="/assets/velocity_logo.svg" alt="Velocity Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Velocity
+      </>
+    }
+  >
+
+```java
+public class MyCustomNeuron extends VelocityNeuron {
+    
+    public MyCustomNeuron(PluginContainer plugin) {
+        super(plugin, Namespace.of("custom"));
+        registerPlaceholders();
+    }
+    
+    private void registerPlaceholders() {
+        register("hello", "Hello World!");
+        register("proxy_version", () -> getPlugin().getDescription().getVersion());
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Registering Your Neuron
+
+After creating your neuron, register it with Synapse:
+
+<Tabs groupId="synapse-platforms">
+  <TabItem 
+    value="hytale" 
+    label={
+      <>
+        <img src="/assets/hytale.png" alt="Hytale Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Hytale
+      </>
+    }
+  >
+
+```java
+@Override
+public void start() {
+    new MyCustomNeuron(this).register();
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="bukkit" 
+    label={
+      <>
+        <img src="/assets/bukkit.png" alt="Bukkit Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Bukkit/Paper
+      </>
+    }
+  >
+
+```java
+@Override
+public void onEnable() {
+    new MyCustomNeuron(this).register();
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="bungee" 
+    label={
+      <>
+        <img src="/assets/bungeecord.png" alt="BungeeCord Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 4 }} />
+        BungeeCord
+      </>
+    }
+  >
+
+```java
+@Override
+public void onEnable() {
+    new MyCustomNeuron(this).register();
+}
+```
+
+  </TabItem>
+  <TabItem 
+    value="velocity" 
+    label={
+      <>
+        <img src="/assets/velocity_logo.svg" alt="Velocity Logo" style={{ height: 20, marginRight: 6, position: "relative", top: 2 }} />
+        Velocity
+      </>
+    }
+  >
+
+```java
+@Subscribe
+public void onProxyInitialization(ProxyInitializeEvent event) {
+    new MyCustomNeuron(this).register();
+}
+```
+
+  </TabItem>
+</Tabs>
+
+---
+## PlaceholderAPI Integration (Bukkit Only)
+
+For Bukkit, you can easily integrate with PlaceholderAPI:
+
+```java
+public class PAPICompatibleNeuron extends BukkitNeuron {
+    
+    public PAPICompatibleNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("myplugin"));
+        registerPlaceholders();
+        
+        // Enable PAPI integration
+        hookToPAPI();
+    }
+    
+    private void registerPlaceholders() {
+        register("player_balance", context -> {
+            Player player = context.user().requirePlayer();
+            return String.valueOf(getBalance(player));
+        });
+    }
+}
+```
+
+---

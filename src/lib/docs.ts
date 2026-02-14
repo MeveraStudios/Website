@@ -125,7 +125,6 @@ export function extractToc(content: string): { items: TocItem[]; headers: Map<st
   let match;
 
   const headers = new Map<string, Header>();
-  let currentParentId = '';
 
   while ((match = headingRegex.exec(content)) !== null) {
     const level = match[1].length;
@@ -134,14 +133,7 @@ export function extractToc(content: string): { items: TocItem[]; headers: Map<st
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-');
 
-    let id = slug;
-
-    if (level === 2) {
-      currentParentId = slug;
-      id = slug;
-    } else if (level === 3 && currentParentId) {
-      id = `${currentParentId}.${slug}`;
-    }
+    const id = slug;
 
     headers.set(id, {
       id,

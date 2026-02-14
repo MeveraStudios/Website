@@ -17,6 +17,11 @@ interface TableOfContentsProps {
 export function TableOfContents({ items, className }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
 
+  // Reset activeId when items change (page navigation)
+  useEffect(() => {
+    setActiveId('');
+  }, [items]);
+
   useEffect(() => {
     const handleScroll = () => {
       // Check if we're at the bottom of the page

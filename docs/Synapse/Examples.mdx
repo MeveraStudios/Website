@@ -1,0 +1,164 @@
+---
+title: Examples
+description: Complete working examples of Synapse usage
+order: 6
+---
+
+
+## Complete Working Example
+
+Here's a complete example of a feature-rich neuron:
+
+```java
+public class ServerInfoNeuron extends BukkitNeuron {
+    
+    private final Plugin plugin;
+    private final AtomicLong lastUpdate = new AtomicLong(0);
+    
+    public ServerInfoNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("server", "srv"));
+        this.plugin = plugin;
+        registerAllPlaceholders();
+    }
+    
+    private void registerAllPlaceholders() {
+        // Static placeholders
+        register("name", () -> Bukkit.getServerName());
+        register("version", () -> Bukkit.getVersion());
+        register("bukkit_version", () -> Bukkit.getBukkitVersion());
+        
+        // Dynamic placeholders with caching
+        register("online", () -> Bukkit.getOnlinePlayers().size(),
+            options -> {
+                options.cache(true);
+                options.cacheTTL(5, TimeUnit.SECONDS);
+            });
+        
+        register("max_players", () -> Bukkit.getMaxPlayers());
+        
+        // Contextual placeholders
+        register("player_world", context -> {
+            Player player = context.user().requirePlayer();
+            World world = player.getWorld();
+            return world != null ? world.getName() : "unknown";
+        });
+        
+        register("tps", context -> {
+            // Simulate TPS calculation
+            return String.format("%.2f", 20.0);
+        }, options -> {
+            options.cache(true);
+            options.cacheTTL(10, TimeUnit.SECONDS);
+        });
+
+        // Placeholder with arguments - using method reference for cleaner code
+        register("world_info", this::getWorldInfo);
+    }
+    
+    private Object getWorldInfo(Context<BukkitUser> context) {
+        String[] args = context.arguments();
+        if (args.length == 0) {
+            return "Specify: players, entities, or chunks";
+        }
+        
+        Player player = context.user().requirePlayer();
+        World world = player.getWorld();
+        if (world == null) return "No world";
+        
+        return switch (args[0].toLowerCase()) {
+            case "players" -> world.getPlayers().size();
+            case "entities" -> world.getEntities().size();
+            case "chunks" -> world.getLoadedChunks().length;
+            default -> "Invalid option: " + args[0];
+        };
+    }
+}
+```
+
+This neuron provides placeholders like:
+- `${server.name}`, `${srv.name}` - Server name
+- `${server.online}` - Online player count (cached)
+- `${server.player_world}` - Current player's world
+- `${server.world_info:players}` - Players in current world
+
+## Option Usage Examples
+
+### Performance Optimization Scenarios
+
+```java
+public class OptimizedNeuron extends BukkitNeuron {
+    
+    public OptimizedNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("optimized"));
+        
+        // Heavy calculation - run async with refresh
+        register("server_load", () -> {
+            // Simulate heavy CPU calculation
+            return String.format("%.1f%%", calculateCPUUsage());
+        }, options -> {
+            options.async(true);        // Don't block main thread
+            options.refresh(true);      // Keep value updated
+            options.delay(15, TimeUnit.SECONDS); // Update every 15s
+        });
+        
+        // Database lookup - cache per user
+        register("user_data", context -> {
+            return queryUserDatabase(context.user().getUniqueId());
+        }, options -> {
+            options.cache(true);        // Cache expensive DB query
+            options.cacheTTL(2, TimeUnit.MINUTES);  // Refresh every 2 min
+        });
+        
+        // API call with arguments - cache with TTL
+        register("external_data", context -> {
+            String endpoint = context.arguments().length > 0 
+                ? context.arguments()[0] 
+                : "default";
+            return callExternalAPI(endpoint, context.user());
+        }, options -> {
+            options.cache(true);        // Cache API responses
+            options.cacheTTL(1, TimeUnit.MINUTES);   // Short TTL for API data
+        });
+        
+        // Relationship calculation - expensive relational operation
+        registerRelational("player_similarity", context -> {
+            // Complex algorithm comparing two players
+            return calculateSimilarityScore(
+                context.user().getUniqueId(),
+                context.other().getUniqueId()
+            );
+        }, options -> {
+            options.cache(true);        // Cache relationship calculations
+            options.cacheTTL(30, TimeUnit.MINUTES); // Long TTL for relationships
+        });
+    }
+}
+```
+
+### Choosing the Right Options
+
+**When to use `async(true)` (Static only):**
+- Database operations
+- File I/O operations  
+- Network requests
+- Heavy computations
+- Any operation that might block for >50ms
+
+**When to use `cache(true)`:**
+- Database lookups
+- API calls
+- Complex calculations
+- File reads
+- Any operation repeated frequently with same inputs
+
+**Cache TTL Guidelines:**
+- **Short TTL (1-5 minutes)**: Frequently changing data, API responses
+- **Medium TTL (5-30 minutes)**: User stats, rankings, moderately dynamic data
+- **Long TTL (30+ minutes)**: Relationships, permissions, rarely changing data
+
+**Refresh Guidelines (Static only):**
+- **High frequency (1-10 seconds)**: Server stats, online counts
+- **Medium frequency (30-60 seconds)**: Resource usage, queue lengths  
+- **Low frequency (5+ minutes)**: Configuration values, external service status
+
+This gives you fine-grained control over performance and ensures your placeholders scale well with your server's needs!

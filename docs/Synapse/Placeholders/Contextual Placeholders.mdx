@@ -1,0 +1,81 @@
+---
+title: Contextual Placeholders
+description: User-dependent placeholders with context
+order: 2
+---
+
+Contextual placeholders depend on user context and receive a `Context<U>` parameter.
+
+---
+
+### Creating Contextual Placeholders
+```java
+public class PlayerNeuron extends BukkitNeuron {
+    
+    public PlayerNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("player"));
+        
+        // Basic contextual placeholder - works with any CommandSender
+        register("name", context -> context.user().getName());
+        
+        // Player-specific placeholder using requirePlayer()
+        register("health", context -> {
+            Player player = context.user().requirePlayer();
+            return String.format("%.1f", player.getHealth());
+        });
+        
+        // Placeholder with argument handling
+        register("stats", context -> {
+            Player player = context.user().requirePlayer();
+            String[] args = context.arguments();
+            if (args.length > 0) {
+                Statistic stat = Statistic.valueOf(args[0].toUpperCase());
+                return String.valueOf(player.getStatistic(stat));
+            }
+            return "No statistic specified";
+        });
+        
+        // Location-based placeholder
+        register("world", context -> {
+            Player player = context.user().requirePlayer();
+            Location loc = player.getLocation();
+            return loc.getWorld().getName();
+        });
+    }
+}
+```
+
+**Usage:**
+```java
+String name = synapse.translate("Hello ${player.name}!", player);
+// Result: "Hello Steve!"
+
+String health = synapse.translate("Health: ${player.health}", player);
+// Result: "Health: 20.0"
+
+String stat = synapse.translate("Deaths: ${player.stats:DEATHS}", player);
+// Result: "Deaths: 5"
+```
+
+### Contextual Placeholder Options
+
+Contextual placeholders support caching based on user context:
+
+```java
+register("player_rank", context -> {
+    return expensiveRankLookup(context.user().getUniqueId());
+}, options -> {
+    options.cache(true);                    // Enable caching
+    options.cacheTTL(5, TimeUnit.MINUTES);  // Cache for 5 minutes
+});
+```
+
+**Available Options:**
+- `cache(boolean)` - Enable result caching per user (default: `false`)
+- `cacheTTL(long, TimeUnit)` - How long to cache results (default: 20 seconds)
+
+**Caching Behavior:**
+- Cache key includes user ID, namespace, placeholder name, and arguments
+- Each user has their own cached values
+- Automatic cleanup when cache expires
+- Arguments are part of the cache key (different args = different cache entries)

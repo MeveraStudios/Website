@@ -1,0 +1,474 @@
+---
+title: Type Handlers
+description: Handling different types in placeholder returns
+order: 4
+---
+
+# Type Handlers
+
+Synapse placeholders can return **any type of Object**, not just strings. The framework automatically converts returned objects to strings using a powerful Type Handler system.
+
+---
+
+## Built-in Type Handlers
+
+Synapse comes with comprehensive built-in type handlers for common types:
+
+### Primitive Types
+```java
+// Numbers - automatically converted
+register("level", context -> player.getLevel()); // Returns int
+register("health", context -> player.getHealth()); // Returns double
+register("balance", context -> economy.getBalance(player)); // Returns BigDecimal
+
+// Booleans - converted to "true"/"false"
+register("is_op", context -> context.user().requirePlayer().isOp());
+register("can_fly", context -> player.getAllowFlight());
+
+// Strings - returned as-is
+register("name", context -> player.getName());
+```
+
+**Usage:**
+```java
+synapse.translate("Level: ${player.level}", player);
+// Result: "Level: 15"
+
+synapse.translate("Op: ${player.is_op}", player);
+// Result: "Op: false"
+```
+
+### Enums
+Enums are automatically formatted from `SCREAMING_SNAKE_CASE` to `Title Case`:
+
+```java
+register("gamemode", context -> {
+    Player player = context.user().requirePlayer();
+    return player.getGameMode(); // Returns GameMode enum
+});
+
+register("difficulty", () -> Bukkit.getWorlds().get(0).getDifficulty());
+```
+
+**Usage:**
+```java
+synapse.translate("Mode: ${player.gamemode}", player);
+// GameMode.CREATIVE → "Mode: Creative"
+// GameMode.SURVIVAL → "Mode: Survival"
+```
+
+### Collections
+Arrays, Lists, Sets, and other collections are joined with commas:
+
+```java
+register("worlds", () -> {
+    return Bukkit.getWorlds().stream()
+        .map(World::getName)
+        .toList(); // Returns List<String>
+});
+
+register("permissions", context -> {
+    Player player = context.user().requirePlayer();
+    return player.getEffectivePermissions().stream()
+        .map(PermissionAttachmentInfo::getPermission)
+        .limit(5)
+        .toArray(String[]::new); // Returns String[]
+});
+```
+
+**Usage:**
+```java
+synapse.translate("Worlds: ${server.worlds}", player);
+// Result: "Worlds: world, world_nether, world_the_end"
+
+synapse.translate("Perms: ${player.permissions}", player);
+// Result: "Perms: essentials.spawn, essentials.home, minecraft.command.help"
+```
+
+### Maps
+Maps are formatted as `key=value` pairs:
+
+```java
+register("stats", context -> {
+    Map<String, Integer> stats = new HashMap<>();
+    stats.put("kills", getKills(player));
+    stats.put("deaths", getDeaths(player));
+    return stats; // Returns Map<String, Integer>
+});
+```
+
+**Usage:**
+```java
+synapse.translate("Stats: ${player.stats}", player);
+// Result: "Stats: kills=42, deaths=13"
+```
+
+### Date/Time Types
+Built-in formatting for Java time types:
+
+```java
+register("join_date", context -> {
+    return player.getFirstPlayed(); // Returns Instant
+});
+
+register("playtime", context -> {
+    return Duration.ofSeconds(player.getStatistic(Statistic.PLAY_ONE_MINUTE) / 20);
+});
+
+register("last_seen", context -> {
+    return LocalDateTime.now(); // Returns LocalDateTime
+});
+```
+
+**Formatting:**
+- `Instant`: ISO-8601 format (`2025-10-20T14:30:25Z`)
+- `Duration`: Human-readable (`2h 15m 30s`, `45m 20s`, `30s`)
+- `LocalDateTime`: `yyyy-MM-dd HH:mm:ss` format
+
+### Wrapper Types
+Special handling for common wrapper types:
+
+```java
+// Optional - unwraps the value
+register("nickname", context -> {
+    return Optional.ofNullable(player.getDisplayName());
+});
+
+// Supplier - evaluates lazily
+register("expensive", () -> {
+    return (Supplier<String>) () -> calculateExpensiveValue();
+});
+
+// CompletableFuture - returns completed value or null
+register("async_data", context -> {
+    return CompletableFuture.supplyAsync(() -> fetchFromAPI());
+});
+```
+
+---
+
+## Creating Custom Type Handlers
+
+You can register custom type handlers for your own types or to override default behavior.
+
+### Simple Handler Registration
+
+```java
+public class MyNeuron extends BukkitNeuron {
+    
+    public MyNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("custom"));
+        
+        // Register handler for custom type
+        registerTypeHandler(Location.class, location -> {
+            return String.format("%s @ %d, %d, %d",
+                location.getWorld().getName(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ()
+            );
+        });
+        
+        // Now you can return Location objects
+        register("location", context -> {
+            Player player = context.user().requirePlayer();
+            return player.getLocation(); // Returns Location
+        });
+    }
+}
+```
+
+**Usage:**
+```java
+synapse.translate("You are at: ${player.location}", player);
+// Result: "You are at: world @ 125, 64, -230"
+```
+
+### Advanced Type Handler Class
+
+For more complex handling, create a dedicated handler class:
+
+```java
+public class ItemStackHandler implements TypeHandler<ItemStack> {
+    
+    @Override
+    public Type getType() {
+        return ItemStack.class;
+    }
+    
+    @Override
+    public String handle(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return "Empty";
+        }
+        
+        StringBuilder result = new StringBuilder();
+        result.append(item.getAmount()).append("x ");
+        
+        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+            result.append(item.getItemMeta().getDisplayName());
+        } else {
+            result.append(formatMaterialName(item.getType()));
+        }
+        
+        return result.toString();
+    }
+    
+    private String formatMaterialName(Material material) {
+        return Arrays.stream(material.name().split("_"))
+            .map(word -> word.charAt(0) + word.substring(1).toLowerCase())
+            .collect(Collectors.joining(" "));
+    }
+}
+```
+
+**Registration:**
+```java
+public MyNeuron(Plugin plugin) {
+    super(plugin, Namespace.of("items"));
+    
+    // Register the handler
+    registerTypeHandler(new ItemStackHandler());
+    
+    // Now you can return ItemStack objects
+    register("hand", context -> {
+        Player player = context.user().requirePlayer();
+        return player.getInventory().getItemInMainHand();
+    });
+    
+    register("helmet", context -> {
+        Player player = context.user().requirePlayer();
+        return player.getInventory().getHelmet();
+    });
+}
+```
+
+**Usage:**
+```java
+synapse.translate("Holding: ${items.hand}", player);
+// Result: "Holding: 64x Diamond Sword"
+
+synapse.translate("Wearing: ${items.helmet}", player);
+// Result: "Wearing: 1x Netherite Helmet"
+```
+
+### Using BaseTypeHandler
+
+For type-safe handlers with automatic type resolution:
+
+```java
+public class UUIDHandler extends BaseTypeHandler<UUID> {
+    
+    @Override
+    public String handle(UUID input) {
+        // Return short UUID (first 8 characters)
+        return input.toString().substring(0, 8);
+    }
+}
+```
+
+**Registration:**
+```java
+registerTypeHandler(new UUIDHandler());
+
+register("uuid", context -> context.user().uniqueId());
+register("uuid_full", context -> context.user().uniqueId().toString());
+```
+
+---
+
+## Type Handler Inheritance
+
+The type handler system supports inheritance-based matching:
+
+```java
+// Register handler for Number (parent class)
+registerTypeHandler(Number.class, number -> {
+    return String.format("%.2f", number.doubleValue());
+});
+
+// Works for all Number subclasses
+register("int_value", () -> 42);           // Integer
+register("double_value", () -> 3.14159);   // Double
+register("long_value", () -> 999999L);     // Long
+register("float_value", () -> 2.5f);       // Float
+```
+
+All will be formatted with 2 decimal places:
+```java
+"${stat.int_value}"    // "42.00"
+"${stat.double_value}" // "3.14"
+"${stat.long_value}"   // "999999.00"
+```
+
+### Interface Handlers
+
+Handlers also work with interfaces:
+
+```java
+// Register handler for any Nameable
+registerTypeHandler(Nameable.class, nameable -> {
+    return nameable.getCustomName() != null 
+        ? nameable.getCustomName() 
+        : "Unnamed";
+});
+
+register("entity_name", context -> {
+    // Returns various Nameable entities
+    return getNearestEntity(player);
+});
+```
+
+---
+
+## Unregistering Type Handlers
+
+Remove type handlers when needed:
+
+```java
+// Unregister a specific type
+unregisterTypeHandler(Location.class);
+
+// Revert to default behavior
+unregisterTypeHandler(Enum.class);
+```
+
+---
+
+## Best Practices
+
+### 1. Return Native Types
+```java
+// ✅ Good - Return native type
+register("health", context -> {
+    return player.getHealth(); // Returns double
+});
+
+// ❌ Avoid - Manual string conversion
+register("health", context -> {
+    return String.valueOf(player.getHealth());
+});
+```
+
+### 2. Handle Null Values
+```java
+public class SafeLocationHandler implements TypeHandler<Location> {
+    @Override
+    public String handle(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return "Unknown Location";
+        }
+        return formatLocation(location);
+    }
+}
+```
+
+### 3. Keep Handlers Simple
+```java
+// ✅ Good - Simple, focused handler
+registerTypeHandler(Player.class, Player::getName);
+
+// ❌ Avoid - Complex logic in handler
+registerTypeHandler(Player.class, player -> {
+    // Lots of complex logic...
+    // Better to do this in the placeholder itself
+});
+```
+
+### 4. Use Inheritance Wisely
+```java
+// Register once for parent class
+registerTypeHandler(Entity.class, entity -> 
+    entity.getType().name().toLowerCase()
+);
+
+// Now works for all entity types:
+// Player, Zombie, Creeper, ArmorStand, etc.
+```
+
+### 5. Consider Performance
+```java
+// ✅ Cached - Handler called once
+register("expensive_calc", () -> {
+    return calculateComplexValue(); // Returns ComplexObject
+}, options -> options.cache(true));
+
+// Handler is called after caching, so:
+// 1. calculateComplexValue() runs and returns ComplexObject
+// 2. ComplexObject is cached
+// 3. When retrieved from cache, handler converts to String
+```
+
+---
+
+## Type Handler Priority
+
+When multiple handlers could match, Synapse uses this priority order:
+
+1. **Exact class match** - Handler registered for the specific class
+2. **Parent class match** - Walking up the inheritance hierarchy
+3. **Interface match** - Implemented interfaces
+4. **Default behavior** - Falls back to `toString()` if no handler found
+
+```java
+class Vehicle { }
+class Car extends Vehicle { }
+class SportsCar extends Car { }
+
+registerTypeHandler(Vehicle.class, v -> "Vehicle");
+registerTypeHandler(Car.class, c -> "Car");
+
+register("vehicle", () -> new SportsCar());
+// Result: "Car" (closest parent match)
+```
+
+---
+
+## Common Use Cases
+
+### Custom Plugin Objects
+```java
+public class Clan {
+    private final String name;
+    private final int memberCount;
+    // ...
+}
+
+registerTypeHandler(Clan.class, clan -> 
+    clan.getName() + " (" + clan.getMemberCount() + " members)"
+);
+
+register("clan", context -> getPlayerClan(player));
+```
+
+### Third-Party Library Types
+```java
+// WorldGuard regions
+registerTypeHandler(ProtectedRegion.class, region ->
+    region.getId() + " [" + region.getPriority() + "]"
+);
+
+// Vault economy
+registerTypeHandler(Economy.class, economy ->
+    economy.format(economy.getBalance(player))
+);
+```
+
+### Complex Data Structures
+```java
+public class PlayerStats {
+    private Map<String, Integer> stats;
+    private List<Achievement> achievements;
+}
+
+registerTypeHandler(PlayerStats.class, stats -> {
+    return String.format("%d stats, %d achievements",
+        stats.getStats().size(),
+        stats.getAchievements().size()
+    );
+});
+```
+
+---
+
+The Type Handler system gives you complete control over how placeholder values are formatted, making it easy to work with any object type in your plugin ecosystem!

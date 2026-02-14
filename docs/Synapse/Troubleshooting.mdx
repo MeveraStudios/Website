@@ -1,0 +1,46 @@
+---
+title: Troubleshooting
+description: Common issues and solutions
+order: 5
+---
+
+### Placeholder Not Resolving
+
+**Problem:** `${custom.placeholder}` returns unchanged
+
+**Solutions:**
+1. Verify the neuron is registered: `new MyNeuron(this).register();`
+2. Check namespace spelling matches exactly
+3. Ensure placeholder is registered in the neuron
+4. Check server logs for registration errors
+
+### Player-Only Placeholder Fails with Console
+
+**Problem:** Exception when console uses player-specific placeholder
+
+**Solution:** Use `requirePlayer()` - it handles the error automatically:
+```java
+register("health", context -> {
+    Player player = context.user().requirePlayer(); // Throws exception if not player
+    return String.format("%.1f", player.getHealth());
+});
+```
+
+### Placeholder Returns Stale Data
+
+**Problem:** Cached placeholder shows old value
+
+**Solutions:**
+1. Reduce cache TTL: `options.cacheTTL(30, TimeUnit.SECONDS);`
+2. Disable caching: `options.cache(false);`
+3. Use refresh for static placeholders: `options.refresh(true);`
+
+### Async Placeholder Blocking Server
+
+**Problem:** Server freezes when translating
+
+**Solution:** Use `translateAsync()` for expensive operations:
+```java
+synapse.translateAsync("${database.query}", player)
+    .thenAccept(player::sendMessage);
+```

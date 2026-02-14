@@ -1,0 +1,61 @@
+---
+title: Static Placeholders
+description: Fixed values and non-contextual placeholders
+order: 1
+---
+
+Static placeholders return fixed values or values from suppliers that don't depend on user context.
+
+---
+
+### Creating Static Placeholders
+```java
+public class StaticNeuron extends BukkitNeuron {
+    
+    public StaticNeuron(Plugin plugin) {
+        super(plugin, Namespace.of("static"));
+        
+        // Fixed string value
+        register("version", "1.0.0");
+        
+        // Dynamic value using supplier
+        register("time", () -> LocalTime.now().toString());
+        
+        // With aliases
+        register("server_name", () -> Bukkit.getServer().getName(), "name", "servername");
+    }
+}
+```
+
+**Usage:**
+```java
+String result = synapse.translate("Version: ${static.version}", player);
+// Result: "Version: 1.0.0"
+
+String time = synapse.translate("Current time: ${static.time}", player);
+// Result: "Current time: 14:30:25.123"
+```
+
+
+### Static Placeholder Options
+
+Static placeholders support refresh and async options:
+
+```java
+register("server_stats", () -> calculateServerStats(),
+    options -> {
+        options.async(true);           // Run calculation in background thread
+        options.refresh(true);         // Enable periodic refresh
+        options.delay(30, TimeUnit.SECONDS); // Refresh every 30 seconds
+    });
+```
+
+**Available Options:**
+- `async(boolean)` - Execute the supplier asynchronously (default: `false`)
+- `refresh(boolean)` - Enable periodic refresh (default: `false`) 
+- `delay(long, TimeUnit)` - Time between refreshes (default: 20 seconds)
+
+**Use Cases:**
+- Database queries that should run in background
+- Expensive calculations that need periodic updates
+- External API calls that might block
