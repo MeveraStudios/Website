@@ -95,7 +95,21 @@ const components = {
     // Handle admonitions (:::note, :::tip, etc.)
     if (className?.includes('admonition')) {
       const type = (props as Record<string, any>)['data-admonition-type'] || 'note';
-      return <Admonition type={type}>{children}</Admonition>;
+      const title = (props as Record<string, any>)['data-admonition-title'];
+      const icon = (props as Record<string, any>)['data-admonition-icon'];
+      const sideColor = (props as Record<string, any>)['data-admonition-side-color'];
+      const bgColor = (props as Record<string, any>)['data-admonition-bg-color'];
+      return (
+        <Admonition 
+          type={type} 
+          title={title}
+          icon={icon}
+          sideColor={sideColor}
+          bgColor={bgColor}
+        >
+          {children}
+        </Admonition>
+      );
     }
 
     return <div className={className} {...props}>{children}</div>;
