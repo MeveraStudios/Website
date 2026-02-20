@@ -7,18 +7,28 @@
 
 import type { ReactNode } from 'react';
 import { Info, Lightbulb, AlertTriangle, AlertOctagon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 
 interface AdmonitionProps {
   type?: string;
   title?: string; // Custom display title
-  icon?: string | null; // Custom icon (emoji/text) or null to hide
+  icon?: string | null; // Custom icon name (from lucide-react), emoji/text, or null to hide
   sideColor?: string; // Custom border color (hex)
   bgColor?: string; // Custom background color (hex)
   children: ReactNode;
   className?: string;
 }
+
+// Map of icon names to Lucide icon components
+const ICON_MAP: Record<string, LucideIcon> = {
+  'Info': Info,
+  'Lightbulb': Lightbulb,
+  'LightBulb': Lightbulb, // Alternative spelling
+  'AlertTriangle': AlertTriangle,
+  'AlertOctagon': AlertOctagon,
+};
 
 const ADMONITION_CONFIG = {
   note: { 
@@ -76,9 +86,13 @@ export function Admonition({
   const displayTitle = title || config.label;
   const Icon = config.icon;
   
-  // Determine what icon to show: custom text/emoji, default icon component, or none
+  // Determine what icon to show
   const showDefaultIcon = customIcon === undefined;
-  const showCustomIcon = typeof customIcon === 'string' && customIcon.length > 0;
+  
+  // Check if customIcon is a Lucide icon name
+  const CustomIconComponent = typeof customIcon === 'string' ? ICON_MAP[customIcon] : undefined;
+  const showLucideIcon = !!CustomIconComponent;
+  const showTextIcon = typeof customIcon === 'string' && !CustomIconComponent && customIcon.length > 0;
 
   return (
     <div 
@@ -93,7 +107,8 @@ export function Admonition({
     >
       <div className="flex items-center gap-2 mb-2">
         {showDefaultIcon && <Icon className="h-5 w-5" />}
-        {showCustomIcon && (
+        {showLucideIcon && <CustomIconComponent className="h-5 w-5" />}
+        {showTextIcon && (
           <span className="text-lg leading-none">{customIcon}</span>
         )}
         <div className="inline-block [&>p]:inline [&>p]:m-0 [&_strong]:font-semibold [&_em]:italic [&_code]:bg-white/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[0.9em]">

@@ -1,7 +1,7 @@
 /**
  * Remark plugin to transform directive syntax (:::note, :::tip, etc.) into admonition divs
- * This plugin converts markdown like:
  * 
+ * For Markdown (.md) files:
  * :::note
  * Content here
  * :::
@@ -11,29 +11,44 @@
  * Content here
  * :::
  * 
- * Or with custom colors:
- * :::custom{side-color="#ff0000" bg-color="#ff000020" label="Custom Title"}
+ * Or with custom colors (use kebab-case for property names):
+ * :::custom{side-color="#ff0000" bg-color="#ff000020" label="Custom Title" icon="LightBulb"}
  * Content here
  * :::
  * 
- * Into divs with proper classes and data attributes for React components
+ * For MDX (.mdx) files, use JSX component syntax instead:
+ * <Admonition type="custom" sideColor="#ff0000" bgColor="#ff000020" title="Custom Title" icon="LightBulb">
+ * Content here
+ * </Admonition>
+ * 
+ * Note: MDX files cannot use directive syntax with attributes due to JSX parsing conflicts.
+ * Use direct component syntax with camelCase props instead.
  */
 
 import { visit } from 'unist-util-visit';
 
 /**
- * Parse custom attributes from string (legacy support)
- * e.g., 'side-color="#ff0000", bg-color="#ff000020", label="Title"'
+ * Parse custom attributes from string with comma separation
+ * e.g., 'sideColor="#ff0000", bgColor="#ff000020", label="Title", icon="LightBulb"'
+ * Also supports camelCase and kebab-case for backward compatibility
  */
 function parseCustomAttributes(attrString: string): Record<string, string> {
   const attrs: Record<string, string> = {};
   
-  // Match key="value" or key='value' patterns
+  // Match key="value" or key='value' patterns, handling commas and spaces
   const regex = /(\w+(?:-\w+)*)=["']([^"']+)["']/g;
   let match;
   
   while ((match = regex.exec(attrString)) !== null) {
-    attrs[match[1]] = match[2];
+    const key = match[1];
+    const value = match[2];
+    
+    // Normalize keys: convert kebab-case to camelCase if needed
+    const normalizedKey = key.includes('-') 
+      ? key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+      : key;
+    
+    attrs[normalizedKey] = value;
   }
   
   return attrs;
@@ -55,8 +70,8 @@ export default function remarkAdmonitions() {
         let bgColor: string | undefined;
         let customIcon: string | undefined;
         
-        // Check node.attributes (remark-directive puts brace content here)
-        if (node.attributes) {
+        // First, try to parse from node.attributes (if remark-directive parsed successfully)
+        if (node.attributes && Object.keys(node.attributes).length > 0) {
           // Get label from attributes
           if (node.attributes.label) {
             customLabel = node.attributes.label;
@@ -67,24 +82,32 @@ export default function remarkAdmonitions() {
             customIcon = node.attributes.icon;
           }
           
-          // Get color attributes
-          if (node.attributes['side-color']) {
+          // Get color attributes (support both camelCase and kebab-case)
+          if (node.attributes.sideColor) {
+            sideColor = node.attributes.sideColor;
+          } else if (node.attributes['side-color']) {
             sideColor = node.attributes['side-color'];
           }
-          if (node.attributes['bg-color']) {
+          
+          if (node.attributes.bgColor) {
+            bgColor = node.attributes.bgColor;
+          } else if (node.attributes['bg-color']) {
             bgColor = node.attributes['bg-color'];
           }
         }
         
-        // If we still don't have colors but the directive is custom,
-        // try to parse from the label attribute (legacy support)
-        if (directiveType === 'custom' && node.attributes?.label && !sideColor) {
-          const labelContent = node.attributes.label;
-          const attrs = parseCustomAttributes(labelContent);
-          if (Object.keys(attrs).length > 0) {
-            sideColor = attrs['side-color'];
-            bgColor = attrs['bg-color'];
-            customLabel = attrs['label'];
+        // Fallback: if remark-directive couldn't parse (e.g., due to comma syntax),
+        // try to get raw attribute string and parse it manually
+        // Check if there's attribute content that failed to parse
+        if (!sideColor && !bgColor && !customLabel && !customIcon) {
+          // Try to access raw attribute string from node properties
+          const attrString = node.attributes?._raw || '';
+          if (attrString) {
+            const parsed = parseCustomAttributes(attrString);
+            customLabel = parsed.label;
+            customIcon = parsed.icon;
+            sideColor = parsed.sideColor || parsed['side-color'];
+            bgColor = parsed.bgColor || parsed['bg-color'];
           }
         }
         

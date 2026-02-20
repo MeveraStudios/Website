@@ -17,6 +17,7 @@ import rehypeRaw from 'rehype-raw';
 import remarkAdmonitions from './remark-admonitions';
 import { CodeBlock } from './CodeBlock';
 import { Admonition } from './Admonition';
+import {MermaidDiagram} from '@lightenna/react-mermaid-diagram';
 import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
 import LatestVersionBlockComponent from '@/components/LatestVersionBlock';
 import { cn } from '@/lib/utils';
@@ -77,6 +78,12 @@ const components = {
           {children}
         </code>
       );
+    }
+
+    // Check if it's a mermaid diagram
+    const language = className?.replace('language-', '');
+    if (language === 'mermaid') {
+      return <MermaidDiagram>{String(children)}</MermaidDiagram>;
     }
 
     return <CodeBlock className={className}>{String(children)}</CodeBlock>;

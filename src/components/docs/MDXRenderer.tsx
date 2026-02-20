@@ -13,6 +13,7 @@ import remarkDirective from 'remark-directive';
 import remarkAdmonitions from './remark-admonitions';
 import { CodeBlock } from './CodeBlock';
 import { Admonition } from './Admonition';
+import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs, TabItem } from './Tabs';
 import LatestVersionBlock from '@/components/LatestVersionBlock';
 import { cn } from '@/lib/utils';
@@ -69,6 +70,7 @@ const mdxComponents = {
   LatestVersionBlock,
   Admonition,
   CodeBlock,
+  MermaidDiagram,
 
   // Headings with anchor links (same as MarkdownRenderer)
   h1: ({ children }: any) => <Heading level={1}>{children}</Heading>,
@@ -91,6 +93,13 @@ const mdxComponents = {
         </code>
       );
     }
+    
+    // Check if it's a mermaid diagram
+    const language = className?.replace('language-', '');
+    if (language === 'mermaid') {
+      return <MermaidDiagram>{String(children)}</MermaidDiagram>;
+    }
+    
     // Code block
     return <CodeBlock className={className}>{String(children)}</CodeBlock>;
   },
