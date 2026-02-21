@@ -1,12 +1,9 @@
 /**
- * Professional MarkdownRenderer Component
- * 
- * A robust, performant markdown renderer using react-markdown with:
- * - MDX support for JSX components
- * - Custom components (Tabs, Admonitions, CodeBlocks)
- * - Proper heading IDs and table of contents support
- * - Syntax highlighting
- * - Clean architecture with separated concerns
+ * MarkdownRenderer Component
+ *
+ * Renders markdown content with react-markdown.
+ * Heading IDs are assigned at the AST level by rehypeHeadingIds — no React-side
+ * counter or ref needed, so StrictMode double-rendering is a non-issue.
  */
 
 import { memo, useMemo } from 'react';
@@ -17,10 +14,10 @@ import rehypeRaw from 'rehype-raw';
 import remarkAdmonitions from './remark-admonitions';
 import { CodeBlock } from './CodeBlock';
 import { Admonition } from './Admonition';
-import {MermaidDiagram} from '@lightenna/react-mermaid-diagram';
+import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
 import LatestVersionBlockComponent from '@/components/LatestVersionBlock';
-import { cn } from '@/lib/utils';
+import { cn, slugify, rehypeHeadingIds } from '@/lib/utils';
 import '@/styles/admonitions.css';
 import '@/styles/code-theme.css';
 import '@/styles/tabs.css';
@@ -30,21 +27,11 @@ interface MarkdownRendererProps {
   className?: string;
 }
 
-/**
- * Heading component with automatic ID generation and anchor links
- */
-interface HeadingProps {
-  level: 1 | 2 | 3 | 4 | 5 | 6;
-  children: React.ReactNode;
-}
+// ─── Heading (pure presentational — reads `id` prop from rehype plugin) ───────
 
-function Heading({ level, children }: HeadingProps) {
+function Heading({ level, id, children }: { level: 1|2|3|4|5|6; id?: string; children: React.ReactNode }) {
   const text = typeof children === 'string' ? children : String(children);
-  const slug = text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-');
-
+  const slug = id || slugify(text);
   const Tag = `h${level}` as const;
 
   return (
@@ -63,11 +50,9 @@ function Heading({ level, children }: HeadingProps) {
   );
 }
 
-/**
- * Custom components mapping for react-markdown
- */
+// ─── Static component map (no dynamic state — safe at module level) ───────────
+
 const components = {
-  // Code blocks with syntax highlighting
   code({ className, children, inline, ...props }: any) {
     if (inline || !className) {
       return (
@@ -79,27 +64,21 @@ const components = {
         </code>
       );
     }
-
-    // Check if it's a mermaid diagram
     const language = className?.replace('language-', '');
     if (language === 'mermaid') {
       return <MermaidDiagram>{String(children)}</MermaidDiagram>;
     }
-
     return <CodeBlock className={className}>{String(children)}</CodeBlock>;
   },
 
-  // Headings with anchor links
-  h1: ({ children }: any) => <Heading level={1}>{children}</Heading>,
-  h2: ({ children }: any) => <Heading level={2}>{children}</Heading>,
-  h3: ({ children }: any) => <Heading level={3}>{children}</Heading>,
-  h4: ({ children }: any) => <Heading level={4}>{children}</Heading>,
-  h5: ({ children }: any) => <Heading level={5}>{children}</Heading>,
-  h6: ({ children }: any) => <Heading level={6}>{children}</Heading>,
+  h1: ({ id, children }: any) => <Heading level={1} id={id}>{children}</Heading>,
+  h2: ({ id, children }: any) => <Heading level={2} id={id}>{children}</Heading>,
+  h3: ({ id, children }: any) => <Heading level={3} id={id}>{children}</Heading>,
+  h4: ({ id, children }: any) => <Heading level={4} id={id}>{children}</Heading>,
+  h5: ({ id, children }: any) => <Heading level={5} id={id}>{children}</Heading>,
+  h6: ({ id, children }: any) => <Heading level={6} id={id}>{children}</Heading>,
 
-  // Handle divs - for admonitions and other custom components
   div({ className, children, ...props }: any) {
-    // Handle admonitions (:::note, :::tip, etc.)
     if (className?.includes('admonition')) {
       const type = (props as Record<string, any>)['data-admonition-type'] || 'note';
       const title = (props as Record<string, any>)['data-admonition-title'];
@@ -107,119 +86,64 @@ const components = {
       const sideColor = (props as Record<string, any>)['data-admonition-side-color'];
       const bgColor = (props as Record<string, any>)['data-admonition-bg-color'];
       return (
-        <Admonition 
-          type={type} 
-          title={title}
-          icon={icon}
-          sideColor={sideColor}
-          bgColor={bgColor}
-        >
+        <Admonition type={type} title={title} icon={icon} sideColor={sideColor} bgColor={bgColor}>
           {children}
         </Admonition>
       );
     }
-
     return <div className={className} {...props}>{children}</div>;
   },
 
-  // Custom JSX components (for when they're written directly in markdown)
   Tabs: ({ defaultValue, children, className }: any) => (
-    <TabsComponent defaultValue={defaultValue} className={className}>
-      {children}
-    </TabsComponent>
+    <TabsComponent defaultValue={defaultValue} className={className}>{children}</TabsComponent>
   ),
-  
   TabItem: ({ value, label, icon, children }: any) => (
-    <TabItemComponent value={value} label={label} icon={icon}>
-      {children}
-    </TabItemComponent>
+    <TabItemComponent value={value} label={label} icon={icon}>{children}</TabItemComponent>
   ),
-  
   LatestVersionBlock: ({ owner, repo, group, id }: any) => (
     <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} />
   ),
-
-  // Handle lowercase JSX elements (from rehype-raw)
   latestversionblock: ({ owner, repo, group, id }: any) => (
     <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} />
   ),
-  
   tabs: ({ defaultvalue, children, className }: any) => (
-    <TabsComponent defaultValue={defaultvalue} className={className}>
-      {children}
-    </TabsComponent>
+    <TabsComponent defaultValue={defaultvalue} className={className}>{children}</TabsComponent>
   ),
-  
   tabitem: ({ value, label, icon, children }: any) => (
-    <TabItemComponent value={value} label={label} icon={icon}>
-      {children}
-    </TabItemComponent>
+    <TabItemComponent value={value} label={label} icon={icon}>{children}</TabItemComponent>
   ),
 
-  // Enhanced links - open external links in new tab
   a: ({ href, children, ...props }: any) => {
     const isExternal = href?.startsWith('http');
     return (
-      <a
-        href={href}
-        target={isExternal ? '_blank' : undefined}
-        rel={isExternal ? 'noopener noreferrer' : undefined}
-        {...props}
-      >
+      <a href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined} {...props}>
         {children}
       </a>
     );
   },
 
-  // Enhanced images with lazy loading
   img: ({ src, alt, ...props }: any) => (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      className="rounded-lg max-w-full h-auto"
-      {...props}
-    />
+    <img src={src} alt={alt} loading="lazy" className="rounded-lg max-w-full h-auto" {...props} />
   ),
 
-  // Enhanced blockquotes
   blockquote: ({ children, ...props }: any) => (
-    <blockquote
-      className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground"
-      {...props}
-    >
+    <blockquote className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground" {...props}>
       {children}
     </blockquote>
   ),
 
-  // Enhanced tables
   table: ({ children, ...props }: any) => (
     <div className="overflow-x-auto my-6">
-      <table className="min-w-full divide-y divide-border" {...props}>
-        {children}
-      </table>
+      <table className="min-w-full divide-y divide-border" {...props}>{children}</table>
     </div>
   ),
 };
 
-/**
- * MarkdownRenderer Component
- * 
- * Renders markdown/MDX content with full support for:
- * - GFM (GitHub Flavored Markdown)
- * - Directives (for admonitions)
- * - Custom React components
- * - Syntax highlighting
- * - Raw HTML
- */
-export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererProps) => {
-  // Memoize plugins array to prevent unnecessary re-renders
-  const remarkPlugins = useMemo(
-    () => [remarkGfm, remarkDirective, remarkAdmonitions],
-    []
-  );
+// ─── Renderer ─────────────────────────────────────────────────────────────────
 
-  const rehypePlugins = useMemo(() => [rehypeRaw], []);
+export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererProps) => {
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkDirective, remarkAdmonitions], []);
+  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeHeadingIds], []);
 
   return (
     <div className={cn('prose prose-invert max-w-none', className)}>
@@ -238,5 +162,4 @@ MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 export default MarkdownRenderer;
 
-// Export CodeBlock for backward compatibility
 export { CodeBlock } from './CodeBlock';

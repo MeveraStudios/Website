@@ -1,8 +1,9 @@
 /**
  * MDXRenderer Component
- * 
- * Renders MDX content (markdown with JSX) using @mdx-js/react
- * This properly compiles and renders JSX components embedded in markdown
+ *
+ * Renders MDX content (markdown with JSX) using @mdx-js/mdx.
+ * Heading IDs are assigned at the AST level by rehypeHeadingIds — no React-side
+ * counter or ref needed, so StrictMode double-rendering is a non-issue.
  */
 
 import { memo, useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ import { Admonition } from './Admonition';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs, TabItem } from './Tabs';
 import LatestVersionBlock from '@/components/LatestVersionBlock';
-import { cn } from '@/lib/utils';
+import { cn, slugify, rehypeHeadingIds } from '@/lib/utils';
 import '@/styles/admonitions.css';
 import '@/styles/code-theme.css';
 import '@/styles/tabs.css';
@@ -26,22 +27,11 @@ interface MDXRendererProps {
   className?: string;
 }
 
-/**
- * Heading component with automatic ID generation and anchor links
- * Same implementation as MarkdownRenderer for consistency
- */
-interface HeadingProps {
-  level: 1 | 2 | 3 | 4 | 5 | 6;
-  children: React.ReactNode;
-}
+// ─── Heading (pure presentational — reads `id` prop from rehype plugin) ───────
 
-function Heading({ level, children }: HeadingProps) {
+function Heading({ level, id, children }: { level: 1|2|3|4|5|6; id?: string; children: React.ReactNode }) {
   const text = typeof children === 'string' ? children : String(children);
-  const slug = text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-');
-
+  const slug = id || slugify(text);
   const Tag = `h${level}` as const;
 
   return (
@@ -60,11 +50,10 @@ function Heading({ level, children }: HeadingProps) {
   );
 }
 
-/**
- * MDX components that will be available in MDX files
- */
+// ─── Static component map (no dynamic state — safe at module level) ───────────
+
 const mdxComponents = {
-  // Custom components
+  // Custom MDX components
   Tabs,
   TabItem,
   LatestVersionBlock,
@@ -72,17 +61,16 @@ const mdxComponents = {
   CodeBlock,
   MermaidDiagram,
 
-  // Headings with anchor links (same as MarkdownRenderer)
-  h1: ({ children }: any) => <Heading level={1}>{children}</Heading>,
-  h2: ({ children }: any) => <Heading level={2}>{children}</Heading>,
-  h3: ({ children }: any) => <Heading level={3}>{children}</Heading>,
-  h4: ({ children }: any) => <Heading level={4}>{children}</Heading>,
-  h5: ({ children }: any) => <Heading level={5}>{children}</Heading>,
-  h6: ({ children }: any) => <Heading level={6}>{children}</Heading>,
+  // Headings with anchor links — id is injected by rehypeHeadingIds
+  h1: ({ id, children }: any) => <Heading level={1} id={id}>{children}</Heading>,
+  h2: ({ id, children }: any) => <Heading level={2} id={id}>{children}</Heading>,
+  h3: ({ id, children }: any) => <Heading level={3} id={id}>{children}</Heading>,
+  h4: ({ id, children }: any) => <Heading level={4} id={id}>{children}</Heading>,
+  h5: ({ id, children }: any) => <Heading level={5} id={id}>{children}</Heading>,
+  h6: ({ id, children }: any) => <Heading level={6} id={id}>{children}</Heading>,
 
   // Standard HTML elements with enhancements
   code: ({ className, children, ...props }: any) => {
-    // Inline code
     if (!className) {
       return (
         <code
@@ -93,18 +81,15 @@ const mdxComponents = {
         </code>
       );
     }
-    
-    // Check if it's a mermaid diagram
+
     const language = className?.replace('language-', '');
     if (language === 'mermaid') {
       return <MermaidDiagram>{String(children)}</MermaidDiagram>;
     }
-    
-    // Code block
+
     return <CodeBlock className={className}>{String(children)}</CodeBlock>;
   },
 
-  // Enhanced images
   img: ({ src, alt, ...props }: any) => (
     <img
       src={src}
@@ -115,7 +100,6 @@ const mdxComponents = {
     />
   ),
 
-  // Enhanced links
   a: ({ href, children, ...props }: any) => {
     const isExternal = href?.startsWith('http');
     return (
@@ -130,7 +114,6 @@ const mdxComponents = {
     );
   },
 
-  // Enhanced blockquotes
   blockquote: ({ children, ...props }: any) => (
     <blockquote
       className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground"
@@ -140,7 +123,6 @@ const mdxComponents = {
     </blockquote>
   ),
 
-  // Enhanced tables
   table: ({ children, ...props }: any) => (
     <div className="overflow-x-auto my-6">
       <table className="min-w-full divide-y divide-border" {...props}>
@@ -149,7 +131,6 @@ const mdxComponents = {
     </div>
   ),
 
-  // Handle divs for admonitions
   div: ({ className, children, ...props }: any) => {
     if (className?.includes('admonition')) {
       const type = (props as Record<string, any>)['data-admonition-type'] || 'note';
@@ -158,8 +139,8 @@ const mdxComponents = {
       const sideColor = (props as Record<string, any>)['data-admonition-side-color'];
       const bgColor = (props as Record<string, any>)['data-admonition-bg-color'];
       return (
-        <Admonition 
-          type={type} 
+        <Admonition
+          type={type}
           title={title}
           icon={icon}
           sideColor={sideColor}
@@ -173,10 +154,13 @@ const mdxComponents = {
   },
 };
 
+// ─── Renderer ─────────────────────────────────────────────────────────────────
+
 /**
  * MDXRenderer Component
- * 
- * Compiles and renders MDX content with full JSX support
+ *
+ * Compiles and renders MDX content with full JSX support.
+ * Heading IDs are assigned during compilation by rehypeHeadingIds.
  */
 export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
   const [MDXContent, setMDXContent] = useState<any>(null);
@@ -185,19 +169,21 @@ export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
   useEffect(() => {
     let cancelled = false;
 
+    // Clear stale content before recompiling
+    setMDXContent(null);
+    setError(null);
+
     async function compileMDX() {
       try {
-        // Compile MDX to JavaScript
         const compiled = await compile(content, {
           outputFormat: 'function-body',
           development: false,
           remarkPlugins: [remarkGfm, remarkDirective, remarkAdmonitions],
-          // Note: rehype-raw is not compatible with MDX - MDX already handles JSX natively
+          rehypePlugins: [rehypeHeadingIds],
         });
 
         if (cancelled) return;
 
-        // Run the compiled code to get the component
         const { default: Component } = await run(String(compiled), {
           ...runtime,
           baseUrl: import.meta.url,
@@ -219,7 +205,6 @@ export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
     };
   }, [content]);
 
-  // Show error state
   if (error) {
     return (
       <div className={cn('prose prose-invert max-w-none', className)}>
@@ -233,7 +218,6 @@ export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
     );
   }
 
-  // Show loading state
   if (!MDXContent) {
     return (
       <div className={cn('prose prose-invert max-w-none', className)}>
@@ -244,7 +228,6 @@ export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
     );
   }
 
-  // Render the MDX content
   return (
     <div className={cn('prose prose-invert max-w-none', className)}>
       <MDXContent components={mdxComponents} />

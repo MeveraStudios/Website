@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import type { DocFile, DocProject, TocItem, Header } from '@/types/docs';
+import { buildHeaderTree, flattenHeaderTree } from './utils';
 
 // Type for cached documentation data
 interface CachedDocsData {
@@ -120,28 +121,22 @@ export function useDocs() {
  * This function is kept for runtime TOC generation if needed
  */
 export function extractToc(content: string): { items: TocItem[]; headers: Map<string, Header> } {
-  const toc: TocItem[] = [];
-  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
-  let match;
+  // Build the header tree, then flatten it for the TOC and headers map.
+  // Both the renderers and this function derive IDs from the same tree,
+  // guaranteeing the DOM IDs always match the TOC.
+  const tree = buildHeaderTree(content);
+  const flat = flattenHeaderTree(tree);
 
   const headers = new Map<string, Header>();
+  const toc: TocItem[] = [];
 
-  while ((match = headingRegex.exec(content)) !== null) {
-    const level = match[1].length;
-    const text = match[2].trim();
-    const slug = text.toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
-
-    const id = slug;
-
-    headers.set(id, {
-      id,
-      link: `#${id}`,
-      display: text
+  for (const item of flat) {
+    headers.set(item.id, {
+      id: item.id,
+      link: `#${item.id}`,
+      display: item.text,
     });
-
-    toc.push({ level, text, id });
+    toc.push({ level: item.level, text: item.text, id: item.id });
   }
 
   return { items: toc, headers };

@@ -1,0 +1,197 @@
+---
+title: Creating your first command
+description: Build your core understanding of imperat with basic definitions.
+order: 2
+---
+
+Imperat is shipped with a powerful API that translates annotated classes into command hierarchies, allowing you to create complex command structures with ease.
+In this section, we will guide you through the process of creating your first command using Imperat's annotation-based API. We will cover the basics of defining commands, adding arguments, and organizing your command hierarchy effectively.
+By the end of this section, you will have a solid understanding of how to create commands in Imperat and be ready to explore more advanced features and concepts.
+
+# How does it work?
+Imperat uses annotations to define commands and their properties. By annotating your classes and methods, you can specify the command structure, arguments, and behavior in a clear and concise way.
+The framework processes these annotations at runtime to build a command hierarchy that can be executed by the user.
+
+## @Command
+A **class** annotated with `@Command` represents a [Root Command](/docs/Imperat/First-Command/BasicDefinitions#root-command), 
+and any nested classes annotated with `@Command` are also considered independent Root Commands, **NOT** sub commands.
+
+A **method** annotated with `@Command` within a command class represents a Root Command as well, and they are not related to the command class they are in, 
+meaning they are not sub commands of that class, but rather an independent Root Command that happens to be defined within the same class.
+This design allows for a flexible and organized command structure, where you can define multiple Root Commands within the same class or across different classes without any hierarchical relationship between them unless explicitly defined through other means.
+
+### Conclusion
+@Command annotations are used to define Root Commands in Imperat, whether they are applied to classes or methods.
+Nested classes annotated with @Command are also treated as independent Root Commands, 
+and methods annotated with @Command are not considered subcommands of the class they are in, but rather independent Root Commands. This allows for a flexible and organized command structure in Imperat.
+
+:::tip
+A command(whether root or subcommand) can have meta-data of its own, such as permissions, cooldowns, and more, which can be defined using additional annotations on the command class or method.
+:::
+
+## @Execute
+A method annotated with `@Execute` represents a [Command Pathway](/docs/Imperat/First-Command/BasicDefinitions#pathway) belonging to the Command defined by the class it is in, which can be either a Root Command or a Subcommand.
+This means that the method will be executed when the Command is invoked, and it defines the specific behavior of the Command when that particular pathway matches the input entered during command execution.
+When a command is executed, and the input entered matches the pathway defined by the method annotated with `@Execute`, the method will be invoked/called to perform the desired action.
+
+:::note
+An `@Execute` method must be defined within a class that is annotated with `@Command`, and it cannot be defined in a class that is not annotated with `@Command`.
+ This is because the `@Execute` annotation is specifically designed to define the behavior of a Command, and it relies on the context of a Command class to function properly.
+:::
+
+:::note
+A method annotated with `@Execute` is also known as `pathway-method` or `executable-method`.
+:::
+
+A `pathway-method` can have parameters that represent the arguments of the Command, and these parameters can be annotated with argument annotations (e.g., `@Literal`, `@Required`, `@Optional`, `@Flag`, `@Greedy`) to specify the type and behavior of each argument.
+When the Command is executed, the framework will automatically parse the input, match it against the defined pathways, and invoke the corresponding `pathway-method` with the appropriate arguments based on the input provided by the user.
+Moreover, the `@Execute` method can also have additional annotations to specify properties such as permissions, cooldowns, and more, allowing for a highly customizable command behavior.
+Finally, There are multiple rules that a java method must follow, in order for Imperat to recognize it as a valid `pathway-method` and process it correctly, and they are the following:
+- The method must be **public**.
+- The method must be annotated with `@Execute`.
+- The method must be defined within a class that is annotated with `@Command` OR `@SubCommand`.
+- The method's first parameter must be of type `YourPlatformSource`, which represents the source of the command execution (e.g., player, console, etc.).
+These rules include ensuring the method is public, has a valid return type (typically void or boolean), and is properly annotated with `@Execute`.
+
+
+## Naming Arguments
+When defining parameters in a `@Execute` method, you can use the `@Named` annotation to specify a custom name for each argument. This allows you to refer to the arguments by their custom names in the command syntax and when processing the command input.
+However, you can also choose to omit the `@Named` annotation, in which case the framework will automatically assign a default name to the argument based on its position in the method signature (e.g., arg0, arg1, etc.).
+
+
+### Preserving parameter names.
+You can also set the framework to use the parameter names from your code as the argument names, which requires enabling the `-parameters` compiler option in your Java project. 
+This allows for more intuitive and meaningful argument names without the need for explicit `@Named` annotations.
+
+<Tabs defaultValue="maven">
+    <TabItem value="maven" label="Maven">
+        <CodeBlock className="language-xml">{`
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+        
+        `}</CodeBlock>
+    </TabItem>
+    <TabItem value="gradle-groovy" label="Gradle (Groovy)">
+        <CodeBlock className="language-groovy">{`
+
+        tasks.withType(JavaCompile).configureEach {
+            // Preserve parameter names in the bytecode
+            options.compilerArgs += '-parameters'
+        }
+        
+        `}</CodeBlock>
+    </TabItem>
+    <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
+        <CodeBlock className="language-kotlin">{`
+        tasks.withType<JavaCompile>().configureEach {
+            // Preserve parameter names in the bytecode
+            options.compilerArgs += "-parameters"
+        }
+
+        `}</CodeBlock>
+    </TabItem>
+</Tabs>
+
+### Applied Example
+This example demonstrates how to define a simple command using the `@Command` and `@Execute` annotations in Imperat.
+```java
+@Command({"total", "sum"})
+public class TotalCommand {
+
+    @Execute
+    public void calculateSum(PLATFORMSOURCE source, int a, int b) {
+        // Command logic goes here
+        source.sendMessage("The sum of " + a + " and " + b + " = " + (a + b));
+    }
+}
+```
+
+#### Analysis of the example:
+- The `TotalCommand` class is annotated with `@Command({"total", "sum"})`, which means it can be invoked using either "total" or "sum" as the command name.
+the primary name for the command is always the first name, which is "total" in this case, and the other names are considered aliases for the command.
+
+- The `calculateSum` method is annotated with `@Execute`, indicating that it is a pathway method that will be executed when the command is invoked.
+- The method has three parameters: `PLATFORMSOURCE source`, `int a`, and `int b`. 
+The `source` parameter represents the source/sender of the command execution, while `a` and `b` represent the integer arguments that the command will accept.
+the syntax for this pathway shall be `total <a> <b>` or `sum <a> <b>`, where `<a>` and `<b>` are placeholders for the integer arguments that the user will provide when executing the command.
+When the command is executed, the framework will automatically parse the input to extract these arguments and pass them to the `calculateSum` method.
+
+
+### Applied (Bukkit) Example 
+```java
+@Command({"tell", "msg", "t", "w", "whisper", "pm"})
+public class TellCmd {
+
+    @Execute
+    public void def(Player source) {
+        // syntax: /tell
+        source.sendMessage("Usage: /tell <target> <message>");
+    }
+
+    @Execute
+    public void whisper(
+            Player source, 
+            Player target, 
+            @Greedy String message
+    ) {
+        // syntax: /tell <target> <message...>
+        source.sendMessage("Message from " + source.getName() + " to " + target.getName() + ": " + message);
+        target.sendMessage("Message from " + source.getName() + " to " + target.getName() + ": " + message);
+    }
+}
+```
+
+#### Analysis of the example:
+- The `TellCmd` class is annotated with `@Command({"tell", "msg", "t", "w", "whisper", "pm"})`, which means it can be invoked using any of the specified command names, such as "tell", "msg", "t", "w", "whisper", or "pm".
+- The `whisper` method is annotated with `@Execute`, indicating that it is a pathway method that will be executed when the command is invoked.
+- The method has three parameters: `Player source`, `Player target`, and `@Greedy String message`. The `source` parameter represents the player who is sending the message, 
+while the `target` parameter represents the player who is receiving the message. The `message` parameter is annotated with `@Greedy`, which means it will capture all remaining input as a single string, allowing for multi-word messages to be sent without needing to specify additional arguments for each word.
+- When the command is executed, the framework will parse the input to extract the `source`, `target`, and `message` arguments, and then invoke the `whisper` method with these arguments to send the message from the source player to the target player.
+- The `def` method is also annotated with `@Execute`, and it serves as a default pathway that will be executed when the command is invoked without any additional arguments, providing usage instructions to the user.
+
+#### Related FAQs
+- **Can I have multiple `@Execute` methods in the same command class?**
+  Yes, you can have multiple `@Execute` methods in the same command class, each representing a different pathway for executing the command. This allows you to define multiple ways to execute the same command with different arguments and behaviors.
+  However, each `@Execute` method must have a unique pathway definition to avoid conflicts when matching user input to the correct pathway.
+
+- **Can I use quotes instead of `@Greedy` for multi-word arguments?**
+  Yes, you can use quotes to allow users to input multi-word arguments without needing to use `@Greedy`. When a user encloses an argument in quotes, the framework will treat the entire quoted string as a single argument, even if it contains spaces. 
+  This provides an alternative way to handle multi-word input without requiring specific annotations on the method parameters.
+  Double quotes (") and single quotes (') are typically supported for this purpose, allowing users to choose their preferred quoting style when entering commands.
+  Example input: `/tell player1 "Hello there, how are you?"` or `/tell player1 'Hello there, how are you?'` would both be valid and treated as a single message argument.
+
+- **`Player` isn't a type of `Source`, How does the framework know to inject the player as the source?**
+  The framework uses a type-matching system to determine how to inject parameters into `@Execute` methods. When it encounters a parameter of a specific type (e.g., `Player`), it checks if that type can be used as a source for command execution.
+  The framework utilizes a system called `Source Resolvers`, which are responsible for resolving the appropriate source object based on the parameter type. If the parameter type matches a known source type for the platform (such as `Player` for Bukkit), 
+  the framework will automatically inject the corresponding source object when executing the command. 
+
+
+:::tip
+A command(whether root or subcommand) can have meta-data of its own, such as permissions, cooldowns, and more, which can be defined using additional annotations on the command class or method.
+:::
+
+### Final Conclusion
+A method annotated with `@Execute` represents a Command Pathway that defines the behavior of a Command when executed.
+It must be defined within a class annotated with `@Command` or `@SubCommand`,
+and it can have parameters that represent the Command's arguments, which can be further annotated to specify their type and behavior.
+When a Command is executed, the framework will match the input against the defined pathways and invoke the corresponding `@Execute` method with the appropriate arguments, allowing for a highly customizable command behavior in Imperat.
+
+
+## @SubCommand
+A class annotated with `@SubCommand` represents a Subcommand, which is a Command that is nested within another Command (the parent Command).
+Subcommands allow for a hierarchical structure of commands, enabling more complex and organized command systems.
+A Subcommand-class can have its own `@Execute` methods that define its behavior when executed, and it can also have its own arguments and properties.
+When a Subcommand is executed, the framework will first match the input against the parent Command's pathways, and if a match is found for the Subcommand, it will then invoke the corresponding `@Execute` method defined within the Subcommand class.
+
+

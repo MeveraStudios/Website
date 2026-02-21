@@ -24,34 +24,32 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Check if we're at the bottom of the page
-      const isAtBottom =
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 50;
-
-      if (isAtBottom && items.length > 0) {
-        setActiveId(items[items.length - 1].id);
-        return;
-      }
-
-      // Find the heading that is closest to the top of the viewport but still above the offset
       const offset = 120; // Matches scroll-mt and header height
       const headingElements = items.map(item => document.getElementById(item.id));
+      const isNearBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 200;
+      const effectiveOffset = isNearBottom ? window.innerHeight * 0.75 : offset;
 
-      let currentActiveId = items[0]?.id || '';
-
-      for (const element of headingElements) {
+      let active = '';
+      let lastVisibleIdx = -1;
+      for (let i = 0; i < headingElements.length; i++) {
+        const element = headingElements[i];
         if (!element) continue;
         const rect = element.getBoundingClientRect();
-        if (rect.top <= offset) {
-          currentActiveId = element.id;
-        } else {
-          // Since headings are in order, we can stop once we find one below the offset
-          break;
+        if (rect.top <= effectiveOffset) {
+          lastVisibleIdx = i;
         }
       }
-
-      setActiveId(currentActiveId);
+      // If at bottom and last heading is not visible, highlight previous
+      if (isNearBottom && lastVisibleIdx === items.length - 2) {
+        active = items[lastVisibleIdx].id;
+      } else if (lastVisibleIdx >= 0) {
+        active = items[lastVisibleIdx].id;
+      } else {
+        active = '';
+      }
+      setActiveId(active);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -90,7 +88,11 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
                 key={item.id}
                 className={cn(
                   'relative',
-                  item.level === 3 && 'ml-4'
+                  item.level === 2 && 'ml-0',
+                  item.level === 3 && 'ml-4',
+                  item.level === 4 && 'ml-8',
+                  item.level === 5 && 'ml-12',
+                  item.level === 6 && 'ml-16'
                 )}
               >
                 {/* Active indicator */}
