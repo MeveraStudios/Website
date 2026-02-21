@@ -21,6 +21,9 @@ To create a true subcommand, use the `@SubCommand` annotation. This marks the co
 You can also annotate methods with `@SubCommand` to define subcommands directly on methods. When Imperat adds a subcommand (from a class or method), it needs to know which pathway of the parent command to attach it to. 
 This is controlled by the `attachmentMode` parameter in the `@SubCommand` annotation.
 
+Finally, You can define external classes as subcommands by annotating them with `@SubCommand`, and declare their classes in the annotation `@ExternalSubCommand` on the parent command class.
+This allows you to organize your subcommands in separate classes while still maintaining a clear hierarchical relationship with the parent command.
+
 #### Attachment Modes
 There are three types of attachment modes:
 - **MAIN**: (Default) Attaches the subcommand to the main pathway of the parent command (the method with `@Execute` and required arguments).
@@ -110,7 +113,53 @@ public class RankCommand {
 }
 ```
 
+### External Subcommands
+External subcommands let you organize your command logic across multiple classes, making your codebase cleaner and easier to maintain—especially for large or complex command hierarchies. Instead of nesting all subcommands inside the parent command class, you can define each subcommand in its own class and connect them to the parent using the `@ExternalSubCommand` annotation. This approach promotes modularity and separation of concerns, allowing each subcommand to be developed and tested independently.
+
+To use external subcommands, annotate the parent command class with `@ExternalSubCommand`, passing the subcommand classes as arguments. Each external subcommand class should be annotated with `@SubCommand` and implement its own `@Execute` methods. This setup keeps your command structure clear and scalable.
+
+Here's a concise example demonstrating how to use external subcommands:
+
+```java
+@Command("rank")
+@ExternalSubCommand({SetSubCommand.class, HelpSubCommand.class})
+public class RankCommand {
+    @Execute
+    public void mainPathway(PLATFORMSOURCE source, String rank) {
+        // Rank's main pathway
+        // syntax: /rank <rank>
+    }
+}
+
+@SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
+public class SetSubCommand {
+
+    @Execute
+    public void setRankDefaultPathway(PLATFORMSOURCE source, String rank){
+        // Set's default pathway
+        // syntax: "/rank <rank> set".
+    }
+
+    @Execute 
+    public void setRank(PLATFORMSOURCE source, String rank, String player) {
+        // Set's main pathway
+        //syntax: "/rank <rank> set <player>".
+    }
+}
+
+@SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+public class HelpSubCommand {
+    @Execute
+    public void help(PLATFORMSOURCE source, @Optional Integer page) {
+        //syntax: /rank help [page]
+        //Subcommand logic for help
+    }
+}
+
+```
+
 ### Summary: Using @SubCommand
 A class annotated with `@SubCommand` is a subcommand nested within a parent command. Subcommands enable hierarchical, organized command structures.
 Each subcommand class can have its own `@Execute` methods, arguments, and properties. When a subcommand is executed, Imperat matches the input against the parent command's pathways, 
 then invokes the relevant `@Execute` method in the subcommand class.
+Subcommands can also be defined from external classes using `@ExternalSubCommand`, allowing for better code organization while maintaining clear parent-child relationships in the command hierarchy.
