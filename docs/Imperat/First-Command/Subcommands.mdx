@@ -1,0 +1,116 @@
+---
+title: Subcommands
+description: Build subcommands for your commands and learn how to create complex command hierarchies with Imperat.
+order: 3
+---
+
+# Subcommands
+Subcommands are a powerful feature in Imperat that allow you to create complex command hierarchies and organize your commands in a more structured way.
+A Subcommand is a Command that is nested within another Command, known as the parent Command.
+Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. 
+Subcommands in Imperat let you build layered, organized command systems. A subcommand is simply a command nested within a parent command, and it can have its own arguments, properties, and execution logic. Subcommands run independently from their parent, enabling flexible and modular command structures.
+## How does Imperat read subcommands from the classes?
+
+### Root Commands vs Subcommands
+In Imperat, a class annotated with `@Command` is treated as a Root Command. Any method in that class with `@Execute` is a Command Pathway.
+If you annotate another method or nested class with `@Command` inside a Root Command, it becomes a new, independent Root Command, but **NOT** a subcommand. This rule applies recursively.
+
+To create a true subcommand, use the `@SubCommand` annotation. This marks the command as a subcommand of its parent, and any `@Execute` method inside it becomes a pathway for that subcommand.
+
+
+You can also annotate methods with `@SubCommand` to define subcommands directly on methods. When Imperat adds a subcommand (from a class or method), it needs to know which pathway of the parent command to attach it to. 
+This is controlled by the `attachmentMode` parameter in the `@SubCommand` annotation.
+
+#### Attachment Modes
+There are three types of attachment modes:
+- **MAIN**: (Default) Attaches the subcommand to the main pathway of the parent command (the method with `@Execute` and required arguments).
+- **DEFAULT**: Attaches to the default pathway (the method with `@Execute` and no required arguments).
+- **EMPTY**: Attaches the subcommand directly after the parent command's name, ignoring pathways and arguments.
+
+:::info
+An executable method that belongs to a subcommand is known as `subcommand-execution-method`.
+It can be defined by `@Subcommand` annotation on a method OR by `@Execute` method within a class annotated with `@SubCommand`.
+:::
+
+:::info
+**Subcommand-execution-method:**
+This is any executable method belonging to a subcommand. It can be defined either by annotating a method with `@SubCommand`, or by using `@Execute` inside a class annotated with `@SubCommand`.
+:::
+
+
+When designing a `subcommand-execution-method`, consider which pathway of the parent command it attaches to. This affects the syntax and argument inheritance:
+
+- **MAIN**: The subcommand inherits all required arguments from the parent command's main pathway. Its execution method must include these arguments, plus any additional ones for the subcommand.
+- **DEFAULT**: The subcommand inherits optional arguments (or none) from the parent's default pathway. Its execution method must match these, plus any extra arguments.
+- **EMPTY**: The subcommand does not inherit any arguments from the parent. Its execution method can define its own arguments freely.
+
+### Example: Subcommands in Imperat
+```java
+// /rank <rank> set <player>
+// /rank help [page]
+    @Command("rank")
+    public class RankCommand {
+    
+        @Execute
+        public void mainPathway(PLATFORMSOURCE source, String rank) {
+            // Main pathway logic
+        }
+    
+        @SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
+        public void setRank(PLATFORMSOURCE source, String rank, String player) {
+            // Subcommand logic for setting rank
+        }
+    
+        @SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+        public void help(PLATFORMSOURCE source, @Optional Integer page) {
+            // Subcommand logic for help
+        }
+    }
+```
+
+
+#### Setting default pathways for every subcommand:
+If you want each subcommand to have its own default pathway, declare subcommands as classes and annotate them with `@SubCommand`:
+```java
+@Command("rank")
+public class RankCommand {
+    @Execute
+    public void mainPathway(PLATFORMSOURCE source, String rank) {
+        // Rank's main pathway
+        // syntax: /rank <rank>
+    }
+
+    @SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
+    public class SetSubCommand {
+        
+        @Execute
+        public void setRankDefaultPathway(PLATFORMSOURCE source, String rank) {
+            // Set's default pathway
+            // syntax: "/rank <rank> set".
+        }
+
+        @Execute 
+        public void setRank(PLATFORMSOURCE source, String rank, String player) {
+            // Set's main pathway
+            //syntax: "/rank <rank> set <player>".
+        }
+    }
+
+    @SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+    public class HelpSubCommand {
+    
+        @Execute
+        public void help(PLATFORMSOURCE source, @Optional Integer page) {
+            //syntax: /rank help [page]
+            //Subcommand logic for help
+            //This is already a default pathway for the "help" subcommand, so it will be executed when the user executes "/rank help" without providing the page argument.
+            //since it follows the rule that defines default pathways (having no required arguments), there is no need to define another default pathway for this subcommand.
+        }
+    }
+}
+```
+
+### Summary: Using @SubCommand
+A class annotated with `@SubCommand` is a subcommand nested within a parent command. Subcommands enable hierarchical, organized command structures.
+Each subcommand class can have its own `@Execute` methods, arguments, and properties. When a subcommand is executed, Imperat matches the input against the parent command's pathways, 
+then invokes the relevant `@Execute` method in the subcommand class.
