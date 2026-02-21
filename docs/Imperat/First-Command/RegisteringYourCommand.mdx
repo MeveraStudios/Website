@@ -1,5 +1,51 @@
 ---
-title: Registering Your Command
+title: Registering your command
 description: Learn how to register your command with Imperat and make it available for use.
 order: 4
 ---
+
+# Registering Your Command
+After creating your command class and defining its pathways, the next step is to register it with Imperat so that it can be recognized and executed by the command framework.
+Firstly, you must **build** an instance of `Imperat` using our config builder.
+
+## Configuring Imperat
+Call `PLATFORMIMPERAT.builder()` to get an instance of the config builder, you can also customize the configuration by chaining methods on the builder instance. For example, you can set a custom command prefix, enable or disable certain features, or configure how Imperat handles permissions and errors.
+the customization options are extensive, thus will be covered in detail in the [Configuration](../Configuration.mdx) section of the documentation.
+Once you have configured the builder to your liking, call the `build()` method to create an instance of `Imperat` with your specified settings.
+
+:::note
+PLATFORMIMPERAT refers to the implementation of imperat for your specific platform (e.g., Bukkit, Sponge, etc.). 
+Make sure to use the correct implementation from [Supported Platforms](/docs/Imperat/Introduction/Platforms.md).
+:::
+
+Registering your command using the created `Imperat` instance can be done in two main ways:
+1. **By instance**: Create an instance of your command class and pass it to the `registerCommand` method of your `Imperat` instance.
+2. **By class**: Pass the class of your command directly to the `registerCommand` method, and Imperat will handle the instantiation for you.
+
+Here's a simple example of how to build an instance of Imperat in bukkit plugin;
+```java
+public class MyPlugin extends JavaPlugin {
+    private BukkitImperat imperat;
+
+    @Override
+    public void onEnable() {
+        this.imperat = BukkitImperat.builder()
+            .build();
+        
+        // Register your command classes here
+        this.imperat.registerCommand(new YourCommand());
+
+        //OR
+        this.imperat.registerCommand(YourCommand.class);
+    }
+}
+```
+
+<Admonition type="tip" title="Pro-Tip">
+If your command class has a no-argument constructor, you can simply register it by its class.
+However, if your command requires specific parameters for instantiation, you have two options:
+- create an instance of it yourself and then register that instance.
+- use our [Instance Factory system](../Imperat/InstanceFactory) to handle instantiation with parameters.
+
+The instance factory allows you to define how Imperat should create instances of your classes, including providing necessary parameters or using dependency injection.
+</Admonition>

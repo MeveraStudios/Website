@@ -1,0 +1,73 @@
+---
+title: Instance Factory
+description: Learn how to use the Instance Factory system in Imperat to handle instantiation of your classes.
+order: 1
+---
+# Instance Factory
+The Instance Factory system in Imperat is a powerful feature that allows you to define how Imperat should create instances of your classes, 
+including providing necessary parameters or using dependency injection.
+This is particularly useful when your command classes require specific parameters for instantiation, 
+or when you want to manage the lifecycle of your command instances more effectively.
+
+## How does the Instance Factory work?
+The Instance Factory system works by allowing you to register methods or classes that Imperat will use to create instances of your command classes. 
+You can define a factory method that takes the necessary parameters and returns an instance of your command class.
+
+### Using the built-in Instance Factory
+Imperat already has a built-in instance factory, that you can use to register your instance providers through `ConfigBuilder#dependencyResolver` method while
+configuring your imperat instance as follows:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .dependencyResolver(config -> {
+        config.register(YourClass.class, () -> new YourClass(/* parameters */));
+    })
+    .build();
+```
+
+In this example, you register a provider for `YourClass` that creates a new instance of `YourClass` with the necessary parameters.
+Once registered, whenever Imperat needs to create an instance of `YourClass`, it will use the provided factory method to do so.
+
+### Custom Instance Factory
+If you need more control over the instantiation process, you can also create a custom instance factory by implementing the `InstanceFactory` interface.
+This allows you to define your own logic for creating instances, such as using a dependency injection framework or managing instance lifecycles in a specific way.
+To create a custom instance factory, you would implement the `InstanceFactory` interface and 
+then register your implementation with Imperat during configuration as follows:
+
+##### Custom Instance Factory Example
+```java
+import org.jetbrains.annotations.NotNull;
+import studio.mevera.imperat.ImperatConfig;
+import studio.mevera.imperat.annotations.base.InstanceFactory;
+import studio.mevera.imperat.exception.UnknownDependencyException;
+
+public class ExampleInstanceFactory implements InstanceFactory<PLATFORMSOURCE> {
+
+    @Override 
+    public @NotNull <T> T createInstance(
+            ImperatConfig<PLATFORMSOURCE> config, 
+            Class<T> cls
+    ) throws UnknownDependencyException {
+        if(cls.equals(YourClass.class)) {
+            return (T) new YourClass(/*parameters*/);
+        }
+        throw new UnknownDependencyException("No instance available for class: " + cls.getName());
+    }
+}
+```
+
+##### Registering Custom Instance Factory
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .instanceFactory(new ExampleInstanceFactory())
+    .build();
+```
+
+### Other uses
+The Instance Factory system isn't limited to just providing command instances.
+You can also use it to provide instances of any class when needed.
+
+**Internally** its also used for:
+- Instantiating command classes, subcommand classes and also external subcommand classes.
+- Instantiating processor classes from the `@Processor` annotation.
+- Instantiating an specified class when using the `@ArgType` annotation.
+- Instantiating arg valiators from the `@ArgValidator` annotation.
