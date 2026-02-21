@@ -25,15 +25,22 @@ Imperat is a multi-modular project, you must install the core module as a starte
 
 Choose your platform to get started, each platform has its own set of features and limitations. You can find detailed information for each supported environment in the [Platforms](./Platforms) section.
 
+### Dependency
+Add your chosen platform as a dependency.
 
-:::tip
+<LatestVersionBlock 
+    owner="MeveraStudios" 
+    repo="imperat"
+    group="studio.mevera" 
+    id="{platform}" 
+/>
+
+:::danger{label="READ THIS"}
+REPLACE `{platform}` with the platform's name.
+:::
+
+:::caution
 Ensure you use the **same version** 
 for both `imperat-core` and the platform-specific module (e.g., `imperat-bukkit`) to avoid compatibility issues.
 :::
 
-
-## Next Steps
-
-- Learn about [Commands](./commands)
-- Explore [Arguments](./arguments)
-- Check out [Examples](./examples)
