@@ -1,0 +1,165 @@
+---
+title: Custom Arguments
+description: Learn how to create custom arguments in Imperat to enhance your command functionality and provide more flexible input options for users.
+order: 1
+---
+
+# Arguments
+Arguments are the inputs your commands use. Each argument has:
+- **Name**: How you reference it in code and command syntax.
+- **Type**: What kind of data it accepts (string, number, etc).
+- **Required/Optional**: Is it mandatory or can it be skipped?
+- **Default Value**: What it defaults to if not provided.
+- **Suggestions**: Helpful hints for users as they type.
+
+the `parsed-value` is provided in the executable-pathway-methods for execution logic.
+## Argument States
+Arguments start as **unparsed** (raw user input) and become **parsed** (converted to their type). Parsed arguments give you:
+- **Raw Value**: The original input.
+- **Parsed Value**: The processed value you use in your code.
+
+### Supported Argument Types
+
+
+### Custom Argument Types
+Want more than basic types? Create your own! Just extend `ArgumentType` and define how to parse and validate your custom input. Imperat handles the rest.
+
+#### Example: Custom Rank Argument
+Suppose you want a `Rank` argument that checks user input against a registry and gives helpful errors.
+```java
+public class Rank {
+
+    private final String name;
+    private final List<String> permissions = new ArrayList<>();
+
+    public Rank(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<String> getPermissions() {
+        return permissions;
+    }
+
+    public void addPermission(String permission) {
+        permissions.add(permission);
+    }
+}
+```
+And you have a registry of ranks that define the available ranks in your plugin.
+You want to create a mechanism that when a user inputs a rank name as an argument, it gets parsed into a `Rank` object that you can use in your command logic.
+and you would want the input to always be validated as an available rank otherwise an error message is sent to the user.
+
+To handle errors, create a custom exception extending `SelfHandledException`:
+```java
+public class UnknownRankException extends SelfHandledException {
+    private final String input;
+    public UnknownRankException(String input) {
+        this.input = input;
+    }
+
+    @Override
+    public <S extends Source> void handle(
+            ImperatConfig<S> config,
+            Context<S> context
+    ) {
+        var sender = context.source();
+        sender.reply("Unknown rank: '" + input + "'");
+    }
+
+}
+```
+Now, create the parsing logic for your custom argument:
+```java
+public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
+
+    @Override
+    public @Nullable Rank parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        Rank rank = yourRankRegistry.getRank(correspondingInput);
+        if (rank == null) {
+            throw new UnknownRankException(correspondingInput);
+        }
+        // for testing purposes, we will just return a new Rank with the name equal to the input
+        return rank;
+    }
+
+    @Override //assuming #getAllRanks returns a `List<Rank>`
+    public SuggestionResolver<PLATFORMSOURCE> getSuggestionResolver() {
+        return (ctx, arg)-> {
+            return yourRankRegistry.getAllRanks().stream()
+                    .map(Rank::getName)
+                    .toList();
+        };
+    }
+}
+```
+
+#### How It Works
+Your custom `ArgumentType` parses input, checks validity, and throws your exception if needed. Imperat catches errors and shows users clear messages.
+
+:::info
+Learn more about error handling and custom exceptions in the [Error Handling](../Imperat/Error-Handling.mdx) section.
+:::
+
+:::note
+We overridded the `getSuggestionResolver` method to provide dynamic suggestions based on the available ranks in the registry.
+This way, when users start typing a rank name, they get real-time suggestions of valid ranks.
+Learn more about suggestions in the [Suggestions](../Imperat/Suggestions.mdx) section.
+:::
+
+#### Registering Your Argument Type
+Register your custom argument type so Imperat knows how to use it:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .registerArgType(Rank.class, new RankArgumentType())
+    .build();
+```
+
+### Using Custom Argument Types
+Now use your custom argument in commands just like built-in types:
+```java
+@Command("rank")
+public class RankCommand {
+
+    @Execute
+    public void exec(PLATFORMSOURCE source) {
+        source.reply("/rank <rank>");
+    }
+
+    @Execute
+    public void setRank(PLATFORMSOURCE source, Rank rank) {
+        // In a real implementation, you would set the player's rank here.
+        source.reply("/rank <rank> setpermission <user>");
+    }
+
+    @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
+    public class SetPermission {
+
+        @Execute
+        public void setFor(PLATFORMSOURCE source, Rank rank, String user) {
+            // In a real implementation, you would set the specified player's rank here.
+            source.reply("Set " + user + "'s rank to " + rank);
+        }
+
+    }
+    
+}
+```
+
+And don’t forget to register your command:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .registerArgType(Rank.class, new RankArgumentType())
+    .build();
+
+imperat.registerCommand(RankCommand.class);
+```
+
+
