@@ -91,7 +91,7 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
     }
 
     @Override //assuming #getAllRanks returns a `List<Rank>`
-    public SuggestionResolver<PLATFORMSOURCE> getSuggestionResolver() {
+    public SuggestionProvider<PLATFORMSOURCE> getSuggestionProvider() {
         return (ctx, arg)-> {
             return yourRankRegistry.getAllRanks().stream()
                     .map(Rank::getName)
@@ -109,7 +109,7 @@ Learn more about error handling and custom exceptions in the [Error Handling](..
 :::
 
 :::note
-We overridded the `getSuggestionResolver` method to provide dynamic suggestions based on the available ranks in the registry.
+We overridded the `getSuggestionProvider` method to provide dynamic suggestions based on the available ranks in the registry.
 This way, when users start typing a rank name, they get real-time suggestions of valid ranks.
 Learn more about suggestions in the [Suggestions](../Imperat/Suggestions.mdx) section.
 :::

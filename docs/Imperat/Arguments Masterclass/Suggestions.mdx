@@ -1,0 +1,112 @@
+---
+title: Suggestions
+description: Learn what suggestions are and how to use them to provide helpful hints to users as they type commands.
+order: 5
+---
+
+# Suggestions
+Suggestions are a powerful feature in Imperat that allow you to provide helpful hints to users as they type commands.
+
+## Using Suggestions
+Imperat does not control how suggestions are displayed to the user, as this is determined by the platform's implementation of the `Source` interface.
+However, Imperat provides a way for you to define and provide suggestions for command arguments, which can enhance the user experience by offering real-time feedback and guidance on what inputs are expected.
+
+Moreover, Imperat integrates with the platform's suggestion system to provide dynamic suggestions based on the context of the command and the input provided by the user.
+This allows you to create a more interactive and user-friendly command system, where users can easily discover available options and understand the expected input format for each argument.
+
+Suggestions are classified into **static** and **dynamic** suggestions, based on how they are retrieved/generated.
+- **Static Suggestions**: These are predefined suggestions that are always the same regardless of the context or user input. 
+They are often used for arguments that have a fixed set of valid values, such as a list of available ranks or game modes.
+- **Dynamic Suggestions**: These are suggestions that are generated based on the current context, such as the user's input or other factors.
+
+Dynamic suggestions can be particularly useful for arguments that require more complex input or have a large number of valid values, 
+as they can provide real-time feedback and guidance to users as they type.
+
+## What is `SuggestionResolver`?
+A `SuggestionResolver` is a functional interface that defines a method for providing suggestions based on the current input and context of a command execution.
+It's the core component responsible for generating suggestions for command arguments, allowing you to create dynamic and context-aware suggestions.
+
+> It can also be used to create static suggestions by returning a fixed **CACHED** list of suggestions regardless of the input or context.
+
+## Setting Suggestions for Arguments
+It differs based on the type of suggestions you want to provide, whether they are static or dynamic.
+
+### Static Suggestions
+To set **static** suggestions for particular arguments in your pathway, annotate the parameter with `@Suggest`, as follows:
+```java
+public class ExampleCommand {
+
+    @Command("example")
+    public void example(PLATFORMSOURCE source, @Suggest("option1", "option2", "option3") String option) {
+        // Command logic here
+    }
+}
+```
+
+### Dynamic Suggestions
+To set **dynamic** suggestions for particular arguments in your pathway, you should use `@SuggestionProvider` annotation on the parameter representing the argument,
+and provide the class of the `SuggestionProvider` implementation that will generate the suggestions, this involves two main steps:
+1. Create a class that implements the `SuggestionProvider` interface and implement the `provide` method to generate suggestions based on the context and input.
+2. Annotate the parameter in your command with `@SuggestionProvider` and specify the class of your `SuggestionProvider` implementation.
+
+First, let's create a `SuggestionProvider` implementation that generates dynamic suggestions based on a registry of ranks:
+```java
+public class OptionsSuggestionProvider implements SuggestionProvider {
+    @Override
+    public List<String> provide(SuggestionContext<PLATFORMSOURCE> context, Argument<PLATFORMSOURCE> parameter) {
+        // Example logic to generate suggestions based on input
+        return Arrays.asList("option1", "option2", "option3");
+    }
+}
+```
+
+Then, you can use this `SuggestionProvider` in your command to provide dynamic suggestions for the `option` argument:
+```java
+@Command("example")
+public class ExampleCommand {
+
+    @Execute
+    public void example(PLATFORMSOURCE source, @SuggestionProvider(OptionsSuggestionProvider.class) String option) { //[!code focus]
+        // Command logic here
+    }
+}
+```
+
+### Suggestions for custom types
+When creating custom argument types, you can also provide suggestions for them by overriding the `getSuggestionProvider` method in your custom argument type implementation.
+This allows you to provide context-aware suggestions for your custom types.
+Here's an example for providing suggestions of available ranks for a custom `Rank` type:
+
+```java
+public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
+
+    @Override
+    public @Nullable Rank parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        Rank rank = yourRankRegistry.getRank(correspondingInput);
+        if (rank == null) {
+            throw new UnknownRankException(correspondingInput);
+        }
+        // for testing purposes, we will just return a new Rank with the name equal to the input
+        return rank;
+    }
+
+    @Override //assuming #getAllRanks returns a `List<Rank>`
+    public SuggestionProvider<PLATFORMSOURCE> getSuggestionProvider() {
+        return (ctx, arg)-> {
+            return yourRankRegistry.getAllRanks().stream()
+                    .map(Rank::getName)
+                    .toList();
+        };
+    }
+}
+```
+
+:::info
+Setting argument-specific suggestions using the `@SuggestionProvider` annotation takes precedence over the suggestions provided by the argument type's `getSuggestionProvider` method.
+This means that if you annotate a parameter with `@SuggestionProvider`, the suggestions generated by that provider will be used 
+instead of the suggestions provided by the argument type, allowing you to customize suggestions on a per-argument basis when needed.
+:::
