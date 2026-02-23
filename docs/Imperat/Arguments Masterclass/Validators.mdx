@@ -1,0 +1,213 @@
+---
+title: Validators
+description: Learn what validators are and how to use them to validate command arguments.
+order: 6
+---
+
+# What is an Argument-Validator?
+It's a concept, that is based on the idea of validating command arguments, allowing you to define rules and constraints for arguments provided during execution.
+Argument-Validators are a powerful tool for ensuring that the input provided by users meets certain criteria before the command is executed.
+
+There are two main types of Argument-Validators in Imperat:
+- **Pre-Parse Validators**: These validators are executed before the argument is parsed into its declared type.
+ They validate the raw input provided by the user, allowing you to check for specific patterns, formats, or other criteria before any parsing occurs.
+
+- **Post-Parse Validators**: These validators are executed after the argument has been parsed into its declared type.
+ They validate the parsed value of the argument, allowing you to check for specific conditions or constraints based on the parsed data.
+
+## Pre-Parse Validators
+Pre-Parse Validators are already supported through the use of `ArgumentType#parse` method, where you can implement your validation logic before parsing the input into the desired type.
+If the validation fails, you can throw a `CommandException` with a custom error message.
+```java
+public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
+
+    @Override
+    public @Nullable Rank parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        Rank rank = yourRankRegistry.getRank(correspondingInput);
+        if (rank == null) { //[!code focus]
+            throw new UnknownRankException(correspondingInput); // ![code focus]
+        } //![code focus]
+
+        // for testing purposes, we will just return a new Rank with the name equal to the input
+        return rank;
+    }
+    // other methods...
+}
+```
+
+## Post-Parse Validators
+Post-Parse Validators can be implemented using the `@Validators` annotation on a method within your command class.
+This method will be executed after the arguments have been parsed, allowing you to validate the parsed values.
+
+Let's say we have a command that registers a user with a username and a birth date, 
+and we want to validate that the birth date is not in the future and that the user is at least 13 years old.
+```java
+public class BirthdayValidator implements ArgValidator<PLATFORMSOURCE> {
+
+    @Override
+    public void validate(
+            Context<PLATFORMSOURCE> context,
+            ParsedArgument<PLATFORMSOURCE> parsedArgument
+    ) throws CommandException {
+        var parsedValue = parsedArgument.getArgumentParsedValue();
+        if(!(parsedValue instanceof Date birthDate)) {
+            //almost impossible since the argument type should have already failed parsing if it was not a date, but just in case
+            throw new CommandException("Invalid date format for birthday. Please use the format 'yyyy-MM-dd'.");
+        }
+        // we want to make sure the birth date is not in the future and that the user is at least 13 years old
+        long thirteenYearsInMillis = 1000L * 60 * 60 * 24 * 365 * 13;
+        if(birthDate.after(new Date())) {
+            throw new CommandException("Birth date cannot be in the future.");
+        }
+        else if(System.currentTimeMillis()-birthDate.getTime() < thirteenYearsInMillis) {
+            throw new CommandException("You must be at least 13 years old.");
+        }
+    }
+}
+```
+
+and let's create an argument-type for `Date` that will parse the date from a string:
+```java
+public class DateArgumentType extends ArgumentType<PLATFORMSOURCE, Date> {
+
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+    @Override
+    public @Nullable Date parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        try {
+            return dateFormat.parse(correspondingInput);
+        } catch (ParseException e) {
+            throw new CommandException("Invalid date format. Please use the format 'yyyy-MM-dd'.");
+        }
+    }
+    // other methods...
+```
+
+> Do not forget to register your custom argument type for `Date`.
+
+Then, we can apply this validator to our command:
+```java
+@Command("register")
+public class RegisterUserCommand {
+
+    @Execute
+    public void register(PLATFORMSOURCE source, String username, @Validators({BirthdayValidator.class}) Date birthDate) {
+        // Command logic here
+        // example-input: '/register ben 2004-05-20'
+        source.reply("You have successfully registered user '" + username + "' with birth date: " + birthDate);
+    }
+```
+
+### Sorting Validators
+If you have multiple validators on the same argument, you can control the order in which they are
+by overriding the `priority()` method in your validator implementation, the higher the priority value, the earlier the validator will be executed. 
+Priorities are based on a numerical value.However, we have some predefined priority constants in the `Priority` class that you can use.
+
+:::info
+the default priority is `Priority.NORMAL` with a numerical value of `20`. 
+:::
+
+Let's say we have a command that takes a list of integers as an argument, and we want to validate that the list of numbers are all positive and prime numbers.
+We can create two validators, one for checking if the numbers are positive and another for checking if they are prime, and we want the positive check to be executed before the prime check.
+
+
+#### Positive Number Validator
+```java
+public class PositiveNumberValidator implements ArgValidator<PLATFORMSOURCE> {
+
+    @Override
+    public int priority() {
+        return Priority.HIGH; // This validator will be executed before the PrimeNumberValidator
+    }
+
+    @Override
+    public void validate(
+            Context<PLATFORMSOURCE> context,
+            ParsedArgument<PLATFORMSOURCE> parsedArgument
+    ) throws CommandException {
+        var parsedValue = parsedArgument.getArgumentParsedValue();
+        if(!(parsedValue instanceof List<?> list)) {
+            throw new CommandException("Invalid input, expected a list of numbers.");
+        }
+        for(Object obj : list) {
+            if(!(obj instanceof Integer number)) {
+                throw new CommandException("Invalid input, expected a list of numbers.");
+            }
+            if(number <= 0) {
+                throw new CommandException("All numbers must be positive.");
+            }
+        }
+    }
+}
+```
+
+#### Prime Number Validator
+```java
+public class PrimeNumberValidator implements ArgValidator<PLATFORMSOURCE> {
+
+    @Override
+    public int priority() {
+        return Priority.LOW; // This validator will be executed after the PositiveNumberValidator
+    }
+
+    @Override
+    public void validate(
+            Context<PLATFORMSOURCE> context,
+            ParsedArgument<PLATFORMSOURCE> parsedArgument
+    ) throws CommandException {
+        var parsedValue = parsedArgument.getArgumentParsedValue();
+        if(!(parsedValue instanceof List<?> list)) {
+            throw new CommandException("Invalid input, expected a list of numbers.");
+        }
+        for(Object obj : list) {
+            if(!(obj instanceof Integer number)) {
+                throw new CommandException("Invalid input, expected a list of numbers.");
+            }
+            if(!isPrime(number)) {
+                throw new CommandException("All numbers must be prime.");
+            }
+        }
+    }
+
+    private boolean isPrime(int number) {
+        if (number <= 1) return false;
+        for (int i = 2; i <= Math.sqrt(number); i++) {
+            if (number % i == 0) return false;
+        }
+        return true;
+    }
+}
+```
+
+Now we can apply these validators to our command:
+```java
+@Command("checkNumbers")
+public class CheckNumbersCommand {
+
+    @Execute
+    public void checkNumbers(PLATFORMSOURCE source, @Validators({PositiveNumberValidator.class, PrimeNumberValidator.class}) List<Integer> numbers) {
+        // Command logic here
+        source.reply("All numbers are positive and prime!");
+    }
+
+}
+```
+
+:::note
+Validators with higher priority values are executed before those with lower priority values. 
+In this example, the `PositiveNumberValidator` will be executed before the `PrimeNumberValidator`,
+ ensuring that we first check if the numbers are positive before checking if they are prime.
+:::
+
+:::note
+It does not matter which order you list the validators in the `@Validators` annotation, the execution order will be determined by their `Priority` values.
+:::
+
