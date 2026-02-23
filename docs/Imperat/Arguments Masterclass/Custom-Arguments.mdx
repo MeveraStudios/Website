@@ -136,16 +136,17 @@ public class RankCommand {
     @Execute
     public void setRank(PLATFORMSOURCE source, Rank rank) {
         // In a real implementation, you would set the player's rank here.
-        source.reply("/rank <rank> setpermission <user>");
+        source.reply("/rank <rank> setpermission <permission>");
     }
 
     @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
     public class SetPermission {
 
         @Execute
-        public void setFor(PLATFORMSOURCE source, Rank rank, String user) {
+        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission) {
             // In a real implementation, you would set the specified player's rank here.
-            source.reply("Set " + user + "'s rank to " + rank);
+            rank.addPermission(permission);
+            source.reply("Added permission '" + permission + "' to rank '" + rank.getName() + "'");
         }
 
     }

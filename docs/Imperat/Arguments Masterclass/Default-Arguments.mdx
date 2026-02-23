@@ -1,0 +1,138 @@
+---
+title: Default Arguments
+description: Learn how to declare default values for optional arguments.
+order: 2
+---
+
+# Default Arguments
+Default arguments allow you to specify a value that will be used if the user does not provide one. 
+This is especially useful for **optional** arguments, ensuring your command can still function even when certain inputs are missing.
+
+## @Default
+To set a default value for an argument, simply annotate the parameter with `@Default` and provide the desired default value as a string.
+Imperat will automatically parse this string into the correct type based on the argument's declared type. For example:
+```java
+@Command("rank")
+public class RankCommand {
+
+    @Execute
+    public void exec(PLATFORMSOURCE source) {
+        source.reply("/rank <rank>");
+    }
+
+    @Execute
+    public void setRank(PLATFORMSOURCE source, Rank rank) {
+        // In a real implementation, you would set the player's rank here.
+        source.reply("/rank <rank> setpermission <permission> [value]");
+    }
+
+    @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
+    public class SetPermission {
+
+        @Execute
+        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission, @Default("false") Boolean value) { //![code focus]
+            // In a real implementation, you would set the specified player's rank here.
+            rank.addPermission(permission, value);
+            source.reply("Added permission '" + permission + "' with value '" + value + "' to rank '" + rank.getName() + "'");
+        }
+
+    }
+    
+}
+```
+
+## @DefaultProvider
+If your default value requires more complex logic or cannot be easily represented as a string,
+ you can use the `@DefaultProvider` annotation to specify a method that will provide the default value.
+
+But first, you have to create a class that will provide the default value, it must extend `OptionalValueSupplier` and implement the `supply` method:
+```java
+public class ExampleDefaultProvider implements DefaultValueProvider {
+
+    @Override
+    public @Nullable <S extends Source> String provide(
+            ExecutionContext<S> context,
+            Argument<S> parameter
+    ) {
+        //some logic to determine the default value based on the context and parameter
+        //but in this example, we will just return a static value
+        
+        return "false";
+    }
+}
+```
+
+Then, you can use this provider in your command:
+```java
+@Command("rank")
+public class RankCommand {
+
+    @Execute
+    public void exec(PLATFORMSOURCE source) {
+        source.reply("/rank <rank>");
+    }
+
+    @Execute
+    public void setRank(PLATFORMSOURCE source, Rank rank) {
+        // In a real implementation, you would set the player's rank here.
+        source.reply("/rank <rank> setpermission <permission> [value]");
+    }
+
+    @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
+    public class SetPermission {
+
+        @Execute
+        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission, @DefaultProvider(ExampleDefaultProvider.class) Boolean value) { //![code focus]
+            // In a real implementation, you would set the specified player's rank here.
+            rank.addPermission(permission, value);
+            source.reply("Added permission '" + permission + "' with value '" + value + "' to rank '" + rank.getName() + "'");
+        }
+
+    }
+    
+}
+
+```
+
+:::note
+In the `ExampleDefaultProvider`, you can implement any logic you need to determine the default value based on the command context, user permissions, or any other factors relevant to your application.
+This allows for highly dynamic default values that can adapt to different situations, providing a more personalized and context-aware command experience for your users.
+:::
+
+:::tip
+If your default-value-provider class requires depenencies to be instantiated, you MUST register a supplier of its instance.
+please refer to the [Instance Factory](../Imperat/InstanceFactory.mdx) section for more information on how to do this.
+:::
+
+## Typed Default Values
+When using the `@Default` annotation, you can specify default values for any argument type, including custom argument types,
+By overriding the `getDefaultValueProvider` method in your custom argument type.
+
+For example, if you have a custom `Rank` argument type, you can provide a default value like this:
+```java
+public class RankArgumentType implements ArgumentType<PLATFORMSOURCE, Rank> {
+
+    // other methods...
+
+    @Override
+    public @Nullable Rank getDefaultValueProvider() {
+        return new Rank("defaultRank");
+    }
+
+}
+
+```
+
+You will not need to use the `@Default` annotation in this case, as the default value will be automatically provided by the argument type itself whenever a value is not supplied by the user.
+However, this is limited to work for types not per argument.
+
+:::tip
+If you need to provide different default values for the same type in different arguments,
+ you can still use the `@Default` or `@DefaultProvider` annotation to determine the default value of each argument separately.
+:::
+
+:::note
+If you use the `@Default` annotation on an argument that has a custom default value provider defined in its `ArgumentType`, 
+the value provided by the `@Default` annotation will take precedence over the one provided by the argument type.
+**This allows you to override the default value for specific arguments while still having a general default value defined for the defined argument type.**
+:::
