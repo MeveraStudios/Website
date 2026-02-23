@@ -29,9 +29,16 @@ A Subcommand is a Command that is nested within another Command, known as the pa
 Subcommands allow for a hierarchical structure of commands, enabling more complex and organized command systems.
 Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. They are often used to group related commands together and provide a more intuitive command structure for users.
 
+## Raw-Argument/Input
+A Raw-Argument, also known as Raw-Input, refers to the unprocessed input provided by the user when executing a command.
+It is the original string input that the user types, which has not yet been parsed or converted into a specific data type.
+Raw-Arguments are typically used as the initial input for command execution and are processed by the command system 
+to extract meaningful information and convert it into the appropriate types for command execution.
+
 ## Argument
 An Argument is a parameter that a `Command` can accept. 
-It provides additional information or input required for the Command to execute properly. Arguments can be of various types, such as strings, numbers, or custom objects, and they can have specific validation rules.
+It provides additional information or input required for the Command to execute properly. 
+Arguments can be of various types, such as strings, numbers, or custom objects, and they can have specific validation rules.
 
 Arguments are classified into four types based on their position and requirements:
 - **Literal Argument**: A fixed value that must be provided for the Command to execute. It is often used to define specific subcommands or options.

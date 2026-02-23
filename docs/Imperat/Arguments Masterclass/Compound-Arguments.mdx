@@ -1,0 +1,107 @@
+---
+title: Compound Arguments
+description: Learn how to combine multiple input arguments into a single compound argument for more complex command structures.
+order: 3
+---
+
+# Compound Arguments
+Compound arguments allow you to combine multiple input raw-arguments into a single argument, enabling more complex command structures and input parsing.
+This is particularly useful when you want to group related inputs together or when the input format is more complex than simple individual arguments.
+
+Defining a compound argument involves defining a compound-based `ArgumentType` that can parse multiple raw-arguments and
+ convert them into a single object or data structure that your command can use.
+
+
+## Example: Compound Argument for Coordinates
+Suppose you want to create a command that accepts a pair of coordinates (x, y) as input. 
+Instead of defining two separate arguments for x and y, you can use a compound argument to capture both values together.
+
+Let's create our type `2DPoint` for the coordinates:
+```java
+public final class Point2D {
+    public final double x; //ik that having public fields is a bad practice, it's just for space-saving purposes
+    public final double y;
+
+    public Point2D(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+}
+```
+
+Next, we can create a compound argument type that parses the input into a `Point2D` object:
+```java
+public class Point2DArgumentType extends ArgumentType<PLATFORMSOURCE, Point2D> {
+
+
+    @Override
+    public @Nullable Point2D parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        //example input: '/teleport 10 20'
+        // the format for this arg is '<x> <y>'
+        // correspondingInput is the expected raw to be the '10' in the example raw;
+        String xInput = correspondingInput;
+        String yInput = cursor.nextInput();
+
+        if (yInput == null) {
+            throw new CommandException("Invalid coordinates, expected format: <x> <y>");
+        }
+
+        return new Point2D(
+                Double.parseDouble(xInput), Double.parseDouble(yInput)
+        );
+    }
+
+    @Override //CRITICAL: you must override this method to return the number of raw-arguments that your compound argument will consume, in this case, it will consume 2 raws for x and y
+    public int getNumberOfParametersToConsume() {
+        return 2; // The <x> and <y> inputs
+    }
+}
+```
+
+Now you can use this `Point2DArgumentType` in your command to accept coordinates as a single compound argument:
+```java
+@Command("teleport")
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(PLATFORMSOURCE source, Point2D coordinates) {
+        // In a real implementation, you would teleport the player to the specified coordinates here.
+        source.reply("Teleporting to coordinates: (" + coordinates.x + ", " + coordinates.y + ")");
+    }
+    
+}
+```
+
+In this example, the `Point2DArgumentType` is designed to parse two separate inputs (x and y) into a single `Point2D` object.
+
+:::danger{label="READ THIS"}
+You must override the `getNumberOfParametersToConsume` method to return the number of raw-arguments that your compound argument will consume.
+This is crucial for the command parser to understand how many inputs to pass to your compound argument and to ensure that the command is parsed correctly.
+:::
+
+## Formatting Compound Arguments
+When defining the input format for a compound argument, it's important to clearly specify how the inputs should be structured.
+Imperat internally automatically generates the format for the argument based on its name ONLY, meaning that if your argument is named `coordinates`,
+ the expected format will be `<coordinates>`(or `[coordinates]` if its **optional**), this might not affect the parsing logic of your argument, 
+ but it can lead to confusion for users when they see the command usage message.
+
+To provide a clear and accurate format for your compound argument, you can use the `@Format` annotation to specify the expected input format.
+### @Format
+The `@Format` annotation allows you to define a custom format for your argument, which will be displayed in the command usage message.
+For example, you can specify the format for the `coordinates` argument as follows:
+```java
+@Command("teleport")
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(PLATFORMSOURCE source, @Format("<x> <y>") Point2D coordinates) { //[!code focus]
+        // In a real implementation, you would teleport the player to the specified coordinates here.
+        source.reply("Teleporting to coordinates: (" + coordinates.x + ", " + coordinates.y + ")");
+    }
+    
+}
+```

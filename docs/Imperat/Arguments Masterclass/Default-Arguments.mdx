@@ -5,8 +5,8 @@ order: 2
 ---
 
 # Default Arguments
-Default arguments allow you to specify a value that will be used if the user does not provide one. 
-This is especially useful for **optional** arguments, ensuring your command can still function even when certain inputs are missing.
+Default arguments allow you to specify a value that will be used if the user does not provide one,
+regarding **optional** arguments, ensuring your command can still function even when certain inputs are missing.
 
 ## @Default
 To set a default value for an argument, simply annotate the parameter with `@Default` and provide the desired default value as a string.
@@ -135,4 +135,15 @@ If you need to provide different default values for the same type in different a
 If you use the `@Default` annotation on an argument that has a custom default value provider defined in its `ArgumentType`, 
 the value provided by the `@Default` annotation will take precedence over the one provided by the argument type.
 **This allows you to override the default value for specific arguments while still having a general default value defined for the defined argument type.**
+:::
+
+## @Default/@DefaultProvider vs @Optional
+The `@Default` and `@DefaultProvider` annotations are used to specify default values for arguments, while the `@Optional` annotation is used to indicate that an argument is optional and may be omitted by the user.
+However, setting `@Default` or `@DefaultProvider` on an argument declares it as optional argument automatically, so you don't need to use `@Optional` in this case.
+This means that if you provide a default value for an argument, it is implicitly considered **optional**.
+
+:::caution
+If you use the `@Optional` annotation without providing a default value using `@Default` or `@DefaultProvider`, 
+the argument will be considered optional but will not have a default value, its value will be `null` if the user does not provide one.
+This can lead to `NullPointerExceptions` if your command logic does not account for the possibility of a `null` value.
 :::

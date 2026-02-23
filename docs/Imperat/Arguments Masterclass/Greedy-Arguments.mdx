@@ -1,0 +1,102 @@
+---
+title: Greedy Arguments
+description: Learn what greedy arguments are and how to use them in your commands.
+order: 4
+---
+
+# Greedy Arguments
+A Greedy Argument is a special type of argument that captures all remaining input from the user when executing a command.
+It is often used for commands that require a variable number of arguments or for commands that need to capture a large amount of input without having to define a specific number of arguments.
+
+When a command is executed, the command system will parse the input and assign values to the defined arguments in order.
+Once it reaches a Greedy Argument, it will capture all remaining input as a single value for that argument, regardless of how many words or inputs are left.
+
+:::danger{label="READ THIS"}
+Greedy Arguments must always be the LAST argument in the pathway, as they capture all remaining input.
+:::
+
+:::caution{label="CAUTION"}
+When creating and attaching subcommands to a pathway.
+If a subcommand is attached to a pathway that contains a Greedy Argument, 
+the subcommand will not be reachable or executable, because the Greedy Argument will capture all input before it can be parsed as a subcommand.
+:::
+
+Greedy Arguments are particularly useful for commands that require free-form input, such as messages, descriptions, or any input that can vary in length and content.
+You can define a Greedy Argument either by using the `@Greedy` annotation on a parameter **OR** by specifying an **argument-type** that is **greedy by nature**.
+
+## @Greedy
+To define a Greedy Argument, simply annotate the parameter with `@Greedy`. For example:
+```java
+@Command("broadcast")
+public class BroadcastCommand {
+    @Execute
+    public void broadcast(PLATFORMSOURCE source, @Greedy String message) {
+        // In a real implementation, you would broadcast the message to all users here.
+        System.out.println("Broadcasting message: " + message);
+    }
+}
+```
+
+## Greedy Argument Types
+Some argument types are designed to be greedy by nature, meaning that they will automatically capture all remaining input without needing the `@Greedy` annotation.
+For example, if you have a custom argument type that is meant to capture a large amount of input, 
+you can simply define it as greedy in its implementation, and it will function as a Greedy Argument when used in your command.
+In this case, you would not need to use the `@Greedy` annotation on the parameter, as the argument type itself will handle the greedy behavior.
+
+### Example: Greedy Custom Argument Type
+Suppose you have a custom argument type called `MessageArgumentType` that is designed to capture a message input from the user.
+You can implement it as a greedy argument.
+
+Creating the greedy custom argument type shall involve 2 main steps:
+1. Implementing the greedy-parsing logic in the `parse` method of your custom argument type.
+2. Overriding the `isGreedy` method to return `true`, indicating that this argument type is greedy by nature.
+
+First, let's create our greedy type `Message`:
+```java
+public final class Message {
+
+    private final String message;
+
+    public Message(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
+```
+
+Then create our custom argument type `MessageArgumentType`:
+```java
+public final class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
+
+    @Override
+    public @Nullable Message parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        //we do not care about the corresponding input, since this is a greedy argument,
+        // we will just take all the remaining input and create a message out of it
+        return new Message(cursor.collectRemainingRaw());
+    }
+
+    @Override
+    public boolean isGreedy(Argument<PLATFORMSOURCE> parameter) {
+        return true;
+    }
+}
+```
+
+Then apply this type to our pathway:
+```java
+@Command("broadcast")
+public class BroadcastCommand {
+    @Execute
+    public void broadcast(PLATFORMSOURCE source, Message message) {
+        // In a real implementation, you would broadcast the message to all users here.
+        System.out.println("Broadcasting message: " + message.getMessage());
+    }
+}
+```
