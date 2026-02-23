@@ -51,7 +51,7 @@ and provide the class of the `SuggestionProvider` implementation that will gener
 
 First, let's create a `SuggestionProvider` implementation that generates dynamic suggestions based on a registry of ranks:
 ```java
-public class OptionsSuggestionProvider implements SuggestionProvider {
+public class OptionsSuggestionProvider implements SuggestionProvider<PLATFORMSOURCE> {
     @Override
     public List<String> provide(SuggestionContext<PLATFORMSOURCE> context, Argument<PLATFORMSOURCE> parameter) {
         // Example logic to generate suggestions based on input
@@ -71,6 +71,11 @@ public class ExampleCommand {
     }
 }
 ```
+
+:::caution
+If your implementation(of `SuggestionProvider`)'s constructor requires parameters/dependencies, you MUST provide a way for imperat to instantiate it.
+Please refer to the [InstanceFactory](../Imperat/InstanceFactory) section for more details on how to achieve this. 
+:::
 
 ### Suggestions for custom types
 When creating custom argument types, you can also provide suggestions for them by overriding the `getSuggestionProvider` method in your custom argument type implementation.
@@ -104,6 +109,20 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
     }
 }
 ```
+
+and then use this custom argument type in your command:
+```java
+@Command("setrank")
+public class RankCommand {
+
+    @Execute
+    public void exec(PLATFORMSOURCE source, String user, Rank rank) {
+        // syntax: /setrank <user> <rank>
+    }
+}
+```
+Thus, when the user starts typing the rank argument or presses TAB for suggestions,
+ they will receive real-time suggestions of valid ranks based on the available ranks in the registry.
 
 :::info
 Setting argument-specific suggestions using the `@SuggestionProvider` annotation takes precedence over the suggestions provided by the argument type's `getSuggestionProvider` method.
