@@ -14,7 +14,7 @@ The framework processes these annotations at runtime to build a command hierarch
 
 ## @Command
 A **class** annotated with `@Command` represents a [Root Command](/docs/Imperat/First-Command/BasicDefinitions#root-command), 
-and any nested classes annotated with `@Command` are also considered independent Root Commands, **NOT** sub commands.
+and any **nested** classes annotated with `@Command` are also considered independent Root Commands, **NOT** sub commands.
 
 A **method** annotated with `@Command` within a command class represents a Root Command as well, and they are not related to the command class they are in, 
 meaning they are not sub commands of that class, but rather an independent Root Command that happens to be defined within the same class.
@@ -43,7 +43,7 @@ An `@Execute` method must be defined within a class that is annotated with `@Com
 A method annotated with `@Execute` is also known as `pathway-method` or `executable-method`.
 :::
 
-A `pathway-method` can have parameters that represent the arguments of the Command, and these parameters can be annotated with argument annotations (e.g., `@Literal`, `@Required`, `@Optional`, `@Flag`, `@Greedy`) to specify the type and behavior of each argument.
+A `pathway-method` can have parameters that represent the arguments of the Command, and these parameters can be annotated with argument annotations (e.g. `@Required`, `@Optional`) to specify the type and behavior of each argument.
 When the Command is executed, the framework will automatically parse the input, match it against the defined pathways, and invoke the corresponding `pathway-method` with the appropriate arguments based on the input provided by the user.
 Moreover, the `@Execute` method can also have additional annotations to specify properties such as permissions, cooldowns, and more, allowing for a highly customizable command behavior.
 Finally, There are multiple rules that a java method must follow, in order for Imperat to recognize it as a valid `pathway-method` and process it correctly, and they are the following:
@@ -173,9 +173,12 @@ while the `target` parameter represents the player who is receiving the message.
 
 - **`Player` isn't a type of `Source`, How does the framework know to inject the player as the source?**
   The framework uses a type-matching system to determine how to inject parameters into `@Execute` methods. When it encounters a parameter of a specific type (e.g., `Player`), it checks if that type can be used as a source for command execution.
-  The framework utilizes a system called `Source Resolvers`, which are responsible for resolving the appropriate source object based on the parameter type. If the parameter type matches a known source type for the platform (such as `Player` for Bukkit), 
+  The framework utilizes a system called `Source Providers`, which are responsible for resolving the appropriate source object based on the parameter type. If the parameter type matches a known source type for the platform (such as `Player` for Bukkit), 
   the framework will automatically inject the corresponding source object when executing the command. 
 
+:::note
+Setting the source type as `Player` will force the command to only be executable by players.
+:::
 
 :::tip
 A command(whether root or subcommand) can have meta-data of its own, such as permissions, cooldowns, and more, which can be defined using additional annotations on the command class or method.

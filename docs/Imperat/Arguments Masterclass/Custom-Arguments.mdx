@@ -157,7 +157,7 @@ public class RankCommand {
 And don’t forget to register your command:
 ```java
 PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
-    .registerArgType(Rank.class, new RankArgumentType())
+    .argType(Rank.class, new RankArgumentType())
     .build();
 
 imperat.registerCommand(RankCommand.class);

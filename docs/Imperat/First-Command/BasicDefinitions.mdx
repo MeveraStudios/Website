@@ -30,8 +30,8 @@ Subcommands allow for a hierarchical structure of commands, enabling more comple
 Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. They are often used to group related commands together and provide a more intuitive command structure for users.
 
 ## Raw-Argument/Input
-A Raw-Argument, also known as Raw-Input, refers to the unprocessed input provided by the user when executing a command.
-It is the original string input that the user types, which has not yet been parsed or converted into a specific data type.
+A Raw-Argument, also known as `Raw-Input`, refers to the unprocessed input provided by the user when executing a command.
+**It is the original string input that the user types**, which has not yet been parsed or converted into a specific data type.
 Raw-Arguments are typically used as the initial input for command execution and are processed by the command system 
 to extract meaningful information and convert it into the appropriate types for command execution.
 
@@ -41,7 +41,7 @@ It provides additional information or input required for the Command to execute 
 Arguments can be of various types, such as strings, numbers, or custom objects, and they can have specific validation rules.
 
 Arguments are classified into four types based on their position and requirements:
-- **Literal Argument**: A fixed value that must be provided for the Command to execute. It is often used to define specific subcommands or options.
+- **Literal Argument**: A fixed value that must be provided for the Command to execute.Thus, It is used to define specific **subcommands**.
 - **Required Argument**: An argument that must be provided by the user for the Command to execute. It is essential for the Command's functionality and cannot be omitted.
 - **Optional Argument**: An argument that can be provided by the user but is not mandatory for the Command to execute. It allows for more flexible command usage and can have default values if not provided.
 - **Flag Argument**: A special type of argument that represents a certain option or setting , this option can be represented as boolean for on/off toggling states **(Switch)** or it can be represented as a value that can be set **(True-Flag)**, 
@@ -84,22 +84,24 @@ graph TD
 ```
 
 ## Pathway
-A Pathway is a structured representation of a Command's hierarchy and its associated properties.
-It represents a specific way to execute a Command, including the required arguments, optional arguments, flags, and other metadata that define how the Command should be executed.
-It defines how commands are organized and how they relate to each other.
+**A Pathway is a specific sequence of arguments and properties that define how a Command can be executed.**
+**It represents a specific way to execute a Command**, including the required arguments, optional arguments, flags, and other metadata that define how the Command should be executed.
 
 A Command can have multiple Pathways, allowing for flexible command structures and various ways to execute the same command with different parameters sequences.
 There are three types of Pathways:
 
 ### Main Pathway
-The main pathway that represents the default way to execute a Command, it is the most commonly used pathway and is often the simplest one. 
-However, it's a must for this pathway to start with a required argument, otherwise it will be considered as a default pathway.
+It is the first pathway to be defined for a command with **ATLEAST** one required argument.
+example pathway: `/print <message>`.
+In this pathway, the command is `print` and it has one required argument `message`.
 
 ### Default Pathway
-The  The default pathway is a special type of pathway that is used when no other pathways match the user's input. 
-It is often used as a fallback option and can be defined without the need to start with required arguments, 
+**It is the unique pathway without any required arguments, it can have no OR optional arguments.**
 Its a must to have the first arg as an optional or without any arguments. 
 It can be used to provide a default behavior for a Command when no specific pathway is matched.
+
+example pathway: `/print` or `/print [message]`.
+In this pathway, the command is `print` and it can be executed without any arguments or with optional arguments like `message` in this case.
 
 ### Empty Pathway
 The empty pathway represents a Command that can be executed without any additional input, its always empty and doesn't declare any possible arguments.
@@ -128,7 +130,7 @@ It has two main types:
 - **Execution Context**: This context is used during the execution of a Command.
 - **Suggestion Context**: This context is used during the suggestion phase when the user is typing a command and needs suggestions for possible completions.
 
-Each type of context provides specific properties and methods relevant to its purpose, allowing you to effectively manage command execution and provide a seamless user experience when interacting with the command system in Imperat.
+Each type of context provides specific properties and methods relevant to its **purpose**, allowing you to effectively manage command execution and provide a seamless user experience when interacting with the command system in Imperat.
 
 ## ImperatConfig
 ImperatConfig is the class designed to hold all customizable features of the framework, allowing users to customize the behaviour of the features provided.
