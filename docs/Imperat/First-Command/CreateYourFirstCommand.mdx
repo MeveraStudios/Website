@@ -12,18 +12,18 @@ By the end of this section, you will have a solid understanding of how to create
 Imperat uses annotations to define commands and their properties. By annotating your classes and methods, you can specify the command structure, arguments, and behavior in a clear and concise way.
 The framework processes these annotations at runtime to build a command hierarchy that can be executed by the user.
 
-## @Command
-A **class** annotated with `@Command` represents a [Root Command](/docs/Imperat/First-Command/BasicDefinitions#root-command), 
-and any **nested** classes annotated with `@Command` are also considered independent Root Commands, **NOT** sub commands.
+## @RootCommand
+A **class** annotated with `@RootCommand` represents a [Root Command](/docs/Imperat/First-Command/BasicDefinitions#root-command), 
+and any **nested** classes annotated with `@RootCommand` are also considered independent Root Commands, **NOT** sub commands.
 
-A **method** annotated with `@Command` within a command class represents a Root Command as well, and they are not related to the command class they are in, 
+A **method** annotated with `@RootCommand` within a command class represents a Root Command as well, and they are not related to the command class they are in, 
 meaning they are not sub commands of that class, but rather an independent Root Command that happens to be defined within the same class.
 This design allows for a flexible and organized command structure, where you can define multiple Root Commands within the same class or across different classes without any hierarchical relationship between them unless explicitly defined through other means.
 
 ### Conclusion
-`@Command` annotations are used to define Root Commands in Imperat, whether they are applied to classes or methods.
-Nested classes annotated with @Command are also treated as independent Root Commands, 
-and methods annotated with @Command are not considered subcommands of the class they are in, but rather independent Root Commands. This allows for a flexible and organized command structure in Imperat.
+`@RootCommand` annotations are used to define Root Commands in Imperat, whether they are applied to classes or methods.
+Nested classes annotated with @RootCommand are also treated as independent Root Commands, 
+and methods annotated with @RootCommand are not considered subcommands of the class they are in, but rather independent Root Commands. This allows for a flexible and organized command structure in Imperat.
 
 :::tip
 A command(whether root or subcommand) can have meta-data of its own, such as permissions, cooldowns, and more, which can be defined using additional annotations on the command class or method.
@@ -35,7 +35,7 @@ This means that the method will be executed when the Command is invoked, and it 
 When a command is executed, and the input entered matches the pathway defined by the method annotated with `@Execute`, the method will be invoked/called to perform the desired action.
 
 :::note
-An `@Execute` method must be defined within a class that is annotated with `@Command`, and it cannot be defined in a class that is not annotated with `@Command`.
+An `@Execute` method must be defined within a class that is annotated with `@RootCommand`, and it cannot be defined in a class that is not annotated with `@RootCommand`.
  This is because the `@Execute` annotation is specifically designed to define the behavior of a Command, and it relies on the context of a Command class to function properly.
 :::
 
@@ -49,7 +49,7 @@ Moreover, the `@Execute` method can also have additional annotations to specify 
 Finally, There are multiple rules that a java method must follow, in order for Imperat to recognize it as a valid `pathway-method` and process it correctly, and they are the following:
 - The method must be **public**.
 - The method must be annotated with `@Execute`.
-- The method must be defined within a class that is annotated with `@Command` OR `@SubCommand`.
+- The method must be defined within a class that is annotated with `@RootCommand` OR `@SubCommand`.
 - The method's first parameter must be of type `YourPlatformSource`, which represents the source of the command execution (e.g., player, console, etc.).
 These rules include ensuring the method is public, has a valid return type (typically void or boolean), and is properly annotated with `@Execute`.
 
@@ -104,9 +104,9 @@ This allows for more intuitive and meaningful argument names without the need fo
 </Tabs>
 
 ### Applied Example
-This example demonstrates how to define a simple command using the `@Command` and `@Execute` annotations in Imperat.
+This example demonstrates how to define a simple command using the `@RootCommand` and `@Execute` annotations in Imperat.
 ```java
-@Command({"total", "sum"})
+@RootCommand({"total", "sum"})
 public class TotalCommand {
 
     @Execute
@@ -118,7 +118,7 @@ public class TotalCommand {
 ```
 
 #### Analysis of the example:
-- The `TotalCommand` class is annotated with `@Command({"total", "sum"})`, which means it can be invoked using either "total" or "sum" as the command name.
+- The `TotalCommand` class is annotated with `@RootCommand({"total", "sum"})`, which means it can be invoked using either "total" or "sum" as the command name.
 the primary name for the command is always the first name, which is "total" in this case, and the other names are considered aliases for the command.
 
 - The `calculateSum` method is annotated with `@Execute`, indicating that it is a pathway method that will be executed when the command is invoked.
@@ -130,7 +130,7 @@ When the command is executed, the framework will automatically parse the input t
 
 ### Applied (Bukkit) Example 
 ```java
-@Command({"tell", "msg", "t", "w", "whisper", "pm"})
+@RootCommand({"tell", "msg", "t", "w", "whisper", "pm"})
 public class TellCmd {
 
     @Execute
@@ -153,7 +153,7 @@ public class TellCmd {
 ```
 
 #### Analysis of the example:
-- The `TellCmd` class is annotated with `@Command({"tell", "msg", "t", "w", "whisper", "pm"})`, which means it can be invoked using any of the specified command names, such as "tell", "msg", "t", "w", "whisper", or "pm".
+- The `TellCmd` class is annotated with `@RootCommand({"tell", "msg", "t", "w", "whisper", "pm"})`, which means it can be invoked using any of the specified command names, such as "tell", "msg", "t", "w", "whisper", or "pm".
 - The `whisper` method is annotated with `@Execute`, indicating that it is a pathway method that will be executed when the command is invoked.
 - The method has three parameters: `Player source`, `Player target`, and `@Greedy String message`. The `source` parameter represents the player who is sending the message, 
 while the `target` parameter represents the player who is receiving the message. The `message` parameter is annotated with `@Greedy`, which means it will capture all remaining input as a single string, allowing for multi-word messages to be sent without needing to specify additional arguments for each word.
@@ -186,6 +186,6 @@ A command(whether root or subcommand) can have meta-data of its own, such as per
 
 ### Final Conclusion
 A method annotated with `@Execute` represents a Command Pathway that defines the behavior of a Command when executed.
-It must be defined within a class annotated with `@Command` or `@SubCommand`,
+It must be defined within a class annotated with `@RootCommand` or `@SubCommand`,
 and it can have parameters that represent the Command's arguments, which can be further annotated to specify their type and behavior.
 When a Command is executed, the framework will match the input against the defined pathways and invoke the corresponding `@Execute` method with the appropriate arguments, allowing for a highly customizable command behavior in Imperat.

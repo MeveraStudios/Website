@@ -29,7 +29,7 @@ To define a Greedy Argument, simply annotate the parameter with `@Greedy`.
 It's mostly used for simple types like `String` where you want to capture all remaining input as a single string value.
 
 ```java
-@Command("broadcast")
+@RootCommand("broadcast")
 public class BroadcastCommand {
     @Execute
     public void broadcast(PLATFORMSOURCE source, @Greedy String message) {
@@ -108,7 +108,7 @@ public final class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Mess
 
 Then apply this type to our pathway:
 ```java
-@Command("broadcast")
+@RootCommand("broadcast")
 public class BroadcastCommand {
     @Execute
     public void broadcast(PLATFORMSOURCE source, Message message) {
@@ -137,7 +137,7 @@ public class ShoutCommand {
 
     @Execute
     public void shout(
-            TestSource source,
+            PLATFORMSOURCE source,
             @Named("message") @Greedy String message,
             @Switch({"loud", "l"}) boolean loud,
             @Switch({"bold", "b"}) boolean bold
@@ -163,7 +163,7 @@ public class BroadcastCommand {
 
     @Execute
     public void exec(
-        TestSource source,
+        PLATFORMSOURCE source,
         @Named("message") @Greedy(limit = 3) String message,
         @Named("repeat") int repeat
     ) {
@@ -238,7 +238,7 @@ public class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
 
 Here is how you can apply this limitedcustom greedy argument type to your command:
 ```java
-@Command("broadcast")
+@RootCommand("broadcast")
 public class BroadcastCommand {
     @Execute
     public void broadcast(PLATFORMSOURCE source, @Greedy(limit = 3) Message message) {

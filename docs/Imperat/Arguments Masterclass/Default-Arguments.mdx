@@ -12,7 +12,7 @@ regarding **optional** arguments, ensuring your command can still function even 
 To set a default value for an argument, simply annotate the parameter with `@Default` and provide the desired default value as a string.
 Imperat will automatically parse this string into the correct type based on the argument's declared type. For example:
 ```java
-@Command("rank")
+@RootCommand("rank")
 public class RankCommand {
 
     @Execute
@@ -64,7 +64,7 @@ public class ExampleDefaultProvider implements DefaultValueProvider {
 
 Then, you can use this provider in your command:
 ```java
-@Command("rank")
+@RootCommand("rank")
 public class RankCommand {
 
     @Execute

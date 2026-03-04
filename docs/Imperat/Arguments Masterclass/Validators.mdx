@@ -95,7 +95,7 @@ public class DateArgumentType extends ArgumentType<PLATFORMSOURCE, Date> {
 
 Then, we can apply this validator to our command:
 ```java
-@Command("register")
+@RootCommand("register")
 public class RegisterUserCommand {
 
     @Execute
@@ -189,7 +189,7 @@ public class PrimeNumberValidator implements ArgValidator<PLATFORMSOURCE> {
 
 Now we can apply these validators to our command:
 ```java
-@Command("checkNumbers")
+@RootCommand("checkNumbers")
 public class CheckNumbersCommand {
 
     @Execute

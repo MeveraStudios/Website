@@ -64,7 +64,7 @@ public class Point2DArgumentType extends ArgumentType<PLATFORMSOURCE, Point2D> {
 
 Now you can use this `Point2DArgumentType` in your command to accept coordinates as a single compound argument:
 ```java
-@Command("teleport")
+@RootCommand("teleport")
 public class TeleportCommand {
 
     @Execute
@@ -94,7 +94,7 @@ To provide a clear and accurate format for your compound argument, you can use t
 The `@Format` annotation allows you to define a custom format for your argument, which will be displayed in the command usage message.
 For example, you can specify the format for the `coordinates` argument as follows:
 ```java
-@Command("teleport")
+@RootCommand("teleport")
 public class TeleportCommand {
 
     @Execute

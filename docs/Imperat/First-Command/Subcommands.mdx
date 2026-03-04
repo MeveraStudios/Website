@@ -10,8 +10,8 @@ A Subcommand is a Command that is nested within another Command, known as the pa
 Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. 
 Subcommands in Imperat let you build layered, organized command systems. A subcommand is simply a command nested within a parent command, and it can have its own arguments, properties, and execution logic. Subcommands run independently from their parent, enabling flexible and modular command structures.
 ## How does Imperat read subcommands from the classes?
-In Imperat, a class annotated with `@Command` is treated as a Root Command. Any method in that class with `@Execute` is a Command Pathway.
-If you annotate another method or nested class with `@Command` inside a Root Command, it becomes a new, independent Root Command, but **NOT** a subcommand. This rule applies recursively.
+In Imperat, a class annotated with `@RootCommand` is treated as a Root Command. Any method in that class with `@Execute` is a Command Pathway.
+If you annotate another method or nested class with `@RootCommand` inside a Root Command, it becomes a new, independent Root Command, but **NOT** a subcommand. This rule applies recursively.
 
 
 ### Parsing subcommands:
@@ -40,7 +40,7 @@ This affects the syntax and argument inheritance.
 ```java
 // /rank <rank> set <player>
 // /rank help [page]
-    @Command("rank")
+    @RootCommand("rank")
     public class RankCommand {
     
         @Execute
@@ -84,7 +84,7 @@ MUST be annotated with `@InheritedArg` to indicate that it is inherited from the
 #### Setting default pathways for every subcommand:
 If you want each subcommand to have its own default pathway, declare subcommands as classes and annotate them with `@SubCommand`:
 ```java
-@Command("rank")
+@RootCommand("rank")
 public class RankCommand {
     @Execute
     public void mainPathway(PLATFORMSOURCE source, String rank) {
@@ -127,7 +127,7 @@ To use external subcommands, annotate the parent command class with `@ExternalSu
 Here's a concise example demonstrating how to use external subcommands:
 
 ```java
-@Command("rank")
+@RootCommand("rank")
 @ExternalSubCommand({SetSubCommand.class, HelpSubCommand.class})
 public class RankCommand {
     @Execute
@@ -171,7 +171,7 @@ Nested subcommans are parsed by having nested classes annotated with `@SubComman
 
 ### Example: Nested Subcommands
 ```java
-@Command("example")
+@RootCommand("example")
 public class ExampleCommand {
     @Execute
     public void exec(PLATFORMSOURCE source, int num) {

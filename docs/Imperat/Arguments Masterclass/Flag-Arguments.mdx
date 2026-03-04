@@ -1,7 +1,152 @@
 ---
-title: Flag Arguments
+title: Command Flags
 description: Learn what flag arguments are and how to use them in your commands.
 order: 4
 ---
 
 # Flags
+Flags are a special type of argument that can be used to modify the behavior of a command. 
+They are typically used to enable or disable certain features of a command, or to provide additional information about how the command should be executed.
+They are always optional and can be used in any order.
+They must be prefixed with either `-` or `--` to distinguish them from regular arguments.
+They are classified into two types: boolean flags**(Switches)** and value flags**(True-Flags)**.
+
+:::tip
+Flags are not positionally dependent, meaning they can be placed anywhere in the command input without affecting the parsing of other arguments.
+:::
+
+## Boolean Flags (Switches)
+Boolean flags, also known as **switches**, are used to act as a simple on/off toggle for a command. 
+When a switch has been provided in the input, its boolean value will be true; otherwise, it will be false. 
+
+Example:
+```java
+@RootCommand("ban")
+@Description("Main command for banning users")
+public final class BanCommand {
+
+    @Execute
+    public void ban(
+            PLATFORMSOURCE source,
+            @Named("user") String user,
+            @Switch({"silent", "s"}) boolean silent,
+            @Switch("ip") boolean ip,
+            @Default("permanent") @Nullable Duration duration,
+            @Default("Breaking server laws") @Greedy String reason
+    ) {
+        //TODO actual ban logic
+        String durationFormat = duration == null ? "FOREVER" : "for " + duration;
+        String msg = "Banning " + user + " " + durationFormat + " due to '" + reason + "'";
+
+        if (!silent) {
+            source.reply("NOT SILENT= " + msg);
+        } else {
+            source.reply("SILENT= " + msg);
+        }
+    }
+}
+```
+
+:::info
+Flags have aliases, which means you can specify multiple names for the same flag.
+In the example above, the `silent` flag can be used as either `-silent` or `-s` in the command input.
+:::
+
+## Value Flags (True-Flags)
+Value flags, also known as **true-flags**, are used to provide additional information or parameters to a command.
+Unlike boolean flags, true-flags require a value to be provided after the flag name.
+The value can be of any type, such as a string, number, or even a complex object (as long as that type has a registered `ArgumentType`).
+
+Example:
+```java
+@RootCommand("git")
+public class GitCommand {
+
+    @Execute
+    public void def(PLATFORMSOURCE source) {}
+
+    @SubCommand("commit")
+    public void commit(PLATFORMSOURCE source, @Flag({"message", "m"}) String msg) {
+        // /git commit -m <message>
+        System.out.println("Commiting with msg: " + msg);
+    }
+
+}
+```
+
+### Value Flags with custom types
+Value flags can also be used with custom types, as long as those types have a registered `ArgumentType`.
+Let's say we set a custom `ArgumentType` for `Duration`, we can then use that type as a value for a flag:
+
+```java
+@RootCommand("motd")
+public class MotdCommand {
+
+    @Execute
+    public void def(PLATFORMSOURCE source) {
+        source.reply("Default motd execution");
+    }
+
+    @Execute
+    public void mainUsage(
+            PLATFORMSOURCE source,
+            @Flag("time") @Default("24h") Duration time,
+            @Greedy String message
+    ) {
+        // /motd [-time <value>] <message...>
+        source.reply("Message: '" + message + "'");
+        source.reply("Duration: '" + JavaDurationParser.formatDuration(time) + "'");
+    }
+}
+```
+
+:::tip
+You can also use the `@Default` annotation with value flags to provide a default value in case the flag is not provided in the command input.
+Same for `@Suggest`, `@SuggestProvider` to provide suggestions for the flag's value.
+This also applies on other annotations.
+:::
+
+
+## Combined Flags
+Combined flags are a convenient way to provide multiple flags in a single input.
+You do not need to do anything special to create short-hand flags, as they are automatically generated based on the name/aliases provided for a flag.
+
+:::danger{label="READ THIS!"}
+When using combined flags, you must ensure that the individual flags being combined 
+are either ALL boolean flags (switches) or ALL value flags (true-flags) with same value-type.
+Combining a mix of boolean and value flags is not allowed and will result in a parsing error.
+:::
+
+Quick example:
+Instead of writing `/example -t -e`, you can combine the flags into `/example -te`.
+For example, if you have these flags defined:
+```java
+@RootCommand("example")
+public class ExampleCommand {
+    @Execute
+    public void exec(PLATFORMSOURCE source, @Switch({"terminal", "t"}) boolean terminal, @Switch({"exitafter", "e"}) boolean exitAfter) {
+        //acceptable inputs:
+        // /example -t -e
+        // /example -te
+        // /example -et
+        // /example -terminalexitafter
+        // /example -exitafterterminal
+    }
+}
+```
+
+Here's another example with value flags:
+```java
+@RootCommand("example")
+public class ExampleCommand {
+    @Execute
+    public void exec(PLATFORMSOURCE source, @Flag({"alpha", "a"}) String alpha, @Flag({"beta", "b"}) String beta) {
+        //acceptable inputs:
+        // /example -a <value> -b <value> (sets the value for alpha and beta separately)
+        // /example -ab <value> (sets the same value for both alpha and beta)
+        // /example -ba <value>
+        // /example -alpha<value> -beta<value>
+    }
+}
+```
+

@@ -36,7 +36,7 @@ To set **static** suggestions for particular arguments in your pathway, annotate
 ```java
 public class ExampleCommand {
 
-    @Command("example")
+    @RootCommand("example")
     public void example(PLATFORMSOURCE source, @Suggest("option1", "option2", "option3") String option) {
         // Command logic here
     }
@@ -62,7 +62,7 @@ public class OptionsSuggestionProvider implements SuggestionProvider<PLATFORMSOU
 
 Then, you can use this `SuggestionProvider` in your command to provide dynamic suggestions for the `option` argument:
 ```java
-@Command("example")
+@RootCommand("example")
 public class ExampleCommand {
 
     @Execute
@@ -112,7 +112,7 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
 
 and then use this custom argument type in your command:
 ```java
-@Command("setrank")
+@RootCommand("setrank")
 public class RankCommand {
 
     @Execute
