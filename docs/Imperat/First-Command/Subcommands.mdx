@@ -10,42 +10,31 @@ A Subcommand is a Command that is nested within another Command, known as the pa
 Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. 
 Subcommands in Imperat let you build layered, organized command systems. A subcommand is simply a command nested within a parent command, and it can have its own arguments, properties, and execution logic. Subcommands run independently from their parent, enabling flexible and modular command structures.
 ## How does Imperat read subcommands from the classes?
-
-### Root Commands vs Subcommands
 In Imperat, a class annotated with `@Command` is treated as a Root Command. Any method in that class with `@Execute` is a Command Pathway.
 If you annotate another method or nested class with `@Command` inside a Root Command, it becomes a new, independent Root Command, but **NOT** a subcommand. This rule applies recursively.
 
-To create a true subcommand, use the `@SubCommand` annotation. This marks the command as a subcommand of its parent, and any `@Execute` method inside it becomes a pathway for that subcommand.
 
+### Parsing subcommands:
+To create a true subcommand, use the `@SubCommand` annotation. 
+This marks the class as a subcommand of its parent, and any `@Execute` method inside it becomes a pathway for that subcommand.
+You can also annotate methods with `@SubCommand` to define subcommands directly on methods.
 
-You can also annotate methods with `@SubCommand` to define subcommands directly on methods. When Imperat adds a subcommand (from a class or method), it needs to know which pathway of the parent command to attach it to. 
-This is controlled by the `attachmentMode` parameter in the `@SubCommand` annotation.
+When Imperat adds a subcommand (from a class or method), it needs to know which pathway of the parent command to attach it to. 
+This is controlled by the `attachTo` parameter in the `@SubCommand` annotation, which represents the parent command's argument to attach the subcommand/literal-argument to.
+If the `attachTo` parameter is not specified, the subcommand will be attached to the **parent's default pathway** *(the pathway with no required arguments)*.
 
 Finally, You can define external classes as subcommands by annotating them with `@SubCommand`, and declare their classes in the annotation `@ExternalSubCommand` on the parent command class.
 This allows you to organize your subcommands in separate classes while still maintaining a clear hierarchical relationship with the parent command.
-
-#### Attachment Modes
-There are three types of attachment modes:
-- **MAIN**: (Default) Attaches the subcommand to the main pathway of the parent command (the method with `@Execute` and required arguments).
-- **DEFAULT**: Attaches to the default pathway (the method with `@Execute` and no required arguments).
-- **EMPTY**: Attaches the subcommand directly after the parent command's name, ignoring pathways and arguments.
 
 :::info
 An executable method that belongs to a subcommand is known as `subcommand-execution-method`.
 It can be defined by `@Subcommand` annotation on a method OR by `@Execute` method within a class annotated with `@SubCommand`.
 :::
 
-:::info
-**Subcommand-execution-method:**
-This is any executable method belonging to a subcommand. It can be defined either by annotating a method with `@SubCommand`, or by using `@Execute` inside a class annotated with `@SubCommand`.
+:::tip
+When designing a `subcommand-execution-method`, consider which pathway of the parent command it attaches to.
+This affects the syntax and argument inheritance.
 :::
-
-
-When designing a `subcommand-execution-method`, consider which pathway of the parent command it attaches to. This affects the syntax and argument inheritance:
-
-- **MAIN**: The subcommand inherits all required arguments from the parent command's main pathway. Its execution method must include these arguments, plus any additional ones for the subcommand.
-- **DEFAULT**: The subcommand inherits optional arguments (or none) from the parent's default pathway. Its execution method must match these, plus any extra arguments.
-- **EMPTY**: The subcommand does not inherit any arguments from the parent. Its execution method can define its own arguments freely.
 
 ### Example: Subcommands in Imperat
 ```java
@@ -57,19 +46,39 @@ When designing a `subcommand-execution-method`, consider which pathway of the pa
         @Execute
         public void mainPathway(PLATFORMSOURCE source, String rank) {
             // Main pathway logic
+            // syntax: /rank <rank>
         }
     
-        @SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
-        public void setRank(PLATFORMSOURCE source, String rank, String player) {
+        @SubCommand(value = "set", attachTo="<rank>")
+        public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
             // Subcommand logic for setting rank
+            // syntax: /rank <rank> set <player>
         }
     
-        @SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+        @SubCommand(value = "help")
         public void help(PLATFORMSOURCE source, @Optional Integer page) {
             // Subcommand logic for help
+            // syntax: /rank help [page]
         }
     }
 ```
+As you have noticed in the example above, 
+the `setRank` subcommand is attached to the `<rank>` argument of the main pathway,
+ meaning that it inherits the `<rank>` argument and requires it to be executed.
+
+:::note
+The `attachTo` parameter in the `@SubCommand` requires you to enter the proper format of the argument it attaches to.
+Formatting:
+- For required arguments: `<argumentName>`
+- For optional arguments: `[argumentName]`
+- For literal arguments: `argumentName`
+Make sure to enter the correct format, otherwise, Imperat will not be able to attach the subcommand to the desired pathway.
+:::
+
+:::danger{label="READ THIS"}
+Any parameter that represents an argument from the parent's pathway, 
+MUST be annotated with `@InheritedArg` to indicate that it is inherited from the parent command's pathway.
+:::
 
 
 #### Setting default pathways for every subcommand:
@@ -83,31 +92,28 @@ public class RankCommand {
         // syntax: /rank <rank>
     }
 
-    @SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
+    @SubCommand(value = "set", attachTo="<rank>")
     public class SetSubCommand {
         
         @Execute
-        public void setRankDefaultPathway(PLATFORMSOURCE source, String rank) {
+        public void setRankDefaultPathway(PLATFORMSOURCE source, @InheritedArg String rank) {
             // Set's default pathway
             // syntax: "/rank <rank> set".
         }
 
         @Execute 
-        public void setRank(PLATFORMSOURCE source, String rank, String player) {
+        public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
             // Set's main pathway
             //syntax: "/rank <rank> set <player>".
         }
     }
 
-    @SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+    @SubCommand(value = "help")
     public class HelpSubCommand {
     
         @Execute
         public void help(PLATFORMSOURCE source, @Optional Integer page) {
             //syntax: /rank help [page]
-            //Subcommand logic for help
-            //This is already a default pathway for the "help" subcommand, so it will be executed when the user executes "/rank help" without providing the page argument.
-            //since it follows the rule that defines default pathways (having no required arguments), there is no need to define another default pathway for this subcommand.
         }
     }
 }
@@ -131,23 +137,23 @@ public class RankCommand {
     }
 }
 
-@SubCommand(value = "set", attachmentMode = AttachmentMode.MAIN)
+@SubCommand(value = "set", attachTo="<rank>")
 public class SetSubCommand {
 
     @Execute
-    public void setRankDefaultPathway(PLATFORMSOURCE source, String rank){
+    public void setRankDefaultPathway(PLATFORMSOURCE source, @InheritedArg String rank){
         // Set's default pathway
         // syntax: "/rank <rank> set".
     }
 
     @Execute 
-    public void setRank(PLATFORMSOURCE source, String rank, String player) {
+    public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
         // Set's main pathway
         //syntax: "/rank <rank> set <player>".
     }
 }
 
-@SubCommand(value = "help", attachmentMode = AttachmentMode.DEFAULT)
+@SubCommand(value = "help")
 public class HelpSubCommand {
     @Execute
     public void help(PLATFORMSOURCE source, @Optional Integer page) {
@@ -156,6 +162,46 @@ public class HelpSubCommand {
     }
 }
 
+```
+
+## Subcommands parsing limits
+Nested subcommands are supported in Imperat, meaning that you can have subcommands within subcommands 
+to create deeper command hierarchies. This means you can have a subcommand inside a subcommand, and so on.
+Nested subcommans are parsed by having nested classes annotated with `@SubCommand` or by annotating methods with `@SubCommand` inside subcommand classes.
+
+### Example: Nested Subcommands
+```java
+@Command("example")
+public class ExampleCommand {
+    @Execute
+    public void exec(PLATFORMSOURCE source, int num) {
+        // syntax: /example <num>
+    }
+    @SubCommand(value = "sub")
+    public class Sub1 {
+        @Execute
+        public void execute(PLATFORMSOURCE source, @InheritedArg int num, String a, String b, String c) {
+            // syntax: /example <num> sub <a> <b> <c>
+        }
+
+        @SubCommand(value = "sub2")
+        public class Sub2 {
+            @Execute
+            public void execute(
+                PLATFORMSOURCE source,
+                @InheritedArg int num,
+                @InheritedArg String a,
+                @InheritedArg String b, 
+                @InheritedArg String c, 
+                float x,
+                float y, 
+                float z
+            ) {
+                // syntax: /example <num> sub <a> <b> <c> sub2 <x> <y> <z>
+            }
+        }
+    }
+}
 ```
 
 ### Summary: Using @SubCommand

@@ -16,7 +16,7 @@ They refer to the specific implementations of Imperat for different platforms (e
 
 ## Command 
 A Command is a fundamental unit of functionality in Imperat. It represents an action that can be executed by the user.
- Commands can have subcommands, arguments, and various properties represented as pathways with certain characteristics that define the behavior of the command.
+ Commands can have subcommands, arguments, and various properties represented as `pathways` with certain characteristics that define the behavior of the command.
 
 ### Root Command
 Root Command is the top-level Command in a command hierarchy. It serves as the entry point for executing commands and can have multiple subcommands and pathways.
@@ -85,38 +85,38 @@ graph TD
 
 ## Pathway
 **A Pathway is a specific sequence of arguments and properties that define how a Command can be executed.**
-**It represents a specific way to execute a Command**, including the required arguments, optional arguments, flags, and other metadata that define how the Command should be executed.
+**It represents a specific way to execute a Command**, including the required arguments, optional arguments, flags, 
+and other metadata that define how the Command should be executed.
 
 A Command can have multiple Pathways, allowing for flexible command structures and various ways to execute the same command with different parameters sequences.
 There are three types of Pathways:
 
 ### Main Pathway
-It is the first pathway to be defined for a command with **ATLEAST** one required argument.
+Its a pathway with **expected arguments**, meaning that it requires **specific sequence of input** from the user to execute the command.
+A `Command` can have multiple main pathways, each with different arguments and properties,
+allowing for various ways to execute the same command with different parameters.
+
 example pathway: `/print <message>`.
 In this pathway, the command is `print` and it has one required argument `message`.
 
 ### Default Pathway
-**It is the unique pathway without any required arguments, it can have no OR optional arguments.**
-Its a must to have the first arg as an optional or without any arguments. 
-It can be used to provide a default behavior for a Command when no specific pathway is matched.
+**It is the unique pathway with NO arguments.**
+Meaning that it can be executed without providing any arguments, 
+making it the default way to execute the command when no arguments are supplied by the user.
+It can be used to provide a default behavior for a Command.
 
-example pathway: `/print` or `/print [message]`.
+example pathway: `/print`
 In this pathway, the command is `print` and it can be executed without any arguments or with optional arguments like `message` in this case.
 
-### Empty Pathway
-The empty pathway represents a Command that can be executed without any additional input, its always empty and doesn't declare any possible arguments.
-It's similar to the default pathway but it doesn't allow any arguments, it's only used internally.
 
 ```mermaid
 graph TD
     A[Pathway Types] --> B[Main Pathway]
     A --> C[Default Pathway]
-    A --> D[Empty Pathway]
                 
     style A fill:#6366f1,stroke:#4f46e5,stroke-width:3px,color:#fff
     style B fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
     style C fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#000
-    style D fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
     
     linkStyle default stroke:#fbbf24,stroke-width:2px
 ```

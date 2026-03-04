@@ -25,7 +25,9 @@ Greedy Arguments are particularly useful for commands that require free-form inp
 You can define a Greedy Argument either by using the `@Greedy` annotation on a parameter **OR** by specifying an **argument-type** that is **greedy by nature**.
 
 ## @Greedy
-To define a Greedy Argument, simply annotate the parameter with `@Greedy`. For example:
+To define a Greedy Argument, simply annotate the parameter with `@Greedy`.
+It's mostly used for simple types like `String` where you want to capture all remaining input as a single string value.
+
 ```java
 @Command("broadcast")
 public class BroadcastCommand {
@@ -37,11 +39,26 @@ public class BroadcastCommand {
 }
 ```
 
+There exist argument types that are designed to be greedy by nature.
+Meaning that they will automatically capture all remaining input without needing the `@Greedy` annotation, as explained in the next section.
+However, you can still use the `@Greedy` on those greedy-by-nature types if you want, for setting a limit on how many arguments to capture.
+
 ## Greedy Argument Types
 Some argument types are designed to be greedy by nature, meaning that they will automatically capture all remaining input without needing the `@Greedy` annotation.
 For example, if you have a custom argument type that is meant to capture a large amount of input, 
 you can simply define it as greedy in its implementation, and it will function as a Greedy Argument when used in your command.
 In this case, you would not need to use the `@Greedy` annotation on the parameter, as the argument type itself will handle the greedy behavior.
+
+### Default Greedy Argument Types
+Some of the default argument types provided by Imperat are greedy by nature, such as:
+- Arrays (e.g., `String[]`, `Integer[]`, etc.)
+- Lists (e.g., `List<String>`, `List<Integer>`, etc.)
+- Wrappers of type `T` where `T` is a greedy type (e.g., `Optional<T>`, `CompletableFuture<T>`, etc.)
+
+When you use these types as parameters in your command,
+ they will automatically capture all remaining input as a single value for that argument, without needing the `@Greedy` annotation.
+
+However, if you want to limit the number of arguments captured by these greedy types, you can still use the `@Greedy` annotation with a specified limit.
 
 ### Example: Greedy Custom Argument Type
 Suppose you have a custom argument type called `MessageArgumentType` that is designed to capture a message input from the user.
@@ -95,6 +112,136 @@ Then apply this type to our pathway:
 public class BroadcastCommand {
     @Execute
     public void broadcast(PLATFORMSOURCE source, Message message) {
+        // In a real implementation, you would broadcast the message to all users here.
+        System.out.println("Broadcasting message: " + message.getMessage());
+    }
+}
+```
+
+## Greedy Argument Limitations
+Limitation on greedy arguments means that the argument will capture up to the specified number of inputs, it can capture less than the limit in
+the following cases:
+- If there are not enough inputs provided by the user to reach the limit.
+**Example:** 
+input: `/example one two`
+syntax: `/example <phrase...>` with a limit of 3
+In this case, the `phrase` argument will capture "one two" as its value, even though the limit is 3, 
+because there are only 2 inputs provided after the command.
+
+- If the user enters flags after providing some inputs, as flags indicate the end of input for the greedy argument.
+Example: 
+input: `/shout HELLOW WORLD -loud -bold`
+```java
+@RootCommand("shout")
+public class ShoutCommand {
+
+    @Execute
+    public void shout(
+            TestSource source,
+            @Named("message") @Greedy String message,
+            @Switch({"loud", "l"}) boolean loud,
+            @Switch({"bold", "b"}) boolean bold
+    ) {
+        source.reply("message=" + message);
+        source.reply("loud=" + loud);
+        source.reply("bold=" + bold);
+    }
+}
+```
+In the case above, the `message` argument will capture "HELLO WORLD" as its value, 
+and the flags `-loud` and `-bold` will not be included in the `message` argument, 
+even though it is greedy, because they indicate the end of input for the greedy argument.
+
+- If the greedy-argument is not the last argument, while the input entered contains a value that can be parsed as the next argument,
+ the greedy argument will stop capturing input at that point to allow the next argument to be parsed.
+
+Example:
+input: `/broadcast one two 7`
+```java
+@RootCommand("broadcast")
+public class BroadcastCommand {
+
+    @Execute
+    public void exec(
+        TestSource source,
+        @Named("message") @Greedy(limit = 3) String message,
+        @Named("repeat") int repeat
+    ) {
+        source.reply("message=" + message + " repeat=" + repeat);
+    }
+}
+```
+In the case above, the `message` argument will capture "one two" as its value,
+and the `repeat` argument will capture "7" as its value, 
+even though the `message` argument is greedy, because it did not capture the "7" input
+since it can be parsed as the next argument `repeat`,
+and greedy arguments will stop capturing input if they encounter an input that can be parsed as the next argument in the pathway.
+
+:::info
+Whether there's a limit on the greedy argument or not, if the user enters a flag after providing some inputs, 
+the greedy argument will stop capturing input at that point.
+:::
+
+:::danger{label="READ THIS"}
+Limitations on greedy arguments are useful when the argument type of the greedy argument is designed to utilize the specific limit placed on the annotation `@Greedy`,
+such as a `String` type where you want to capture a specific number of words from the user's input, rather than capturing all remaining input.
+It only works if the argument type utilizies the `limit` parameter of the `@Greedy` annotation, otherwise, it will have no effect and the greedy argument will capture all remaining input as usual.
+The default greedy argument types provided by Imperat (arrays, lists, and wrappers of greedy types) utilize the `limit` parameter of the `@Greedy` annotation.
+:::
+
+
+## Implementing Limitation Logic for Custom Greedy Arguments
+If you want to implement custom limitation logic for a greedy argument, you can do so in the `parse` method of your custom argument type.
+In the `parse` method, you can access the `limit` parameter from the `@Greedy` annotation and implement your custom logic to determine how many inputs to capture based on that limit.
+Here's an example of how you might implement custom limitation logic for a greedy argument in a custom argument type:
+
+```java
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import studio.mevera.imperat.command.arguments.Argument;
+import studio.mevera.imperat.command.arguments.type.ArgumentType;
+import studio.mevera.imperat.context.ExecutionContext;
+import studio.mevera.imperat.context.internal.Cursor;
+import studio.mevera.imperat.exception.CommandException;
+
+public class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
+
+    @Override
+    public @Nullable Message parse(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @NotNull Cursor<PLATFORMSOURCE> cursor,
+            @NotNull String correspondingInput
+    ) throws CommandException {
+        int limit = -1;
+        Argument<PLATFORMSOURCE> parameter = cursor.currentParameterIfPresent();
+        if(parameter != null) {
+            limit = parameter.greedyLimit();
+        }
+
+        StringBuilder builder = new StringBuilder(correspondingInput);
+        int consumed = 1; // already consumed the first token as correspondingInput
+        while (cursor.hasNextRaw() && (limit == -1 || consumed <= limit)) {
+            builder.append(" ");
+            cursor.popRaw()
+                    .ifPresent(builder::append);
+            consumed++;
+        }
+        return new Message(builder.toString());
+    }
+
+    @Override
+    public boolean isGreedy(Argument<PLATFORMSOURCE> parameter) {
+        return true;
+    }
+}
+```
+
+Here is how you can apply this limitedcustom greedy argument type to your command:
+```java
+@Command("broadcast")
+public class BroadcastCommand {
+    @Execute
+    public void broadcast(PLATFORMSOURCE source, @Greedy(limit = 3) Message message) {
         // In a real implementation, you would broadcast the message to all users here.
         System.out.println("Broadcasting message: " + message.getMessage());
     }
