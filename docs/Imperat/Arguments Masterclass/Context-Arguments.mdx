@@ -1,0 +1,133 @@
+---
+title: Context Arguments
+description: Learn about context arguments in Imperat and how they can be used to provide additional information and functionality to your command execution.
+order: 8
+---
+# Context Arguments
+**Context Arguments** are arguments, where their values are loaded/deduced from the **context** of the command.
+
+## How is this useful?
+Imagine you have multiple pathways where there's an object that must always loaded from the use of the loaded input-arguments.
+
+Without Context Arguments: you will have to write the loading code for this object in every `pathway-method`.
+With Context Arguments: you shall set the loading code for this object **ONCE** and then it can be automatically loaded as a parameter provided in your `pathway-method`.
+
+### Guilds Example
+Let's imagine you're working on a guild system where you're creating a complex hierarchy like the following:
+`/guild create <name>`
+`/guild disband`
+`/guild invite <user>`
+`/guild join <guild>`
+
+In All subcommands' `pathway-method` *(except for the subcommand **create**)*, we will need to fetch the guild of the `source` *(aka command-sender)*, to be used for the logic of the subcommand's execution.
+
+#### Without Context Arguments:
+```java
+@RootCommand("guild")
+public class GuildCommand {
+    
+    private GuildManager guildManager = ...
+    
+    //Apart from the create subcommand, focus on other subcommands
+    
+    @SubCommand("disband")
+    public void disbandGuild(PLATFORMSOURCE source) {
+        Guild senderGuild = guildManager.getUserGuild(source);
+        // disband logic.
+    }
+    
+    @SubCommand("invite")
+    public void invite(PLATFORMSOURCE source, String user) {
+        Guild senderGuild = guildManager.getUserGuild(source);
+        // invite logic
+    }
+    
+    @SubCommand("join")
+    public void join(PLATFORMSOURCE source, String guild) {
+        Guild senderGuild = guildManager.getUserGuild(source);
+        if(senderGuild != null) {
+            //ERROR: sender is already in a guild!
+            return;
+        }
+        // join logic
+    }
+}
+```
+
+#### With Context Arguments 
+We will be setting the source's `Guild` as a context-argument.
+First Let's create our guild context argument provider:
+
+```java  
+public class GuildContextProvider implements ContextArgumentProvider<PLATFORMSOURCE, Guild> {
+    private final GuildManager guildManager;
+    public GuildContextProvider(GuildManager guildManager) {
+        this.guildManager = guildManager;
+    }
+    @Override
+    public @Nullable Guild provide(
+            @NotNull ExecutionContext<PLATFORMSOURCE> context,
+            @Nullable ParameterElement parameter
+    ) throws CommandException {
+        return guildManager.getUserGuild(context.source());
+    }
+}
+```
+  
+Let's Register the `GuildContextProvider`.
+```
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()  
+                          .contextArgumentProvider(Guild.class, new GuildContextProvider(yourGuildManagerInstance))  
+                          .build();
+```
+
+Now Let's apply it on our `guild` command.
+
+```java
+@RootCommand("guild")
+public class GuildCommand {
+    
+    private GuildManager guildManager = ...
+    
+    //Apart from the create subcommand, focus on other subcommands
+    
+    @SubCommand("disband")
+    public void disbandGuild(PLATFORMSOURCE source, @Context Guild senderGuild) {
+        // disband logic.
+    }
+    
+    @SubCommand("invite")
+    public void invite(PLATFORMSOURCE source, String user, @Context Guild senderGuild) {
+        // invite logic
+    }
+    
+    @SubCommand("join")
+    public void join(PLATFORMSOURCE source, @Context Guild senderGuild, String guild) {
+        if(senderGuild != null) {
+            //ERROR: sender is already in a guild!
+            return;
+        }
+        // join logic
+    }
+}
+```
+
+:::info
+`ParameterElement` refers to the parameter that this argument was loaded from.  
+You can integrate it with advanced things like having custom annotations, checking for them, etc...
+:::
+
+## Typed Context Arguments
+Instead of placing `@Context` repeatedly on `Guild` parameters, you can just declare the type `Guild` as to be provided through context, by annotating the class `Guild` with `@Context`.
+example:
+```java
+@Context
+public class Guild {
+    //code...
+}
+```  
+This basically tells imperat that any parameter of type `Guild` will be defined as a context-argument.
+
+:::tip
+If you're going to include multiple parameters with same type, where one represents a context-argument while the other represents an input-argument, then you **MUST NOT** declare the type as context-type, as this will force imperat to always assume that **ANY** parameter of **that type** is a context-argument.
+:::

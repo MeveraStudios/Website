@@ -130,7 +130,7 @@ public class PositiveNumberValidator implements ArgValidator<PLATFORMSOURCE> {
 
     @Override
     public void validate(
-            Context<PLATFORMSOURCE> context,
+            CommandContext<PLATFORMSOURCE> context,
             ParsedArgument<PLATFORMSOURCE> parsedArgument
     ) throws CommandException {
         var parsedValue = parsedArgument.getArgumentParsedValue();
@@ -160,7 +160,7 @@ public class PrimeNumberValidator implements ArgValidator<PLATFORMSOURCE> {
 
     @Override
     public void validate(
-            Context<PLATFORMSOURCE> context,
+            CommandContext<PLATFORMSOURCE> context,
             ParsedArgument<PLATFORMSOURCE> parsedArgument
     ) throws CommandException {
         var parsedValue = parsedArgument.getArgumentParsedValue();
