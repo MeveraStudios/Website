@@ -134,16 +134,16 @@ public class RankCommand {
     }
 
     @Execute
-    public void setRank(PLATFORMSOURCE source, Rank rank) {
+    public void exec(PLATFORMSOURCE source, Rank rank) {
         // In a real implementation, you would set the player's rank here.
         source.reply("/rank <rank> setpermission <permission>");
     }
 
-    @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
+    @SubCommand(value = "setpermission", attachTo = "<rank>")
     public class SetPermission {
 
         @Execute
-        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission) {
+        public void setPermission(PLATFORMSOURCE source, @InheritedArg Rank rank, String permission) {
             // In a real implementation, you would set the specified player's rank here.
             rank.addPermission(permission);
             source.reply("Added permission '" + permission + "' to rank '" + rank.getName() + "'");
