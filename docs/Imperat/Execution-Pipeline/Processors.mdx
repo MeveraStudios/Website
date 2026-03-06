@@ -1,0 +1,112 @@
+---
+title: Processors
+description: Learn about processors in Imperat and how they can be used to modify and enhance the command execution process.
+order: 4
+---
+# Processors
+**Processors** are tasks that are executed at specific points during the command execution process, 
+allowing you to intercept and manipulate the command execution flow, providing a powerful way to 
+customize how commands are processed and executed.
+
+They are classified into two types:
+- **Pre-Processors**: These are executed **BEFORE** the command pathway is resolved.
+- **Post-Processors**: These are executed **AFTER** the command pathway is resolved.
+
+:::tip
+Processors are run before the execution of the command-pathway, regardless of the whether **pre** or **post**.
+:::
+
+:::info
+Every Processor has a crucial property `priority`, which is a number that determines the order of execution of processors.
+Processors with higher priority values are executed before those with lower priority values.
+:::
+
+A `Processor` can either be command-specific, or global.
+- **Command-Specific Processor**: A processor that is registered to a specific command. It will only be executed when that command is executed.
+- **Global Processor**: A processor that is registered globally. It will be executed for every command that is executed, regardless of the command being executed.
+
+## Command Specific Processor
+A command-specific processor is registered to a specific command and will only be executed when that command is executed.
+To create a command-specific processor, define methods annotated with `Processor` in your command class.
+To set the method to define a **pre-processor**, simply set the first parameter of the method of type `CommandContext<PLATFORMSOURCE>`.
+To set the method to define a **post-processor**, simply set the first parameter of the method of type `ExecutionContext<PLATFORMSOURCE>`.
+
+
+### Simple Example
+In this example, we have a command `ExampleCommand` with two processors: a pre-processor and a post-processor.
+The pre-processor will be executed before the command pathway is resolved, 
+and the post-processor will be executed after the command pathway is resolved.
+
+```java
+@RootCommand("example")
+public class ExampleCommand {
+
+    @Processor
+    public void preProcessor(CommandContext<PLATFORMSOURCE> commandContext) {
+        // This is a pre-processor that will be executed before the command pathway is resolved.
+    }
+    
+    @Processor
+    public void postProcessor(ExecutionContext<PLATFORMSOURCE> executionContext) {
+        // This is a post-processor that will be executed after the command pathway is resolved.
+    }
+
+}
+```
+
+You can have multiple pre-processors and post-processors in the same command, and they will be executed in the order of their priority values.
+### Advanced Example
+In this example, we have a command `ExampleCommand` with multiple processors, each with different priority values.
+```java
+@RootCommand("example")
+public class ExampleCommand {
+    @Processor(priority = 1)
+    public void preProcessor1(CommandContext<PLATFORMSOURCE> commandContext) {
+        // This is a pre-processor with priority 1.
+    }
+    
+    @Processor(priority = 2)
+    public void preProcessor2(CommandContext<PLATFORMSOURCE> commandContext) {
+        // This is a pre-processor with priority 2. It will be executed before preProcessor1.
+    }
+    
+    @Processor(priority = 1)
+    public void postProcessor1(ExecutionContext<PLATFORMSOURCE> executionContext) {
+        // This is a post-processor with priority 1.
+    }
+    
+    @Processor(priority = 2)
+    public void postProcessor2(ExecutionContext<PLATFORMSOURCE> executionContext) {
+        // This is a post-processor with priority 2. It will be executed before postProcessor1.
+    }
+}
+```
+
+## Global Processor
+A global processor is registered globally and will be executed for every command that is executed, regardless of the command being executed.
+It must be registered as a listener for the `CommandPreProcessEvent` event for pre-processors, 
+and for the `CommandPostProcessEvent` event for post-processors.
+
+### Global Pre-Processor Example
+```java
+PLATFORMIMPERAT imperat = ...;
+imperat.listen(CommandPreProcessEvent.class, (event) -> {
+    // This is a global pre-processor that will be executed for every command that is executed.
+    Command<PLATFORMSOURCE> command = event.getCommand();
+    CommandContext<PLATFORMSOURCE> commandContext = event.getContext();
+}, Priority.of(1), ExecutionStrategy.SYNC);
+```
+
+### Global Post-Processor Example
+```java
+PLATFORMIMPERAT imperat = ...;
+imperat.listen(CommandPostProcessEvent.class, (event) -> {
+    // This is a global post-processor that will be executed for every command that is executed.
+    Command<PLATFORMSOURCE> command = event.getCommand();
+    ExecutionContext<PLATFORMSOURCE> executionContext = event.getContext();
+}, Priority.of(1), ExecutionStrategy.SYNC);
+```
+
+:::info
+You can throw exceptions in the processors to cancel the execution of the command.
+:::

@@ -1,0 +1,92 @@
+---
+title: Exception Handlers
+description: Learn about exception handling in Imperat and how to implement custom exception handling logic for command execution.
+order: 3
+---
+
+# Exception Handlers
+**Exception Handlers** are a powerful feature in Imperat that allow you to define custom logic 
+for handling errors that may be thrown during the command execution process.
+They provide a way to gracefully handle exceptions and provide feedback to users when something goes wrong.
+
+They are classified into two types:
+- **Command-Specific Exception Handlers**: These are exception handlers that are registered to a specific command. 
+The exceptions that occur during the execution of that command will be handled by these exception handlers specified for that command.
+- **Global Exception Handlers**: These are exception handlers that are registered globally.
+The exceptions that occur during the execution of **ANY** command will be handled by these global exception handlers.
+
+To create an exception handler, define methods annotated with `ExceptionHandler` in your command class for command-specific exception handlers,
+ or in any external class for global exception handlers.
+
+## Command-Specific Exception Handler Example
+In this example, we have a command `ExampleCommand` with a command-specific exception handler that handles `PermissionDeniedException` exceptions.
+```java
+@RootCommand("example")
+public class ExampleCommand {
+
+    @ExceptionHandler(PermissionDeniedException.class)
+    public void handlePermissionDenied(PermissionDeniedException ex, CommandContext<PLATFORMSOURCE> commandContext) {
+        // Handle the permission denied exception
+    }
+}
+```
+
+When a `PermissionDeniedException` is thrown during the execution of the command named `example`, 
+the `handlePermissionDenied` method will be called to handle the exception, 
+while if the same exception is thrown during the execution of any other command, it will not be handled by this method.
+
+## Global Exception Handler Example
+In this example, we have a global exception handler that handles `PermissionDeniedException` exceptions.
+We can create and register the exception handler in two ways, either while building the `PLATFORMIMPERAT` instance, 
+or by using the `registerGlobalExceptionHandler` method of the `PLATFORMIMPERAT` instance, which takes a class; This class is expected to have 
+methods annotated with `@ExceptionHandler` to be registered as global exception handlers.
+
+### While Building `PLATFORMIMPERAT` Instance
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .exceptionHandler(PermissionDeniedException.class, (ex, commandContext) -> {
+        // Handle the permission denied exception globally
+    })
+    .build();
+```
+
+### Using `registerGlobalExceptionHandler` Method
+Let's create a class named `GlobalErrorHandlers` that contains our global exception handler method:
+```java
+public class GlobalErrorHandlers {
+
+    @ExceptionHandler(PermissionDeniedException.class)
+    public void handlePermissionDeniedGlobally(PermissionDeniedException ex, CommandContext<PLATFORMSOURCE> commandContext) {
+        // Handle the permission denied exception globally
+    }
+}
+```
+
+Then, we can register this class as a global exception handler:
+```java
+PLATFORMIMPERAT imperat = ...;
+imperat.registerGlobalExceptionHandlers(new GlobalErrorHandlers());
+```
+
+## Self-Handling Exceptions
+They are exceptions that can handle themselves without the need for registering an exception handler for them.
+To make an exception self-handling, the exception class must implement the `SelfHandlingException` interface and implement the `handle` method, 
+which contains the logic for handling the exception.
+
+Here's an example of a self-handling exception:
+```java
+public class CustomException extends SelfHandlingException {
+    @Override
+    public void handle(PLATFORMSOURCE source, CommandContext<PLATFORMSOURCE> commandContext) {
+        // Handle the exception logic here
+    }
+}
+```
+
+When a `CustomException` is thrown during the execution of any command, 
+the `handle` method will be called to handle the exception without the need for registering an exception handler for it.
+
+:::note
+Self-Handling exceptions behave like registered **global** exception-handlers, 
+as they can handle themselves regardless of the command being executed.
+:::
