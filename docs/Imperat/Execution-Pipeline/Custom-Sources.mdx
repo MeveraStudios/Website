@@ -60,6 +60,7 @@ public class CustomCommandCommandSource implements CommandSource {
 }
 ```
 
+### Registering a SourceProvider for the Custom Command Source
 Then, you have to register a `SourceProvider` for that `CustomCommandSource` in your `PLATFORMIMPERAT` builder, 
 which defines how to create an instance of the custom source from the platform-specific source.
 ```java
@@ -68,6 +69,7 @@ PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
     .build();
 ```
 
+### Usage example
 and now you can use `CustomCommandSource` as a parameter in your pathway methods , it shall represent the command source,
  and Imperat will automatically create an instance of it using the registered `SourceProvider` when executing the command.
 ```java
