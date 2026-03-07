@@ -1,0 +1,82 @@
+---
+title: Custom Sources
+description: Learn how to create and use your own custom command-sources in your pathway-methods.
+order: 6
+---
+# Custom Sources
+In Imperat, a **command source** represents the entity that initiates a command execution.
+By default, Imperat provides a command source for the platform you are using (for example, `BukkitSource` for Bukkit/Spigot).
+However, you can also create and use your own custom command sources that wraps around these platform-specific sources, 
+allowing you to add additional functionality or context to the command source.
+
+## Creating a Custom Command Source
+To create a custom command source, you need to define a class that implements the `CommandSource` interface.
+
+```java
+import studio.mevera.imperat.BukkitCommandSource;
+import studio.mevera.imperat.context.CommandSource;
+
+public class CustomCommandCommandSource implements CommandSource {
+    
+    private final BukkitCommandSource platformSource;
+
+    public CustomCommandCommandSource(BukkitCommandSource platformSource) {
+        this.platformSource = platformSource;
+    }
+
+    public void greet() {
+        reply("Hello Sir!");
+    }
+
+    @Override 
+    public String name() {
+        return platformSource.name();
+    }
+
+    @Override
+    public Object origin() {
+        return platformSource.origin();
+    }
+
+    @Override 
+    public void reply(String message) {
+        platformSource.reply(message);
+    }
+
+    @Override 
+    public void warn(String message) {
+        platformSource.warn(message);
+    }
+
+    @Override 
+    public void error(String message) {
+        platformSource.error(message);
+    }
+
+    @Override 
+    public boolean isConsole() {
+        return platformSource.isConsole();
+    }
+}
+```
+
+Then, you have to register a `SourceProvider` for that `CustomCommandSource` in your `PLATFORMIMPERAT` builder, 
+which defines how to create an instance of the custom source from the platform-specific source.
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .sourceProvider(CustomCommandSource.class, (source, context) -> new CustomCommandSource(source))
+    .build();
+```
+
+and now you can use `CustomCommandSource` as a parameter in your pathway methods , it shall represent the command source,
+ and Imperat will automatically create an instance of it using the registered `SourceProvider` when executing the command.
+```java
+@RootCommand("greet")
+public class GreetCommand {
+    
+    @Execute
+    public void greet(CustomCommandSource source) {
+        source.greet(); // This will send "Hello Sir!" to the command source.
+    }
+}
+```
