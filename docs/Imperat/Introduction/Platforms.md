@@ -21,19 +21,19 @@ Imperat supports various platforms as shown in the table below:
 
 ## Platform Differences
 The main differences between all platforms is the implementation of `Imperat` that represents the framework on this platform
- along with the Implementation of `Source` that represents the command-sender on this platform.
-They are following the naming format: `<platform>Imperat`, Same with the senders/sources : `<platform>Source` (except for CLI)
+ along with the Implementation of `CommandSource` that represents the command-sender on this platform.
+They are following the naming format: `<platform>Imperat`, Same with the senders/sources : `<platform>CommandSource` (except for CLI)
 as shown in the table below:
 
-| Platform Name      | Implementation to Use         | Source (Command Sender)     |
+| Platform Name      | Implementation to Use         | CommandSource (Command Sender)     |
 |--------------------|-------------------------------|-----------------------------|
-| imperat-bukkit     | `BukkitImperat`               | `BukkitSource`              |
-| imperat-bungee     | `BungeeImperat`               | `BungeeSource`              |
-| imperat-velocity   | `VelocityImperat`             | `VelocitySource`            |
-| imperat-minestom   | `MinestomImperat`             | `MinestomSource`            |
-| imperat-jda        | `JDAImperat`                  | `JDASource`                 |
-| imperat-hytale     | `HytaleImperat`               | `HytaleSource`              |
-| imperat-cli        | `CommandLineImperat`          | `ConsoleSource`             |
+| imperat-bukkit     | `BukkitImperat`               | `BukkitCommandCommandSource`              |
+| imperat-bungee     | `BungeeImperat`               | `BungeeCommandSource`              |
+| imperat-velocity   | `VelocityImperat`             | `VelocityCommandSource`            |
+| imperat-minestom   | `MinestomImperat`             | `MinestomCommandSource`            |
+| imperat-jda        | `JDAImperat`                  | `JDACommandSource`                 |
+| imperat-hytale     | `HytaleImperat`               | `HytaleCommandSource`              |
+| imperat-cli        | `CommandLineImperat`          | `ConsoleCommandSource`             |
 
 
 ### BUKKIT Brigadier Integration
