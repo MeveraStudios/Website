@@ -1,6 +1,62 @@
 ---
 title: Exception Guide
 description: Learn about exceptions in Imperat and how to handle them effectively during command execution.
-order: 2
+order: 3
 ---
 # Exceptions Guide
+During runtime pipelines (e.g: command-execution, event-handling, providing-suggestions), Exceptions may occur due to various reasons such as invalid input, permission issues, or unexpected errors.
+Exceptions that occur are either a run-time exception or a command-based exception. 
+
+:::info{label="READ THIS"}
+Throwing exceptions is used to stop whatever pipeline is running and to provide feedback to the user about what went wrong.
+:::
+
+## Run-time Exceptions
+They mostly occur during registration of command classes.
+Some are from Java, while some are from Imperat itself. 
+They are not meant to be caught by the user, but rather to indicate that something went wrong during a process.
+
+| Exception | Thrown During | Description |
+| --- | --- | --- |
+| `UnknownCommandException` | Command execution | Thrown when the root command provided does not exist or is not registered. |
+| `InvalidSourceException` | Command registration | Thrown when the first parameter of a pathway method is not a subtype of type `Source`. |
+| `AmbiguousCommandException` | Command registration | Thrown when registering a command with ambiguous pathways or parameters, or when attempting to register an already registered command. |
+| `UnknownDependencyException` | Dependency resolution | Thrown when there is no dependency to supply, or when something goes wrong while resolving a field dependency. |
+
+:::note
+`UnknownCommandException` is not thrown on minecraft-related platforms, as the command system is built on top of the native command system,
+ and thus relies on its own exceptions.However, its useful for other platforms that do not have a native command system, such as **CLI**.
+:::
+
+## Imperat Exceptions
+These exceptions are meant to be thrown by the user during command execution, 
+and are used to provide feedback to the user about what went wrong. They are meant to be caught by the user and handled accordingly.
+
+All Imperat exceptions are subtypes of `CommandException`, and thus share some common properties and methods.
+When `CommandException` is thrown, the message provided in the constructor is sent to the user as feedback.
+
+Any exception that is a subtype of `CommandException` can be thrown during command execution to provide feedback to the user about what went wrong.
+the sub-type exceptions are used to provide the message/feedback internally, and thus provide a more specific message to the user.
+When that sub-type is thrown, it will be handled by the exception handler system.
+If the exception thrown is of type `SelfHandlingException` it will handle itself.
+Otherwise, The system will look for the most specific handler for that type of exception, if it doesn't find one, it will look for the handler of the parent type,
+ and so on until it finds a handler or reaches the top of the hierarchy.
+
+### Default sub-types of `CommandException`
+| Exception | Description |
+| --- | --- |
+| `InvalidSyntaxException` | Thrown when the user provides invalid syntax for a command. |
+| `ArgumentParseException` | Thrown when the user provides invalid input for an argument command. |
+| `PermissionDeniedException` | Thrown when the user does not have permission for a command, or for the pathway resolved, or even for any argument of that pathway.. |
+| `CombinedFlagsException` | Thrown when the user provides combined flags for a command in a way that the command does not support it. |
+| `SelfHandlingException` | An exception that handles itself, meaning that it contains its own logic for handling the exception and providing feedback to the user. |
+| `ResponseException` | An exception that contains a response to be sent to the user, meaning that it will send the response provided in the constructor to the user as feedback. |
+
+Most messages for these exceptions are generated internally, 
+and thus do not require a message to be provided in the constructor, however, they can still accept a custom message if needed.
+
+:::info
+ResponseException is useful for cases where you want to customize the feedback sent to the user, without having to create a new exception type.
+For example, you can throw a `ResponseException` with a custom message when the user provides an invalid integer format and you can even provide placeholders.
+For more details, check out the [Responses Guide](../Responses%20Guide.mdx).
+:::

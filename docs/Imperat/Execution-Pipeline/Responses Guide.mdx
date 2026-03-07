@@ -1,0 +1,74 @@
+---
+title: Responses & Error Messages
+description: Learn how Imperat resolves response-driven errors, customizes messages, and handles placeholders through ResponseRegistry.
+order: 4
+---
+
+# What Are Responses?
+
+In Imperat, a `Response` is a registry-driven, user-facing message associated with a `ResponseKey`.
+
+Responses decouple error and feedback messages from exception-throwing code. Instead of hardcoding strings at throw sites,
+ you register message templates in a `ResponseRegistry` and reference them by key.
+
+Each `Response` consists of:
+
+- A `ResponseKey`: A unique string identifier (for example, `"args.parsing.invalid-number-format"`).
+- A content supplier (`Supplier<String>`): Provides the raw message template.
+- Optional placeholder support: Dynamic values such as `{command}`, `{arguments}`, `{source}`, and custom placeholders are resolved when sending.
+- Optional `ResponseContentFetcher`: Controls how content is fetched.
+
+`ResponseKey` is a functional interface with a single `getKey()` method, so keys can be defined as lambdas.
+
+## How Are Responses Used?
+
+When an exception is thrown during command execution, Imperat looks for a registered `Response` matching the exception type or its parent types. 
+If found, it resolves the message template, replaces placeholders, and sends the final message to the user.
+
+Placeholders start with `%` and end with `%`.
+For example, if you have a response template like `"Invalid number format for argument '%input%'"`, 
+and the user provided `abc` for an integer argument, the final message sent would be `"Invalid number format for argument 'abc'"`.
+
+## Customizing Default Responses
+Imperat provides default responses for common feedback scenarios, such as invalid syntax or permission issues.
+Moreover, you can customize these responses by registering your own `Response` with the same `ResponseKey`.
+
+### Custom Response Example
+This is an example on how to override the default response for invalid number format:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .response(INVALID_NUMBER_FORMAT, () -> "Invalid number '%input%', please provide a valid %number_type%.")
+    .build();
+```
+
+In this example, we override the default response for `INVALID_NUMBER_FORMAT` with a custom message that 
+includes placeholders for the invalid input and the expected number type.
+
+### Default Responses   
+All default responses are provided with the context placeholders, which are:
+- `%command%`: The command-label being executed.
+- `%arguments%`: The raw arguments string provided by the user.
+- `%source%`: The name of the command source (e.g: player name, console, etc...).
+
+Each default response may also provide additional placeholders relevant to the context of the response. 
+For example, `INVALID_NUMBER_FORMAT` provides the following additional placeholders:
+- `%input%`: The invalid input provided by the user for the number argument.
+- `%number_type%`: The expected type of the number (e.g: integer, double).
+
+Here's a list of some of the default responses and their additional placeholders:
+| ResponseKey | Description | Additional Placeholders | Placeholder Meaning |
+| --- | --- | --- | --- |
+| `INVALID_BOOLEAN` | Invalid boolean input. | `%input%` | `%input%`: raw boolean text entered by the user. |
+| `INVALID_ENUM` | Invalid enum value for a specific enum type. | `%input%`, `%enum_type%` | `%input%`: entered enum value; `%enum_type%`: expected enum class/type name. |
+| `INVALID_NUMBER_FORMAT` | Invalid numeric input format for the expected number type. | `%input%`, `%number_type%` | `%input%`: entered numeric text; `%number_type%`: expected numeric type (for example int, double). |
+| `INVALID_CHARACTER` | Input is not a single character. | `%input%` | `%input%`: entered text that failed single-character validation. |
+| `INVALID_MAP_ENTRY_FORMAT` | Map entry does not match the required format. | `%input%`, `%extra_msg%` | `%input%`: full map entry text; `%extra_msg%`: extra reason/details (for example missing separator). |
+| `INVALID_UUID` | Input is not a valid UUID format. | `%input%` | `%input%`: entered UUID string. |
+| `VALUE_OUT_OF_CONSTRAINT` | Input is not one of the allowed values. | `%input%`, `%allowed_values%` | `%input%`: entered value; `%allowed_values%`: allowed values list rendered by Imperat. |
+| `UNKNOWN_FLAG` | Unknown flag was provided. | `%input%` | `%input%`: flag token the user entered (for example `-x`). |
+| `MISSING_FLAG_INPUT` | One or more flags were used without required value input. | `%flags%` | `%flags%`: flags missing values. |
+| `FLAG_OUTSIDE_SCOPE` | Flags were used outside their command scope. | `%flag_input%`, `%wrong_cmd%` | `%flag_input%`: used flag(s); `%wrong_cmd%`: command scope those flags belong to. |
+| `NUMBER_OUT_OF_RANGE` | Parsed input value is outside the allowed range for the target argument. | `%parsed_input%`, `%formatted_argument%`, `%formatted_range%`, `%input%`, `%range_min%`, `%range_max%` | `%parsed_input%`: parsed numeric value; `%formatted_argument%`: display name/format of the argument; `%formatted_range%`: human-readable range; `%input%`: raw entered input; `%range_min%`: range lower bound; `%range_max%`: range upper bound. |
+| `COOLDOWN` | Command is on cooldown and cannot be executed yet. | `%seconds%`, `%remaining_duration%`, `%cooldown_duration%`, `%last_executed%` | `%seconds%`: remaining time in seconds; `%remaining_duration%`: full remaining duration; `%cooldown_duration%`: total cooldown length; `%last_executed%`: timestamp/instant of last execution. |
+| `NO_HELP` | No help content is available for the command. | _None_ (uses context placeholders) | Uses context placeholders only: `%command%`, `%arguments%`, `%source%`. |
+| `NO_HELP_PAGE` | Requested help page does not exist. | `%page%` | `%page%`: requested page number/name that was not found. |
