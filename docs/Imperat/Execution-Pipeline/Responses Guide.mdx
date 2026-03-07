@@ -15,10 +15,15 @@ Each `Response` consists of:
 
 - A `ResponseKey`: A unique string identifier (for example, `"args.parsing.invalid-number-format"`).
 - A content supplier (`Supplier<String>`): Provides the raw message template.
-- Optional placeholder support: Dynamic values such as `{command}`, `{arguments}`, `{source}`, and custom placeholders are resolved when sending.
+- Optional placeholder support.
 - Optional `ResponseContentFetcher`: Controls how content is fetched.
 
 `ResponseKey` is a functional interface with a single `getKey()` method, so keys can be defined as lambdas.
+
+you can provide a custom `ResponseContentFetcher` when registering a `Response`.
+A `ResponseContentFetcher` is a functional interface that defines how the content of a response is fetched.
+Its either synchronous (`ResponseContentFetcher#blocking` , which is the default) or asynchronous(using `CompletableFuture#supplyAsync`).
+
 
 ## How Are Responses Used?
 
@@ -72,3 +77,30 @@ Here's a list of some of the default responses and their additional placeholders
 | `COOLDOWN` | Command is on cooldown and cannot be executed yet. | `%seconds%`, `%remaining_duration%`, `%cooldown_duration%`, `%last_executed%` | `%seconds%`: remaining time in seconds; `%remaining_duration%`: full remaining duration; `%cooldown_duration%`: total cooldown length; `%last_executed%`: timestamp/instant of last execution. |
 | `NO_HELP` | No help content is available for the command. | _None_ (uses context placeholders) | Uses context placeholders only: `%command%`, `%arguments%`, `%source%`. |
 | `NO_HELP_PAGE` | Requested help page does not exist. | `%page%` | `%page%`: requested page number/name that was not found. |
+
+## Throwing a `ResponseException`:
+You can also throw a `ResponseException` directly in your code to trigger a response without needing to define a new exception type.
+For example:
+
+```java
+@RootCommand("printnum")
+public class ExampleCommand {
+
+    @Execute
+    public void exec(PLATFORMSOURCE source, String number) {
+        // Some logic that determines an error condition
+        try {
+            int parsedNumber = Integer.parseInt(number);
+            System.out.println("Parsed number: " + parsedNumber);
+        } catch (NumberFormatException e) {
+            throw ResponseException.of(INVALID_NUMBER_FORMAT)
+                .withPlaceholder("input", number)
+                .withPlaceholder("number_type", "integer");
+        }
+
+    }
+}
+
+```
+
+They can also be thrown anywhere else in the pipeline as told before.
