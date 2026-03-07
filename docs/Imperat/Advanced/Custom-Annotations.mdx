@@ -1,0 +1,46 @@
+---
+title: Custom Annotations
+description: Learn how to create and use custom annotations in Imperat to keep command logic clean and reusable.
+order: 1
+---
+# Applying Custom Annotations
+In Imperat, you can create and use custom annotations to add metadata to your command methods,
+by defining an `AnnotationReplacer` for your custom annotation,
+Which shall tell Imperat how to replace your custom annotation with a supported annotation that Imperat can understand and process.
+
+## Creating a Custom Annotation
+To create a custom annotation, you need to define a new annotation interface.
+Let's create a custom annotation called `@AdminOnly` that indicates a pathway-method should only be accessible to administrators.
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface AdminOnly {
+}
+```
+
+## Creating an Annotation Replacer
+Next, you need to create an `AnnotationReplacer` that tells Imperat how to replace the `@AdminOnly` annotation with a supported annotation.
+```java
+import studio.mevera.imperat.command.annotations.*;
+import studio.mevera.imperat.command.AnnotationFactory;
+import java.util.List;
+
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .annotationReplacer(AdminOnly.class, (element, annotation) -> {
+        // Replace @AdminOnly with @Permission("admin.permission")
+        String permission = "command.admin";
+        
+        // Generate built-in annotations
+        var perm = AnnotationFactory.create(Permission.class, "value", permission);        
+        return List.of(perm);
+    })
+    .build();
+```
+
+### Example Analysis
+In the example above, We have defined an `AnnotationReplacer` that will replace `@AdminOnly` annotation with a `@Permission("command.admin")` annotation.
+The parameter `element` represents the annotated element (in this case, the method annotated with `@AdminOnly`), 
+and the parameter `annotation` represents the instance of the `@AdminOnly` annotation.
+The `AnnotationFactory` is a utility class provided by Imperat that allows you to create instances of annotations dynamically.
+In this case, we are creating an instance of the `@Permission` annotation with the value of `"command.admin"`.

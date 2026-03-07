@@ -1,0 +1,20 @@
+---
+title: Return Resolvers
+description: Understand how return resolvers in Imperat transform command method results into platform-specific responses.
+order: 2
+---
+
+# Return Resolvers
+
+A return resolver defines what Imperat should do with values returned by command methods.
+This lets you keep command methods expressive while centralizing how outputs are rendered to users.
+
+## What Problem Do Return Resolvers Solve?
+
+Without return resolvers, command methods often need direct `source.reply(...)` calls everywhere.
+With resolvers, a method can simply return a value, and Imperat translates it into a response strategy.
+
+Typical outcomes:
+- `String` return values become chat/message output.
+- Structured domain objects become formatted text or rich components.
+- `void` methods skip response rendering.
