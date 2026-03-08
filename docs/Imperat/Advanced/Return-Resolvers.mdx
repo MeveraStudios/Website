@@ -6,15 +6,73 @@ order: 2
 
 # Return Resolvers
 
-A return resolver defines what Imperat should do with values returned by command methods.
-This lets you keep command methods expressive while centralizing how outputs are rendered to users.
+A return resolver defines what Imperat should do with values returned by pathway-methods.
+They are made for pathway-methods that return a value.
+What Imperat does with the returned value depends on the return resolver used for that pathway-method.
 
-## What Problem Do Return Resolvers Solve?
+## Explicit Return Resolvers
+You can explicitly specify a return resolver for a pathway-method by using the `@ExplicitReturnResolver` annotation.
+First let's create a return resolver that handles `String` return types:
+```java
+import studio.mevera.imperat.annotations.base.element.MethodElement;
+import studio.mevera.imperat.context.CommandSource;
+import studio.mevera.imperat.context.ExecutionContext;
+import java.lang.reflect.Type;
 
-Without return resolvers, command methods often need direct `source.reply(...)` calls everywhere.
-With resolvers, a method can simply return a value, and Imperat translates it into a response strategy.
+public class ExampleReturnResolver extends BaseReturnResolver<PLATFORMSOURCE, String> {
 
-Typical outcomes:
-- `String` return values become chat/message output.
-- Structured domain objects become formatted text or rich components.
-- `void` methods skip response rendering.
+    public ExampleReturnResolver() {
+        super(String.class);
+    }
+
+    @Override
+    public void resolve(ExecutionContext<PLATFORMSOURCE> context, MethodElement method, String result) {
+        // Here you can define how to handle the returned string.
+        // For example, you could send it as a message to the user:
+        context.source().sendMessage(result);
+    }
+}
+```
+
+Then you can use this return resolver for a pathway-method like this:
+```java
+@RootCommand("example")
+public class ExampleCommand {
+
+    @Execute
+    @ExplicitReturnResolver(ExampleReturnResolver.class)
+    public String exec(PLATFORMSOURCE source) {
+        return "This is an explicit return resolver.";
+    }
+} 
+```
+
+This way, when the `exec` method is executed, the returned string will be handled by the `ExampleReturnResolver`, 
+which in this case sends the string as a message to the user.
+
+## Global Return Resolvers
+You can also register return resolvers globally for specific return types.
+This means that any pathway-method that returns a value of that type will be handled by the registered return resolver, 
+without needing to specify it explicitly for each method.
+
+To register a global return resolver, you can use the `ReturnResolverRegistry` in your plugin's initialization code:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .returnResolver(String.class, new ExampleReturnResolver())
+    .build();
+```
+With this setup, any pathway-method that returns a `String` will automatically be handled by the `ExampleReturnResolver`,
+without needing to annotate each method with `@ExplicitReturnResolver`.
+
+This is just an example, it doesn't have to be a `String` return type, 
+you can create return resolvers for any return type you need and register them globally or explicitly as needed.
+
+:::note
+Keep in mind that if you have both an explicit return resolver and a global return resolver for the same return type,
+the explicit return resolver will take precedence over the global one for that specific pathway-method.
+:::
+
+:::danger{label="READ THIS"}
+If you set an explicit return resolver for a pathway-method, Ensure that the return type of the method **EXACTLY** matches 
+the type expected by the return resolver in its constructor.
+:::
