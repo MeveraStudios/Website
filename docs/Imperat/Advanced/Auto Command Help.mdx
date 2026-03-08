@@ -26,8 +26,8 @@ public final class GroupCommand {
 
     @Execute
     public void defaultUsage(
-            TestCommandSource source,
-            @Context CommandHelp<TestCommandSource> commandHelp
+            PLATFORMSOURCE source,
+            @Context CommandHelp<PLATFORMSOURCE> commandHelp
     ) {
         // Runs when user types: /group
         // We display help here
@@ -36,7 +36,7 @@ public final class GroupCommand {
     @Execute
     @Description("Shows sub-commands.")
     public void mainUsage(
-            TestCommandSource source,
+            PLATFORMSOURCE source,
             @Named("group") Group group
     ) {
         // Runs when user types: /group <group>
@@ -46,7 +46,7 @@ public final class GroupCommand {
     @SubCommand(value = "setperm", attachTo = "<group>")
     @Description("Sets permission for a group.")
     public void setGroupPermission(
-            TestCommandSource source,
+            PLATFORMSOURCE source,
             @InheritedArg @Named("group") Group group,
             @Named("permission") String permission
     ) {
@@ -56,7 +56,7 @@ public final class GroupCommand {
     @SubCommand(value = "setprefix", attachTo = "<group>")
     @Description("Sets prefix for a group.")
     public void setPrefix(
-            TestCommandSource source,
+            PLATFORMSOURCE source,
             @InheritedArg @Named("group") Group group,
             @Named("prefix") String prefix
     ) {
@@ -79,8 +79,8 @@ To access the help system, inject `CommandHelp` into your method using `@Context
 ```java
 @Execute
 public void defaultUsage(
-        TestCommandSource source,
-        @Context CommandHelp<TestCommandSource> commandHelp
+        PLATFORMSOURCE source,
+        @Context CommandHelp<PLATFORMSOURCE> commandHelp
 ) {
     // commandHelp is ready to use
 }
@@ -95,7 +95,7 @@ public void defaultUsage(
 `HelpQuery` tells the system **what** help entries to retrieve. Build one using its fluent builder:
 
 ```java
-HelpQuery<TestCommandSource> query = HelpQuery.<TestCommandSource>builder()
+HelpQuery<PLATFORMSOURCE> query = HelpQuery.<PLATFORMSOURCE>builder()
         .build();
 ```
 
@@ -119,7 +119,7 @@ The `conditionalRootUsage` predicate decides whether that root pathway gets incl
 You can override this. For example, to never include the root:
 
 ```java
-HelpQuery.<TestCommandSource>builder()
+HelpQuery.<PLATFORMSOURCE>builder()
         .conditionalRootUsage(pathway -> false)
         .build();
 ```
@@ -131,20 +131,20 @@ HelpQuery.<TestCommandSource>builder()
 `HelpTheme` controls **how** help entries look when displayed. For plain text output, extend `TextBasedHelpTheme`:
 
 ```java
-public class MyHelpTheme extends TextBasedHelpTheme<TestCommandSource> {
+public class MyHelpTheme extends TextBasedHelpTheme<PLATFORMSOURCE> {
 
     @Override
-    public @NotNull String getHeaderContent(ExecutionContext<TestCommandSource> context) {
+    public @NotNull String getHeaderContent(ExecutionContext<PLATFORMSOURCE> context) {
         return "======== Command Help ========";
     }
 
     @Override
-    public @NotNull String getFooterContent(ExecutionContext<TestCommandSource> context) {
+    public @NotNull String getFooterContent(ExecutionContext<PLATFORMSOURCE> context) {
         return "=============================";
     }
 
     @Override
-    public @NotNull UsageFormatter<TestCommandSource, String> getUsageFormatter() {
+    public @NotNull UsageFormatter<PLATFORMSOURCE, String> getUsageFormatter() {
         return (lastCommand, pathway, context, theme) -> {
             return HelpComponent.plainText(
                     context.command().getName() + " " + pathway.formatted()
@@ -173,11 +173,11 @@ Now combine the query and theme inside your command method:
 ```java
 @Execute
 public void defaultUsage(
-        TestCommandSource source,
-        @Context CommandHelp<TestCommandSource> commandHelp
+        PLATFORMSOURCE source,
+        @Context CommandHelp<PLATFORMSOURCE> commandHelp
 ) {
     commandHelp.display(
-            HelpQuery.<TestCommandSource>builder().build(),
+            HelpQuery.<PLATFORMSOURCE>builder().build(),
             new MyHelpTheme()
     );
 }
@@ -205,7 +205,7 @@ theme.setOptionValue(HelpTheme.Option.SHOW_HEADER, false);
 theme.setOptionValue(HelpTheme.Option.SHOW_FOOTER, false);
 
 commandHelp.display(
-        HelpQuery.<TestCommandSource>builder().build(),
+        HelpQuery.<PLATFORMSOURCE>builder().build(),
         theme
 );
 ```
@@ -236,7 +236,7 @@ A common pattern is to exclude pathways whose last argument is a subcommand lite
 
 ```java
 commandHelp.display(
-        HelpQuery.<TestCommandSource>builder()
+        HelpQuery.<PLATFORMSOURCE>builder()
                 .filter((pathway) -> !pathway.getLastArgument().isCommand())
                 .build(),
         new MyHelpTheme()
@@ -272,7 +272,7 @@ group <group> setprefix <prefix>
 
 ```java
 commandHelp.display(
-        HelpQuery.<TestCommandSource>builder()
+        HelpQuery.<PLATFORMSOURCE>builder()
                 .filter(HelpFilters.hasPermission(source, commandHelp.getContext()))
                 .build(),
         new MyHelpTheme()
@@ -284,7 +284,7 @@ commandHelp.display(
 Chain multiple `.filter()` calls (AND logic — all must pass):
 
 ```java
-HelpQuery.<TestCommandSource>builder()
+HelpQuery.<PLATFORMSOURCE>builder()
         .filter(HelpFilters.childrenOnly())
         .filter(HelpFilters.hasPermission(source, commandHelp.getContext()))
         .build();
@@ -293,10 +293,10 @@ HelpQuery.<TestCommandSource>builder()
 Or use `HelpFilter` combinators:
 
 ```java
-HelpFilter<TestCommandSource> combined = HelpFilters.<TestCommandSource>childrenOnly()
+HelpFilter<PLATFORMSOURCE> combined = HelpFilters.<PLATFORMSOURCE>childrenOnly()
         .and(HelpFilters.nameContains("perm"));
 
-HelpQuery.<TestCommandSource>builder()
+HelpQuery.<PLATFORMSOURCE>builder()
         .filter(combined)
         .build();
 ```
@@ -312,11 +312,11 @@ Putting it all together for our `/group` command:
 ```java
 @Execute
 public void defaultUsage(
-        TestCommandSource source,
-        @Context CommandHelp<TestCommandSource> commandHelp
+        PLATFORMSOURCE source,
+        @Context CommandHelp<PLATFORMSOURCE> commandHelp
 ) {
     commandHelp.display(
-            HelpQuery.<TestCommandSource>builder()
+            HelpQuery.<PLATFORMSOURCE>builder()
                     .filter((pathway) -> !pathway.getLastArgument().isCommand())
                     .build(),
             new MyHelpTheme()
