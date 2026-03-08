@@ -1,0 +1,88 @@
+---
+title: "@Values"
+description: Restrict argument input to a known fixed set of allowed values.
+order: 5
+---
+# @Values
+
+## Purpose
+
+`@Values` restricts a parameter to a **predefined set of allowed string values**. If the user enters anything not in the list, the command is rejected with an error.
+
+This is useful when a parameter should only accept specific keywords (e.g., game modes, directions, categories).
+
+## Where to Place
+
+On a **parameter**.
+
+```java
+@Target(ElementType.PARAMETER)
+```
+
+## Properties
+
+| Property        | Type       | Default | Description                                                      |
+|-----------------|------------|---------|------------------------------------------------------------------|
+| `value`         | `String[]` | —       | **(Required)** The allowed values.                               |
+| `caseSensitive` | `boolean`  | `true`  | If `true`, input must match exact casing. If `false`, ignores case. |
+
+## Example
+
+```java
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+import studio.mevera.imperat.annotations.types.Named;
+import studio.mevera.imperat.annotations.types.Values;
+
+@RootCommand("gamemode")
+public class GamemodeCommand {
+
+    @Execute
+    public void setMode(
+            PLATFORMSOURCE source,
+            @Named("mode") @Values({"survival", "creative", "adventure", "spectator"}) String mode
+    ) {
+        source.reply("Gamemode set to " + mode);
+    }
+}
+```
+
+### What happens (caseSensitive = true, the default)
+
+| Input                     | Result                                       |
+|---------------------------|----------------------------------------------|
+| `/gamemode survival`      | ✅ Accepted                                   |
+| `/gamemode creative`      | ✅ Accepted                                   |
+| `/gamemode Survival`      | ❌ Rejected — capital "S" doesn't match       |
+| `/gamemode hardcore`      | ❌ Rejected — not in the allowed list          |
+
+### Case-insensitive example
+
+```java
+@Named("mode")
+@Values(value = {"survival", "creative"}, caseSensitive = false)
+String mode
+```
+
+Now `/gamemode Survival` and `/gamemode SURVIVAL` would both be accepted.
+
+## Pipe separator
+
+You can use the pipe character `|` inside a single value string to define multiple allowed values in one entry:
+
+```java
+@Values({"north|south|east|west"})
+```
+
+This is equivalent to:
+
+```java
+@Values({"north", "south", "east", "west"})
+```
+
+## Error Message
+
+When validation fails, Imperat throws an `ArgumentParseException` with the key `VALUE_OUT_OF_CONSTRAINT`. The following placeholder is available:
+
+- `%allowed_values%` — a comma-separated list of the allowed values
+

@@ -1,0 +1,53 @@
+---
+title: "@Async"
+description: Run command execution asynchronously for non-blocking tasks while keeping thread safety in mind.
+order: 1
+---
+
+# @Async
+`@Async` marks a command method to run **asynchronously** (on a separate thread) instead of the main thread.
+By default, command methods execute synchronously — the calling thread is blocked until the method finishes. When you add `@Async`, Imperat runs the method on a background thread using `ForkJoinPool.commonPool()`, so the main thread is free to continue.
+
+## When to Use
+
+- When your command does **slow work** like database queries, HTTP requests, or file I/O.
+- When the command logic is **non-critical** and doesn't need to block the caller.
+
+## Where to Place
+
+On a **method** annotated with `@Execute`.
+
+```java
+@Target(ElementType.METHOD)
+```
+
+## Example
+
+```java
+import studio.mevera.imperat.annotations.types.Async;
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+
+@RootCommand("balance")
+public class BalanceCommand {
+
+    @Execute
+    @Async
+    public void checkBalance(PLATFORMSOURCE source) {
+        // This runs on a background thread, not the main thread.
+        // Safe to do slow database lookups here.
+        double balance = database.getBalance(source.name());
+        source.reply("Your balance: $" + balance);
+    }
+}
+```
+
+**Without `@Async`:** The method blocks the main thread until `database.getBalance(...)` finishes.  
+**With `@Async`:** The method runs in the background. The main thread returns immediately.
+
+## Important Notes
+
+- The annotation takes **no parameters**. Just add `@Async` and you're done.
+- Be careful with **thread safety** — don't access non-thread-safe objects from async methods.
+- Async methods may finish **after** the command call returns to the sender.
+

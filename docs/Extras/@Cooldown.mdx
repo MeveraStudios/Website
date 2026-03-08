@@ -1,0 +1,72 @@
+---
+title: "@Cooldown"
+description: Limit how frequently a command can be used by the same source.
+order: 3
+---
+# @Cooldown
+`@Cooldown` prevents a command from being executed repeatedly by the same user. After a user runs the command, they must wait for the specified duration before they can run it again.
+This is useful for preventing spam, rate-limiting expensive operations, or adding gameplay mechanics.
+
+## Where to Place
+
+On a **method** annotated with `@Execute`.
+
+```java
+@Target(ElementType.METHOD)
+```
+
+## Properties
+
+| Property     | Type       | Default | Description                                                                 |
+|--------------|------------|---------|-----------------------------------------------------------------------------|
+| `value`      | `long`     | —       | **(Required)** The cooldown duration amount.                                |
+| `unit`       | `TimeUnit` | —       | **(Required)** The time unit (e.g., `TimeUnit.SECONDS`, `TimeUnit.MINUTES`).|
+| `permission` | `String`   | `""`    | A permission that **bypasses** the cooldown. If empty, no one can bypass.   |
+
+## Example
+
+```java
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+import studio.mevera.imperat.annotations.types.Cooldown;
+import studio.mevera.imperat.annotations.types.Named;
+
+import java.util.concurrent.TimeUnit;
+
+@RootCommand("heal")
+public class HealCommand {
+
+    @Execute
+    @Cooldown(value = 30, unit = TimeUnit.SECONDS)
+    public void heal(PLATFORMSOURCE source) {
+        source.reply("You have been healed!");
+    }
+}
+```
+
+### What happens
+
+| Action                                  | Result                                                        |
+|-----------------------------------------|---------------------------------------------------------------|
+| User runs `/heal`                       | ✅ Healed. Cooldown starts (30 seconds).                       |
+| User runs `/heal` again after 10s       | ❌ Rejected — "You must wait X seconds."                       |
+| User runs `/heal` again after 30s       | ✅ Healed. Cooldown restarts.                                  |
+
+## Bypass permission example
+
+```java
+@Execute
+@Cooldown(value = 1, unit = TimeUnit.MINUTES, permission = "heal.bypass.cooldown")
+public void heal(PLATFORMSOURCE source) {
+    source.reply("You have been healed!");
+}
+```
+
+Users with the permission `heal.bypass.cooldown` can run `/heal` without waiting.
+
+## Error Message
+
+When the cooldown is active, Imperat throws a `CommandException` with the key `COOLDOWN`. The following placeholders are available:
+
+- `%seconds%` — the remaining cooldown time in seconds
+- `%remaining_duration%` — the full remaining duration as a string
