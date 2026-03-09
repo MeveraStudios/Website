@@ -1,7 +1,7 @@
 ---
 title: Context Arguments
 description: Learn about context arguments in Imperat and how they can be used to provide additional information and functionality to your command execution.
-order: 8
+order: 9
 ---
 # Context Arguments
 **Context Arguments** are arguments, where their values are loaded/deduced from the **context** of the command.
@@ -131,3 +131,14 @@ This basically tells imperat that any parameter of type `Guild` will be defined 
 :::tip
 If you're going to include multiple parameters with same type, where one represents a context-argument while the other represents an input-argument, then you **MUST NOT** declare the type as context-type, as this will force imperat to always assume that **ANY** parameter of **that type** is a context-argument.
 :::
+
+## Default Context Argument Providers
+Imperat already registers a few context providers by default.
+
+| Requested type | Provided value |
+| --- | --- |
+| `CommandContext` | The current command context object |
+| `ExecutionContext` | The current execution context object |
+| `ArgumentInput` | The parsed argument input container for the current execution |
+
+That means you can directly use these types in command method parameters as context arguments, even without manually registering your own provider for them.

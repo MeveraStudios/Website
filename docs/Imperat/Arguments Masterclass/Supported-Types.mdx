@@ -1,0 +1,195 @@
+---
+title: Supported Types
+description: "The pre-defines argument types that are supported on all platforms, and how to register custom types."
+order: 4
+---
+
+# Core Supported Types
+
+Imperat's core module comes with a set of pre-registered argument types that work out of the box on **every platform**. You do not need to register these manually — they are available the moment you create an Imperat instance.
+
+## Simple Types
+
+These are resolved automatically when you use them as parameter types in your command methods.
+
+| Java Type    | Accepted Input                              | Example Input | Error Key               |
+|--------------|---------------------------------------------|---------------|-------------------------|
+| `String`     | Any text. Supports quoted strings and greedy mode. | `hello`       | —                       |
+| `boolean`    | `true` / `false`                            | `true`        | `INVALID_BOOLEAN`       |
+| `char`       | A single character.                         | `A`           | `INVALID_CHARACTER`     |
+| `UUID`       | A standard UUID string.                     | `550e8400-e29b-41d4-a716-446655440000` | `INVALID_UUID` |
+
+## Numeric Types
+
+All numeric types (including their primitive forms) are resolved automatically.
+
+| Java Type      | Accepted Input       | Example Input | Error Key               |
+|----------------|----------------------|---------------|-------------------------|
+| `int`          | An integer number.   | `42`          | `INVALID_NUMBER_FORMAT` |
+| `long`         | A long number.       | `100000`      | `INVALID_NUMBER_FORMAT` |
+| `float`        | A decimal number.    | `3.14`        | `INVALID_NUMBER_FORMAT` |
+| `double`       | A decimal number.    | `3.14159`     | `INVALID_NUMBER_FORMAT` |
+| `byte`         | A byte (-128 to 127).| `64`          | `INVALID_NUMBER_FORMAT` |
+| `short`        | A short number.      | `1024`        | `INVALID_NUMBER_FORMAT` |
+| `BigInteger`   | An arbitrarily large integer. | `99999999999999` | `INVALID_NUMBER_FORMAT` |
+| `BigDecimal`   | An arbitrarily large decimal. | `1.23456789` | `INVALID_NUMBER_FORMAT` |
+
+> Both primitive (`int`, `long`, `float`, `double`, `byte`, `short`) and boxed (`Integer`, `Long`, `Float`, `Double`, `Byte`, `Short`) forms are supported.
+
+## Enum Types
+
+Any `Enum` type is resolved automatically — no manual registration needed.
+
+| Java Type      | Accepted Input                       | Example Input |
+|----------------|--------------------------------------|---------------|
+| Any `Enum`     | The exact name of an enum constant.  | `SURVIVAL`    |
+
+Tab-completion suggestions are automatically generated from the enum constants.
+
+### Example
+
+```java
+public enum GameMode { SURVIVAL, CREATIVE, ADVENTURE }
+
+@RootCommand("setmode")
+public class SetModeCommand {
+
+    @Execute
+    public void setMode(PLATFORMSOURCE source, @Named("mode") GameMode mode) {
+        source.reply("Mode set to " + mode.name());
+    }
+}
+```
+
+`/setmode CREATIVE` → parses `CREATIVE` as `GameMode.CREATIVE`.
+
+## Generic / Wrapper Types
+
+Imperat can automatically resolve generic wrapper types as long as the **inner type**(`T`) is itself a registered type.
+
+### `Optional<T>`
+
+Wraps the parsed value in `java.util.Optional`. If parsing fails, the result is `Optional.empty()`.
+
+```java
+@Execute
+public void greet(PLATFORMSOURCE source, @Named("name") Optional<String> name) {
+    source.reply("Hello, " + name.orElse("world") + "!");
+}
+```
+
+:::note
+This does **NOT** make the argument **optional**  in the sense that it can be omitted from the command input. 
+The argument is still required, but if the user provides an invalid value, it will be treated as `Optional.empty()` instead of causing a parsing error.
+:::
+
+### `CompletableFuture<T>`
+
+Parses the value asynchronously, returning a `CompletableFuture<T>`.
+
+```java
+@Execute
+public void lookup(PLATFORMSOURCE source, @Named("id") CompletableFuture<UUID> id) {
+    id.thenAccept(uuid -> source.reply("UUID: " + uuid));
+}
+```
+
+### `Either<A, B>`
+
+Tries to parse the input as type `A` first. If that fails, it falls back to type `B`.
+
+```java
+@Execute
+public void find(PLATFORMSOURCE source, @Named("target") Either<Integer, String> target) {
+    target.getPrimary().ifPresent(id -> source.reply("Found by ID: " + id));
+    target.getFallback().ifPresent(name -> source.reply("Found by name: " + name));
+}
+```
+
+`/find 42` → parses as `Integer` (primary).  
+`/find Steve` → fails integer parse, falls back to `String`.
+
+## Collection Types
+
+Imperat supports collection parameters. The element type must be a registered type. Collections are **greedy** — they consume multiple space-separated arguments.
+
+| Java Type           | Default Implementation |
+|---------------------|------------------------|
+| `List<T>`           | `ArrayList`            |
+| `Set<T>`            | `HashSet`              |
+| `Queue<T>`          | `LinkedList`           |
+| `Deque<T>`          | `ArrayDeque`           |
+| `Collection<T>`     | `ArrayList`            |
+
+Many concrete implementations are also supported (`LinkedList`, `TreeSet`, `CopyOnWriteArrayList`, `PriorityQueue`, etc.).
+
+:::tip
+You can define specific implementations as the type and they will be used instead.
+ALL java collection implementations are supported, as long as the element type is registered.
+:::
+
+### Example
+
+```java
+@Execute
+public void ban(PLATFORMSOURCE source, @Named("players") List<String> players) {
+    for (String player : players) {
+        source.reply("Banned: " + player);
+    }
+}
+```
+
+`/ban Alice Bob Charlie` → `players` = `["Alice", "Bob", "Charlie"]`
+
+## Array Types
+
+Array parameters work identically to collections — they consume multiple arguments greedily.
+:::info
+Any `T[]` type is supported, as long as `T` is a registered type.
+:::
+
+```java
+@Execute
+public void tag(PLATFORMSOURCE source, @Named("names") String[] names) {
+    source.reply("Tagged " + names.length + " players.");
+}
+```
+
+## Map Types
+
+Map parameters parse entries in `key=value` format, separated by spaces.
+
+| Java Type              | Default Implementation |
+|------------------------|------------------------|
+| `Map<K, V>`           | `HashMap`              |
+| `LinkedHashMap<K, V>` | `LinkedHashMap`        |
+| `TreeMap<K, V>`       | `TreeMap`              |
+| `ConcurrentHashMap<K, V>` | `ConcurrentHashMap` |
+
+:::info
+Any pre-defined `Map<K, V>` type is supported, as long as both `K` and `V` are registered types.
+:::
+
+### Example
+
+```java
+@Execute
+public void config(PLATFORMSOURCE source, @Named("settings") Map<String, Integer> settings) {
+    settings.forEach((k, v) -> source.reply(k + " = " + v));
+}
+```
+
+`/config render_distance=16 max_fps=120` → `{"render_distance": 16, "max_fps": 120}`
+
+## Registering a Custom Type
+
+If you need a type that is not built-in, register it on the config builder:
+
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder(plugin)
+     .registerArgType(MyType.class, new MyTypeArgument())
+        .build();
+```
+
+Where `MyTypeArgument` extends `ArgumentType<S, MyType>` and implements the `parse` method.
+
