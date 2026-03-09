@@ -1,0 +1,101 @@
+---
+title: "@Shortcut"
+description: Create a shortcut command that redirects to another command pathway, sharing the same parameters and execution logic.
+order: 8
+---
+# @Shortcut
+`@Shortcut` redirects one command pathway to another.  
+It creates a new top-level command whose pathway executes the exact same logic, 
+with the same parameters, permissions, and description as the original pathway.
+
+For example, the pathway `/group <group> setperm <permission>` can be redirected so that `/setgroupperm <group> <permission>` does the same thing.
+Another example, the pathway `/party invite <receiver>` can be redirected so that `/pinvite <receiver>` does the same thing.
+## Where to Place
+
+On a **method** annotated with `@Execute`.
+
+```java
+@Target(ElementType.METHOD)
+```
+
+## Properties
+
+| Property | Type     | Default | Description                                                                       |
+|----------|----------|---------|-----------------------------------------------------------------------------------|
+| `value`  | `String` | —       | **(Required)** The name of the shortcut command. Must not be empty or contain spaces. |
+
+## Rules
+
+- The shortcut value **cannot be empty**.
+- The shortcut value **cannot contain spaces** — it must be a single word.
+- The shortcut command inherits all parameters, execution logic, permissions, and description from the original pathway.
+
+## Example 1 — Redirecting a Simple Pathway
+
+```java
+@RootCommand({"party", "p"})
+public class PartyCommand {
+
+    @SubCommand(value = "invite")
+    @Description("Invites a player to your party")
+    @Shortcut("pinvite")
+    public void invite(PLATFORMSOURCE sender, @Named("receiver") String receiver) {
+        sender.reply("Inviting " + receiver + " to your party");
+    }
+}
+```
+
+**Original pathway:** `/party invite <receiver>`  
+**Shortcut pathway:** `/pinvite <receiver>`
+
+| Input                  | Equivalent to           | Result                                    |
+|------------------------|-------------------------|-------------------------------------------|
+| `/party invite Alice`  | —                       | ✅ Invites Alice.                          |
+| `/pinvite Alice`       | `/party invite Alice`   | ✅ Same — invites Alice.                   |
+| `/pinvite`             | `/party invite`         | ❌ Error — missing required `receiver` arg.|
+
+## Example 2 — Redirecting a Nested Pathway
+
+When a pathway is deeper in the command tree, `@Shortcut` flattens it into one top-level command.
+
+```java
+@RootCommand("group")
+public class GroupCommand {
+
+    @SubCommand(value = "setperm", attachTo = "<group>")
+    @Description("Sets permission for a group.")
+    @Shortcut("setgroupperm")
+    public void setGroupPermission(
+            PLATFORMSOURCE source,
+            @InheritedArg @Named("group") Group group,
+            @Named("permission") String permission) {
+        source.reply("Set permission '" + permission + "' for group '" + group.name() + "'");
+    }
+
+    @SubCommand(value = "setprefix", attachTo = "<group>")
+    @Description("Sets prefix for a group.")
+    @Shortcut("setgroupprefix")
+    public void setPrefix(
+            PLATFORMSOURCE source,
+            @InheritedArg @Named("group") Group group,
+            @Named("prefix") String prefix
+    ) {
+        source.reply("Set prefix '" + prefix + "' for group '" + group.name() + "'");
+    }
+}
+```
+
+**Original pathway:** `/group <group> setperm <permission>`  
+**Shortcut pathway:** `/setgroupperm <group> <permission>`
+
+| Input                                   | Equivalent to                        | Result                                        |
+|-----------------------------------------|--------------------------------------|-----------------------------------------------|
+| `/group member setperm lobby.fly`       | —                                    | ✅ Sets `lobby.fly` on group `member`.         |
+| `/setgroupperm member lobby.fly`        | `/group member setperm lobby.fly`    | ✅ Same result.                                |
+| `/setgroupperm member`                  | —                                    | ❌ Error — missing required `permission` arg.  |
+| `/group member setprefix [Guest]`       | —                                    | ✅ Sets prefix `[Guest]` on group `member`.    |
+| `/setgroupprefix member [Guest]`        | `/group member setprefix [Guest]`    | ✅ Same result.                                |
+
+## Key Takeaway
+
+`@Shortcut` redirects a command pathway to a new top-level command pathway — same parameters, same execution, same permissions. One annotation, zero extra logic.
