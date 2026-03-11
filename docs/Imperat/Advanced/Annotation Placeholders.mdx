@@ -1,0 +1,45 @@
+---
+title: "Annotation Placeholders"
+description: "Learn about the placeholders used in Imperat's annotation-based command system."
+order: 7
+---
+# Annotation Placeholders
+You can use placeholders in strings provided to Imperat's annotations, such as `@RootCommand`, `@SubCommand`, `@Execute`, etc...
+These placeholders allow you to dynamically insert values into the annotation strings, making your command definitions more flexible and adaptable to different contexts.
+
+Its you (the developer) who defines these placeholders, and their corresponding values, when building the Imperat instance through `PLATFORMIMPERAT.builder()`.
+For example, you can define a placeholder called `default_description` and use it in your command annotations like this:
+```java
+@RootCommand("example")
+@Description("%default_description%")
+public class ExampleCommand {
+    @Execute
+    public void execute(PLATFORMSOURCE source) {
+        source.sendMessage("This is an example command.");
+    }
+}
+```
+
+Then, when building your Imperat instance, you can provide a value for the `default_description` placeholder like this:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .placeholder(
+        Placeholder.builder("default_description")
+                .resolver((placeHolderId) -> {
+                    return yourConfig.getString("desc");
+                })
+                .build()
+    )
+    .build();
+```
+
+In the example above, we defined a placeholder called `default_description` and provided a resolver function that retrieves the value from a configuration file.
+When Imperat processes the `@Description` annotation on the `ExampleCommand` class, it will replace the `%default_description%` placeholder with the value returned by the resolver function, 
+allowing you to have dynamic descriptions for your commands based on your configuration or any other logic you choose to implement.
+
+:::tip
+This is can be useful when you want your value to be dynamic and not hardcoded in the annotation, 
+for example, if you want to have different descriptions for different languages 
+or if you want to update the description without having to recompile your code, 
+so you can simply update that value in a configuration file or a database then reload your app/plugin.
+:::
