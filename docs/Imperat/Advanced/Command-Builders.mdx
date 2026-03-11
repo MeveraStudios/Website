@@ -1,0 +1,174 @@
+---
+title: "Command Builders"
+description: "Learn how to build custom commands in Imperat."
+order: 6
+---
+# Command Builders
+Imperat internally convert annotated classes and functions into commands and pathways using command builders.
+**Command Builders** are the core of Imperat's command system, allowing you to create custom commands and pathways with ease.
+
+## Creating a Command 
+To create a command, you can use the `Command.Builder` class.
+Let's imagine having a command-class that represents a simple command like this:
+```java
+@RootCommand("hello")
+public class HelloCommand {
+    @Execute
+    public void execute(PLATFORMSOURCE source) {
+        source.sendMessage("Hello, World!");
+    }
+
+    @Execute
+    public void executeWithUsername(PLATFORMSOURCE source, String username) {
+        source.sendMessage("Hello, " + username + "!");
+    }
+}
+```
+
+The above command-class would be converted into a command with two pathways, one for the default execution and one for the execution with a username argument.
+It would be exactly equivalent to the following command built using the command builder:
+
+```java
+import studio.mevera.imperat.command.Command;
+
+PLATFORMIMPERAT imperat = ...;
+
+Command<PLATFORMSOURCE> command = Command.create(imperat, "hello")
+    .defaultExecutor((source, args) -> {
+        // this defines the default behavior of the command when executed without any subcommands or arguments
+        // aka the default-pathway of the command
+        source.sendMessage("Hello, World!");
+    })
+    .pathway(
+        CommandPathway.<PLATFORMSOURCE>builder()
+        .arguments(
+            Argument.requiredText("username")
+        )
+        .execute((source, context)-> {
+            String username = context.getArgument("username");
+            source.sendMessage("Hello, " + username + "!");
+        })
+    )
+    .build();
+
+```
+
+You can register the command objects created using the command-builder through `Imperat#registerSimpleCommand(Command)` method.
+```java
+imperat.registerSimpleCommand(command);
+```
+
+## Building Arguments
+You can create an `Argument` using the static methods: `Argument#required` for required arguments and `Argument#optional` for optional arguments.
+However, both methods require you to specify the `ArgumentType` of the argument.
+
+For example, to create a required text argument named "username", you can do the following:
+```java
+Argument<String> argument = Argument.required("username", ArgumentTypes.string())
+// options in the builder
+.description("The username of the player")
+.permission(PermissionsData.of("imperat.command.hello.username"))
+.suggest((context, argument)-> { //you can provide your own `SuggestionProvider` for dynamic suggestions.
+    // dynamic suggestions based on the context and the argument
+    // for example, you can return a list of online players as suggestions for a username argument
+    return yourSystem.getOnlineUsers().stream()
+        .map(user -> user.getName())
+        .collect(Collectors.toList());
+})
+.validate(yourArgValidator) // you can provide your own `ArgumentValidator` to validate the PARSED argument value before execution
+.build();
+```
+
+If the argument is **optional**, you can also provide a default value that will be used if the argument is not provided during command execution:
+```java
+Argument<String> argument = Argument.optional("username", ArgumentTypes.string())
+//...
+.defaultValue("defaultUsername") // you can provide a default value, this is ONLY USEFUL for optional arguments, which will be used if the argument is not provided during execution
+.build();
+```
+
+### Building Flags
+You can also build flags using the `Argument#flagSwitch` for **switches** and `Argument#flag` for **value(true)-flags**, 
+which takes a string representing the flag name as an argument.
+
+:::note
+The method `Argument#flag` requires an extra parameter that represent the `ArgumentType` of the flag value.
+:::
+
+Here's an example of a **ban** with the syntax: `/ban <username> [reason]`
+```java
+PLATFORMIMPERAT imperat = ...;
+
+Command<PLATFORMSOURCE> BAN_COMMAND = 
+Command.create(imperat, "ban")
+.permission(
+    PermissionsData.of("command.ban")
+)
+.description("Main command for banning players")
+.pathway(
+    CommandPathway.<PLATFORMSOURCE>builder()
+    .arguments(
+            Argument.requiredText("username"),
+            Argument.<PLATFORMSOURCE>optionalGreedy("reason")
+                    .defaultValue("Breaking server laws")
+    )
+    .withFlags(
+            Argument.<PLATFORMSOURCE>flagSwitch("silent")
+                    .aliases("s")
+    )
+    .execute((source, context) -> {
+        //getting arguments' values:
+        String username = context.getArgument("username");
+
+        // optional
+        String reason = context.getArgument("reason");
+
+        //getting silent flag value, (false if the sender doesn't add
+        // '-s' or '-silent')
+        Boolean silent = context.getFlagValue("silent");
+        assert silent != null;
+
+        String msg =
+                "Permanently Banning " + username + " due to '"
+                        + reason + "'";
+        if (!silent) {
+            source.reply("NOT SILENT= " + msg);
+        } else {
+            source.reply("SILENT= " + msg);
+        }
+    })
+)
+.build();
+```
+
+
+## Building Subcommands
+You can build subcommands using the `Command.Builder#subcommand` method, which takes another `Command` object as an argument.
+For example, to create a subcommand `special` under the `hello` command,
+
+```java
+PLATFORMIMPERAT imperat = ...;
+
+Command<PLATFORMSOURCE> specialSubcommand = Command.create(imperat, "special")
+    .defaultExecutor((source, args) -> {
+        source.sendMessage("This is a special subcommand!");
+    })
+    .build();
+
+Command<PLATFORMSOURCE> helloCommand = Command.create(imperat, "hello")
+    .defaultExecutor((source, args) -> {
+        source.sendMessage("Hello, World!");
+    })
+    .subcommand(specialSubcommand) // this adds the `special` subcommand under the `hello` command
+    .build();
+```
+
+:::tip
+Commands can be nested to any depth, allowing you to create complex command structures with multiple levels of subcommands.
+But keep in mind that deeply nested commands can become difficult to manage and understand for users, so it's generally a good idea to keep your command structures as simple as possible.  
+:::
+
+:::tip{label="Pro-Tip", side-color="#00d4ff", bg-color="#00d4ff20"}
+A great indication for using the `Command.Builder` instead of annotations is when you want to create commands **dynamically** at runtime.
+for example, if you want to create commands based on data from a database or an API, or if you want to create commands that are not known at compile time.
+:::

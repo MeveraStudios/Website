@@ -1,0 +1,89 @@
+---
+title: "Events"
+description: "Learn about Imperat's event system, including pre-defined events, how to register event listeners, and how to create custom events."
+order: 5
+---
+# Events Guide
+Imperat has a built-in event system, also known as `EventBus`, that allows you to listen and react to various events that occur within Imperat.
+There are pre-defined events that Imperat fires at different stages of runtime.
+
+## Pre-defined Events
+| Event Name | Description |
+|------------|-------------|
+`CommandPreRegistrationEvent` | Fired right before a command is registered.
+`CommandPostRegistrationEvent` | Fired right after a command is registered.
+`CommandPreProcessEvent` | Right before the command is processed with the provided input.
+`CommandPostProcessEvent` | Right after the command is processed with the provided input.
+
+:::note
+Remember the pre and post processors ?
+They basically depend on the events: `CommandPreProcessEvent` and `CommandPostProcessEvent`.
+:::
+
+## Registering Event Listeners
+To Listen to an event, you need to subscribe to it through Imperat's `EventBus`.
+For example:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .build();
+imperat.listen(yourEventClass.class, (event) -> {
+    // This code will be executed every time a command is about to be processed.
+    // You can access the command, the input, the source, etc... through the event object.
+}, Priority.NORMAL, ExecutionStrategy.SYNC);
+```
+
+In the example above, we are subscribing to the `CommandPreProcessEvent` event.
+The second parameter is a lambda function that will be executed every time the event is fired.
+The `Priority` parameter allows you to specify the order in which listeners are executed when multiple listeners are subscribed to the same event.
+Its a wrapper around an integer value, where higher values indicate higher priority.
+However, the class has some predefined constants for common priorities, such as `Priority.HIGHEST`, `Priority.HIGH`, `Priority.NORMAL`, `Priority.LOW`, and `Priority.LOWEST`.
+
+The `ExecutionStrategy` parameter allows you to specify whether the listener should be executed synchronously or asynchronously.
+`ExecutionStrategy.SYNC` means the listener will be executed in the same thread that fired the event,
+ while `ExecutionStrategy.ASYNC` means the listener will be executed in a separate thread.
+
+## Cancellable Events
+Some events are cancellable (The event class implements `Cancellable`), which means that you can prevent the default behavior associated with that event from occurring.
+For example, the `CommandPreProcessEvent` is cancellable, which means that if you cancel it, the command will not be processed.
+To cancel an event, you can call the `event.setCancelled(true)` method within your event listener.
+
+## Creating Custom Events
+You can also create your own custom events.
+Your custom events can be command-based or not, depending on whether they need to be associated with a command or not.    
+To create a command-based event, you need to extend the `CommandEvent` class, which is a subclass of `Event`.
+For custom events that are not associated with a command, you can simply implement the `Event` interface.
+Here's an example of a custom general event:
+```java
+public class CustomEvent implements Event {
+    private String message;
+
+    public CustomEvent(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}
+```
+
+Let's first register a listener for this event:
+```java
+imperat.listen(CustomEvent.class, (event) -> {
+    System.out.println("Received custom event with message: " + event.getMessage());
+}, Priority.NORMAL, ExecutionStrategy.SYNC);
+```
+
+Now Let's fire this event somewhere in our code:
+```java
+PLATFORMIMPERAT imperat = ...;
+imperat.publishEvent(new CustomEvent("Hello, this is a custom event!"));
+```
+
+Now when `Imperat#publishEvent` is called with a new instance of `CustomEvent`, the registered listener(s) will be triggered, 
+and execute the logic defined in the listener.
+
+

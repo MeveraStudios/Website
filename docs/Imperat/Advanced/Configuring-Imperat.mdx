@@ -1,0 +1,202 @@
+---
+title: "Configuring Imperat"
+description: "Learn how to configure Imperat with various options to customize its behavior and optimize your command handling."
+order: 1
+---
+
+# Extra Configuration Options
+When building your Imperat instance, you have access to various configuration options that allow you to customize its behavior and optimize your command handling.
+I will be covering some of the most useful and commonly used configuration options in this section, but there are many more available in the `ConfigBuilder` class.
+
+## Permission Checker
+The permission checker is a functional interface that allows you to define how Imperat should check for permissions.
+By default, Imperat does not perform any permission checks, but you can provide your own implementation to integrate with your platform's permission system.
+Here's an example of how to set a permission checker:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .permissionChecker((source, permission) -> {
+        // Implement your permission checking logic here.
+        // For example, you could check if the source has the required permission:
+        return yourPermissionSystem.hasPermission(source, permission);
+    })
+    .build();
+```
+
+In the example above, we are providing a lambda function that takes 
+the `CommandSource` and the permission string as parameters and returns a boolean indicating whether the source has the required permission or not.
+
+## Global Command Coordinator
+Firstly, a Command Coordinator is responsible for coordinating the execution of commands,
+It defines what thread the command should be executed on, and how to handle exceptions that may occur during command execution.
+
+When using `@Async`, the command will be executed asynchronously using the default async coordinator, which uses `ForkJoinPool.commonPool()` to execute commands asynchronously.
+Pre-defined coordinators can be found in the `CommandCoordinator` class.
+However, you can also set a global command coordinator that will be used for all pathways by default, without needing to specify it for each pathway.
+When a pathway is executed, Imperat will check if the pathway has a specific coordinator defined for it, if not,
+ it will use the global command coordinator for it which is the synchronous coordinator by default.
+
+Here's an example of how to set a global command coordinator:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .globalCommandCoordinator(yourCustomCommandCoordinator)
+    .build();
+```
+
+Feel free to create your own custom command coordinators
+ to define how commands should be executed in your platform, 
+ and set it as the global command coordinator to have it applied to all pathways by default.
+
+## Global Default-Pathway
+You can define a default pathway for all commands when an empty input is provided, without needing to specify it for each command.
+When a command is executed with an empty input, Imperat will check if the command has a specific default pathway defined for it, if not,
+ it will use the global default pathway for it which is the empty pathway by default.
+Here's an example of how to set a global default pathway:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .globalDefaultPathwayBuilder(yourDefaultPathway)
+    .build();
+```
+
+:::note
+The pathway provided is an object of type `CommandPathway.Builder<S>`, **NOT** a method annotated with `@Execute`,
+Learn more about creating/integrating with imperat's API in the [Command Builders](../Imperat/Command%20Builders.mdx) section.
+:::
+
+## Default Suggestion Provider
+You can set a default suggestion provider that will be used for all arguments by default, without needing to specify it for each argument.
+When an argument is being suggested, Imperat will check if the argument has a specific suggestion provider defined for it, if not,
+ it will use the default suggestion provider for it which is the empty suggestion provider by default.
+
+Here's an example of how to set a default suggestion provider:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .defaultSuggestionProvider(yourCustomSuggestionProvider)
+    .build();
+```
+
+## Middle Optional Argument Skipping
+<p>
+Whether to handle the skipping of consecutive optional argument <b>during execution</b>
+For example if you have `/test [a] [b]` where parameter 'a' is of type String
+and parameter 'b' is of type Integer.
+if you enter `/test 1` while this option is enabled, it would handle this and assign
+the parameter 'b' to the value that suits its type.
+with no respect for the order of optional arguments.
+</p>
+
+It's disabled by default, but you can enable it like this:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .handleMiddleOptionalArgSkipping(true)
+    .build();
+```
+
+## Help Coordinator
+You can freely define the default coordinator that coordinates all of the help classes in imperat.
+By overriding the default `HelpCoordinator`, you can control two things:
+- How the help entries are fetched from the `HelpQuery` provided.
+- How the help messages are rendered and sent to the user.
+
+The default `HelpCoordinator` is from the method with the empty parameters: `HelpCoordinator#create()`.
+Feel free to create your own custom `HelpCoordinator` through calling `HelpCoordinator#create(TreeHelpVisitor<S>, HelpLayoutRenderer<S, C>)` and providing your own implementations of the `TreeHelpVisitor` and `HelpLayoutRenderer` interfaces,
+to control how help entries are fetched and how help messages are rendered and sent to the user.
+
+Here's an example of registering a custom `HelpCoordinator`:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .helpCoordinator(yourCustomHelpCoordinator)
+    .build();
+```
+
+### Modifying the coordination steps.
+You can override the method `HelpCoordinator#showHelp`. if you want to heavily modify how the help coordination process works,
+ for example, if you want to add some extra steps to the coordination process, or if you want to change how the help query is processed before fetching the help entries, etc...
+
+
+## Context Factory
+The context factory is responsible for creating new instances of `CommandContext` for pre-processing, 
+new instances of `ExecutionContext` for command execution, and instances
+of `SuggestionContext` for argument suggestions.
+
+By default, Imperat uses a simple context factory that creates instances of `CommandContext`, `ExecutionContext`, and `SuggestionContext` using their default constructors.
+However, you can provide your own implementation of the context factory to create custom context instances with additional data or functionality.
+Here's an example of how to set a custom context factory:
+```java
+public class YourCustomContextFactory extends ContextFactory<PLATFORMSOURCE> {
+
+    public YourCustomContextFactory() {
+        super();
+    }
+
+    @Override
+    public CommandContext<PLATFORMSOURCE> createContext(
+            @NotNull Imperat<S> imperat,
+            @NotNull S source,
+            Command<S> command,
+            @NotNull String label,
+            @NotNull ArgumentInput queue
+    ) {
+        // Create and return a custom CommandContext instance
+        return new YourCustomCommandContext(imperat, source, command, label, queue);
+    }
+
+    @Override
+    public ExecutionContext<PLATFORMSOURCE> createExecutionContext(
+            @NotNull CommandContext<S> plainContext,
+            @NotNull CommandPathway<S> pathway,
+            @NotNull Command<S> lastCommand
+    ) {
+        // Create and return a custom ExecutionContext instance
+        return new YourCustomExecutionContext(plainContext, pathway, lastCommand);
+    }
+
+    @Override
+    public SuggestionContext<PLATFORMSOURCE> createSuggestionContext(
+            @NotNull Imperat<S> imperat,
+            @NotNull S source,
+            @NotNull Command<S> command,
+            @NotNull String label,
+            @NotNull ArgumentInput queue
+    ) {
+        // Create and return a custom SuggestionContext instance
+        return new YourCustomSuggestionContext(imperat, source, command, label, queue);
+    }
+}
+```
+
+Then you can register your custom context factory when building your Imperat instance:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .contextFactory(new YourCustomContextFactory())
+    .build();
+```
+
+## Throwable Printer
+The throwable printer is responsible for printing exceptions that occur during the framework's operations.
+By default, Imperat uses a simple throwable printer that prints the stack trace of the exception to the console.
+However, you can provide your own implementation of the throwable printer to customize how exceptions are logged or reported in your application.
+Here's an example of how to set a custom throwable printer:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .throwablePrinter((throwable) -> {
+        // Implement your custom throwable printing logic here.
+        // For example, you could log the exception to a file or send it to an error tracking service:
+        yourLoggingSystem.logError("An error occurred in Imperat", throwable);
+    })
+    .build();
+```
+
+## Event Bus
+You can set a custom event bus to handle the events in Imperat.
+By default, Imperat uses a simple event bus that allows you to subscribe to events and publish events within the framework.
+However, you can provide your own implementation of the event bus to integrate with your platform's event system or to add additional functionality to event handling.
+`EventBus` has a builder that has 2 customizable properties:
+- `ExceptionHandler`: Defines how exceptions that occur during event handling should be handled. By default, it uses the built-in **exception-handler** system.
+- `ExecutorService`: Defines the executor service that will be used for asynchronous event handling. By default, it uses `ForkJoinPool.commonPool()`.
+
+Here's an example of how to set a custom event bus:
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .eventBus(EventBus.builder().exceptionHandler(yourExceptionHandler).executorService(yourExecutorService))
+    .build();
+```
