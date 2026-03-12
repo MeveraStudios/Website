@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mevera Docs</title>
+    <script>
+      // GitHub Pages SPA redirect
+      // When GH Pages serves this 404.html for any unmatched path,
+      // we encode the intended URL into a query param and redirect to /.
+      // The index.html will then read it and restore the URL so React Router works.
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        '/?p=' + encodeURIComponent(l.pathname + l.search) +
+        (l.hash ? '&h=' + encodeURIComponent(l.hash) : '')
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
