@@ -33,6 +33,7 @@ const projectsConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
 interface DocFrontmatter {
     title: string;
     description?: string;
+    slug?: string;
     category?: string;
     order?: number;
     hidden?: boolean;
@@ -166,6 +167,7 @@ function parseFrontmatter(content: string): { frontmatter: DocFrontmatter; body:
         frontmatter: {
             title: (frontmatter.title as string) || 'Untitled',
             description: frontmatter.description as string | undefined,
+            slug: frontmatter.slug as string | undefined,
             category: frontmatter.category as string | undefined,
             order: frontmatter.order as number | undefined,
             hidden: frontmatter.hidden as boolean | undefined,
@@ -325,9 +327,11 @@ function precompileDocs() {
             const fileName = parts[parts.length - 1];
             const extensionMatch = fileName.match(/\.(mdx?)$/);
             const extension = extensionMatch ? extensionMatch[0] : '.md';
-            const slug = fileName.replace(/\.mdx?$/, '');
+            const fileSlug = fileName.replace(/\.mdx?$/, '');
 
             const { frontmatter, body } = parseFrontmatter(content);
+            const slug = frontmatter.slug || fileSlug;
+
 
             // Determine category
             let categoryName = frontmatter.category || rootCategoryName;
