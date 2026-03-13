@@ -36,14 +36,23 @@ export default defineConfig({
         ],
       },
       workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         maximumFileSizeToCacheInBytes: 4000000, // 4MB to allow React/UI vendor chunks
         runtimeCaching: [
           {
-            urlPattern: /\/docs-data\.json$/,
+            urlPattern: /\/docs-nav\.json$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'docs-data',
+              cacheName: 'docs-nav',
               expiration: { maxAgeSeconds: 60 * 60 * 24 }, // 1 day
+            },
+          },
+          {
+            urlPattern: /\/docs-content\/.*\.json$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'docs-content',
+              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 days cache for static document content
             },
           },
           {

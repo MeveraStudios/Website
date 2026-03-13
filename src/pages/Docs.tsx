@@ -20,7 +20,7 @@ import { DocNavigation } from '@/components/docs/DocNavigation';
 import { SearchDialog } from '@/components/docs/SearchDialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useDocs, getDoc, extractToc, getDocNavigation } from '@/lib/docs';
+import { useDocs, useDocContent, getDocNavigation } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES } from '@/config/site';
 
 export function Docs() {
@@ -60,11 +60,8 @@ export function Docs() {
     return <div>No documentation found</div>;
   }
 
-  // Find the current document
-  const doc = slug ? getDoc(projectId!, slug) : null;
-
-  // Redirect to first doc in project if doc not found
-  if (!doc) {
+  // Redirect to first doc in project if no slug provided
+  if (!slug) {
     const firstDoc = project.categories[0]?.docs[0];
     if (firstDoc) {
       return <Navigate to={`/docs/${project.id}/${firstDoc.slug}`} replace />;
@@ -72,14 +69,16 @@ export function Docs() {
     return <div>No documentation found for this project</div>;
   }
 
-  // Extract table of contents
-  const { items: toc } = extractToc(doc.content);
+  // Fetch the current document content
+  const { doc, isLoading } = useDocContent(projectId || '', slug);
 
   // Get prev/next navigation
-  const { prev, next } = getDocNavigation(project, doc.slug);
+  const { prev, next } = getDocNavigation(project, slug);
 
-  // Generate edit URL
-  const editUrl = `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${doc.slug}${doc.extension}`;
+  // Generate edit URL (fallback if doc not loaded)
+  const editUrl = doc 
+    ? `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${doc.slug}${doc.extension}`
+    : `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${slug}.md`;
 
   return (
     <div className="min-h-screen flex flex-col bg-docs">
@@ -103,63 +102,72 @@ export function Docs() {
               <SearchDialog />
             </div>
 
-            {/* Document Header */}
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold tracking-tight mb-4">
-                {doc.frontmatter.title}
-              </h1>
-
-              {doc.frontmatter.description && (
-                <p className="text-xl text-muted-foreground">
-                  {doc.frontmatter.description}
-                </p>
-              )}
-
-              {/* Meta info */}
-              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
-                {FEATURES.lastUpdated && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>Last updated: {new Date().toLocaleDateString()}</span>
-                  </div>
-                )}
-
-                {FEATURES.editPageLinks && (
-                  <Button variant="link" size="sm" asChild className="h-auto p-0">
-                    <a
-                      href={editUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit this page
-                    </a>
-                  </Button>
-                )}
+            {isLoading || !doc ? (
+              <div className="py-20 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading page...</p>
               </div>
-            </div>
-
-            <Separator className="mb-8" />
-
-            {/* Document Content */}
-            {doc.extension === '.mdx' ? (
-              <MDXRenderer content={doc.content} />
             ) : (
-              <MarkdownRenderer content={doc.content} />
-            )}
+              <>
+                {/* Document Header */}
+                <div className="mb-8">
+                  <h1 className="text-4xl font-bold tracking-tight mb-4">
+                    {doc.frontmatter.title}
+                  </h1>
 
-            {/* Document Navigation */}
-            <DocNavigation
-              prev={prev}
-              next={next}
-              projectId={project.id}
-            />
+                  {doc.frontmatter.description && (
+                    <p className="text-xl text-muted-foreground">
+                      {doc.frontmatter.description}
+                    </p>
+                  )}
+
+                  {/* Meta info */}
+                  <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
+                    {FEATURES.lastUpdated && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Last updated: {new Date().toLocaleDateString()}</span>
+                      </div>
+                    )}
+
+                    {FEATURES.editPageLinks && (
+                      <Button variant="link" size="sm" asChild className="h-auto p-0">
+                        <a
+                          href={editUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit this page
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <Separator className="mb-8" />
+
+                {/* Document Content */}
+                {doc.extension === '.mdx' ? (
+                  <MDXRenderer content={doc.content || ''} />
+                ) : (
+                  <MarkdownRenderer content={doc.content || ''} />
+                )}
+
+                {/* Document Navigation */}
+                <DocNavigation
+                  prev={prev}
+                  next={next}
+                  projectId={project.id}
+                />
+              </>
+            )}
           </main>
 
           {/* Table of Contents */}
-          {FEATURES.tableOfContents && (
-            <TableOfContents key={doc.slug} items={toc} />
+          {FEATURES.tableOfContents && doc && doc.toc && !isLoading && (
+            <TableOfContents key={doc.slug} items={doc.toc} />
           )}
         </div>
       </div>

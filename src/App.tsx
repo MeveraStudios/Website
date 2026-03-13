@@ -11,7 +11,7 @@
  * - 404 handling
  */
 
-import { useEffect } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -19,10 +19,12 @@ import {
   useLocation,
   Navigate
 } from 'react-router-dom';
-import { Home } from '@/pages/Home';
-import { Docs } from '@/pages/Docs';
 import { SITE_CONFIG } from '@/config/site';
 import { preloadDocs } from '@/lib/docs';
+
+// Lazy loading the main route pages to split bundles
+const Home = lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
+const Docs = lazy(() => import('@/pages/Docs').then(m => ({ default: m.Docs })));
 import './App.css';
 
 // Preload documentation data
@@ -92,13 +94,19 @@ function AppRoutes() {
     <>
       <ScrollToTop />
       <PageTitle />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/docs/:projectId/:slug" element={<Docs />} />
-        <Route path="/docs/:projectId" element={<Docs />} />
-        <Route path="/docs" element={<Navigate to="/docs/Imperat/getting-started" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/docs/:projectId/:slug" element={<Docs />} />
+          <Route path="/docs/:projectId" element={<Docs />} />
+          <Route path="/docs" element={<Navigate to="/docs/Imperat/getting-started" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

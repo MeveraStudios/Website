@@ -9,17 +9,19 @@ import { useState, useEffect } from 'react';
 import type { DocFile, DocProject, TocItem, Header } from '@/types/docs';
 import { buildHeaderTree, flattenHeaderTree } from './utils';
 
-// Type for cached documentation data
-interface CachedDocsData {
+// Type for cached documentation navigation data
+interface CachedDocsNavData {
   projects: DocProject[];
-  toc: Record<string, TocItem[]>;
   generatedAt?: string;
 }
 
-// Cached data
-let cachedDocsData: CachedDocsData | null = null;
-let isLoading = false;
-let loadPromise: Promise<void> | null = null;
+// Cached data for content chunks
+const docContentCache = new Map<string, DocFile>();
+
+// Cached navigation data
+let cachedDocsNavData: CachedDocsNavData | null = null;
+let isNavLoading = false;
+let navLoadPromise: Promise<void> | null = null;
 const listeners: Array<() => void> = [];
 
 /**
@@ -43,77 +45,118 @@ function notifySubscribers() {
 }
 
 /**
- * Load precompiled documentation data
+ * Load lightweight precompiled documentation navigation data
  */
-async function loadDocsData(): Promise<CachedDocsData> {
-  // Return cached data if available
-  if (cachedDocsData) {
-    return cachedDocsData;
+async function loadDocsNavData(): Promise<CachedDocsNavData> {
+  if (cachedDocsNavData) return cachedDocsNavData;
+
+  if (isNavLoading && navLoadPromise) {
+    await navLoadPromise;
+    return cachedDocsNavData!;
   }
 
-  // If already loading, wait for the existing promise
-  if (isLoading && loadPromise) {
-    await loadPromise;
-    return cachedDocsData!;
-  }
-
-  // Start loading
-  isLoading = true;
-  loadPromise = (async () => {
+  isNavLoading = true;
+  navLoadPromise = (async () => {
     try {
-      const response = await fetch('/docs-data.json');
+      const response = await fetch('/docs-nav.json');
       if (!response.ok) {
-        throw new Error(`Failed to load docs data: ${response.statusText}`);
+        throw new Error(`Failed to load docs nav data: ${response.statusText}`);
       }
-      cachedDocsData = await response.json();
-      notifySubscribers(); // Notify all components that data is ready
+      cachedDocsNavData = await response.json();
+      notifySubscribers();
     } catch (error) {
-      console.error('Error loading documentation data:', error);
-      // Fallback to empty data
-      cachedDocsData = { projects: [], toc: {} };
+      console.error('Error loading navigation data:', error);
+      cachedDocsNavData = { projects: [] };
       notifySubscribers();
     } finally {
-      isLoading = false;
+      isNavLoading = false;
     }
   })();
 
-  await loadPromise;
-  return cachedDocsData!;
+  await navLoadPromise;
+  return cachedDocsNavData!;
 }
 
 /**
- * React hook to use documentation data
- * This ensures components re-render when data loads
+ * Fetch a specific document's detailed content
+ */
+export async function fetchDocContent(projectId: string, slug: string): Promise<DocFile | null> {
+  const cacheKey = `${projectId}/${slug}`;
+  if (docContentCache.has(cacheKey)) {
+    return docContentCache.get(cacheKey)!;
+  }
+
+  try {
+    const response = await fetch(`/docs-content/${projectId}/${slug}.json`);
+    if (!response.ok) {
+      throw new Error(`Failed to load document content for ${slug}`);
+    }
+    const docData: DocFile = await response.json();
+    docContentCache.set(cacheKey, docData);
+    return docData;
+  } catch (error) {
+    console.error(`Error fetching document ${slug}:`, error);
+    return null;
+  }
+}
+
+/**
+ * React hook to use documentation navigation data
  */
 export function useDocs() {
   const [projects, setProjects] = useState<DocProject[]>(() => {
-    return cachedDocsData?.projects || [];
+    return cachedDocsNavData?.projects || [];
   });
-  const [isLoaded, setIsLoaded] = useState(() => cachedDocsData !== null);
+  const [isLoaded, setIsLoaded] = useState(() => cachedDocsNavData !== null);
 
   useEffect(() => {
-    // If data is already loaded, we're done
-    if (cachedDocsData) {
-      setProjects(cachedDocsData.projects);
+    if (cachedDocsNavData) {
+      setProjects(cachedDocsNavData.projects);
       setIsLoaded(true);
       return;
     }
 
-    // Subscribe to data loading
     const unsubscribe = subscribe(() => {
-      if (cachedDocsData) {
-        setProjects(cachedDocsData.projects);
+      if (cachedDocsNavData) {
+        setProjects(cachedDocsNavData.projects);
         setIsLoaded(true);
       }
     });
 
-    // Trigger load if not already loading
-    loadDocsData().catch(console.error);
+    loadDocsNavData().catch(console.error);
 
     return unsubscribe;
   }, []);
 
   return { projects, isLoaded };
+}
+
+/**
+ * React hook to fetch and provide a specific document's content
+ */
+export function useDocContent(projectId: string, slug: string) {
+  const [doc, setDoc] = useState<DocFile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!projectId || !slug) return;
+    
+    setIsLoading(true);
+    let isMounted = true;
+
+    fetchDocContent(projectId, slug).then((content) => {
+      if (isMounted) {
+        setDoc(content);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId, slug]);
+
+  return { doc, isLoading };
 }
 
 /**
@@ -153,29 +196,37 @@ export function parseDocs(): DocProject[] {
   }
 
   // If data is already cached, return it synchronously
-  if (cachedDocsData) {
-    return cachedDocsData.projects;
+  if (cachedDocsNavData) {
+    return cachedDocsNavData.projects;
   }
 
-  // Trigger async load (this will populate cache for subsequent calls)
-  loadDocsData().catch(console.error);
+  // Trigger async load
+  loadDocsNavData().catch(console.error);
 
-  // Return empty array for now (components will re-render when data loads)
   return [];
 }
 
 /**
- * Get a specific document by project and slug
+ * Get a specific document from the loaded docContentCache OR basic nav info
  */
 export function getDoc(projectId: string, slug: string): DocFile | undefined {
-  if (!cachedDocsData) {
-    return undefined;
+  const cacheKey = `${projectId}/${slug}`;
+  if (docContentCache.has(cacheKey)) {
+    return docContentCache.get(cacheKey);
+  }
+  
+  // Fall back to finding the nav item
+  if (!cachedDocsNavData) return undefined;
+  
+  const project = cachedDocsNavData.projects.find(p => p.id === projectId);
+  if (!project) return undefined;
+  
+  for (const cat of project.categories) {
+    const doc = cat.docs.find(d => d.slug === slug);
+    if (doc) return doc;
   }
 
-  const project = cachedDocsData.projects.find(p => p.id === projectId);
-  if (!project) return undefined;
-
-  return project.allDocs.find(d => d.slug === slug);
+  return undefined;
 }
 
 /**
@@ -198,36 +249,54 @@ export function getProjectNav(project: DocProject): { label: string; href: strin
 }
 
 /**
- * Search through all documentation
+ * Search through all documentation using the search index directly
  */
-export function searchDocs(query: string): { title: string; excerpt: string; href: string; project: string }[] {
-  if (!cachedDocsData) {
+let searchIndexCache: { title: string; content: string; href: string; project: string }[] | null = null;
+let isSearchIndexLoading = false;
+
+export async function fetchSearchIndex() {
+  if (searchIndexCache) return searchIndexCache;
+  if (isSearchIndexLoading) return []; // Avoid parallel disjoint fetched, or return empty temp
+
+  isSearchIndexLoading = true;
+  try {
+    const res = await fetch('/search-index.json');
+    if (res.ok) {
+      searchIndexCache = await res.json();
+    }
+  } catch (e) {
+    console.error("Failed to load search index", e);
+  } finally {
+    isSearchIndexLoading = false;
+  }
+  return searchIndexCache || [];
+}
+
+export function searchDocs(query: string) {
+  if (!searchIndexCache) {
     return [];
   }
 
   const results: { title: string; excerpt: string; href: string; project: string }[] = [];
   const lowerQuery = query.toLowerCase();
 
-  cachedDocsData.projects.forEach(project => {
-    project.allDocs.forEach(doc => {
-      const content = doc.content.toLowerCase();
-      const title = doc.frontmatter.title.toLowerCase();
+  searchIndexCache.forEach(doc => {
+    const content = doc.content.toLowerCase();
+    const title = doc.title.toLowerCase();
 
-      if (title.includes(lowerQuery) || content.includes(lowerQuery)) {
-        // Find excerpt around the match
-        const index = content.indexOf(lowerQuery);
-        const start = Math.max(0, index - 50);
-        const end = Math.min(content.length, index + query.length + 100);
-        const excerpt = doc.content.slice(start, end).replace(/[#*`]/g, '');
+    if (title.includes(lowerQuery) || content.includes(lowerQuery)) {
+      const index = content.indexOf(lowerQuery);
+      const start = Math.max(0, index - 50);
+      const end = Math.min(content.length, index + query.length + 100);
+      const excerpt = doc.content.slice(start, end).replace(/[#*`]/g, '');
 
-        results.push({
-          title: doc.frontmatter.title,
-          excerpt: `...${excerpt}...`,
-          href: `/docs/${project.id}/${doc.slug}`,
-          project: project.name
-        });
-      }
-    });
+      results.push({
+        title: doc.title,
+        excerpt: `...${excerpt}...`,
+        href: doc.href,
+        project: doc.project
+      });
+    }
   });
 
   return results;
@@ -251,5 +320,5 @@ export function getDocNavigation(project: DocProject, currentSlug: string): { pr
  * Call this early in your app to ensure data is available
  */
 export async function preloadDocs(): Promise<void> {
-  await loadDocsData();
+  await loadDocsNavData();
 }

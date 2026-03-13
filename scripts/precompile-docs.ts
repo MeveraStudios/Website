@@ -69,6 +69,36 @@ interface DocProject {
     };
 }
 
+// Omit content and frontmatter from the navigation data to keep it small
+interface NavDocFile {
+    slug: string;
+    path: string;
+    frontmatter: {
+        title: string;
+        sidebarLabel?: string;
+        order?: number;
+    };
+    category: string;
+}
+
+interface NavDocCategory {
+    name: string;
+    docs: NavDocFile[];
+    order: number;
+}
+
+interface NavDocProject {
+    id: string;
+    name: string;
+    description: string;
+    categories: NavDocCategory[];
+    meta: {
+        emoji: string;
+        color: string;
+        githubRepo?: string;
+    };
+}
+
 interface TocItem {
     text: string;
     level: number;
@@ -421,21 +451,70 @@ function precompileDocs() {
     });
 
     // Write output files
-    const docsData = {
-        projects: Array.from(projectsMap.values()),
-        toc: tocMap,
+    
+    // 1. Generate Navigation Data (lightweight)
+    const navProjects: NavDocProject[] = Array.from(projectsMap.values()).map(project => {
+        return {
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            meta: project.meta,
+            categories: project.categories.map(category => ({
+                name: category.name,
+                order: category.order,
+                docs: category.docs.map(doc => ({
+                    slug: doc.slug,
+                    path: doc.path,
+                    category: doc.category,
+                    frontmatter: {
+                        title: doc.frontmatter.title,
+                        sidebarLabel: doc.frontmatter.sidebarLabel,
+                        order: doc.frontmatter.order
+                    }
+                }))
+            }))
+        };
+    });
+
+    const docsNavData = {
+        projects: navProjects,
         generatedAt: new Date().toISOString()
     };
 
-    const docsDataPath = join(PUBLIC_DIR, 'docs-data.json');
+    const docsNavPath = join(PUBLIC_DIR, 'docs-nav.json');
     const searchIndexPath = join(PUBLIC_DIR, 'search-index.json');
+    const docsContentDir = join(PUBLIC_DIR, 'docs-content');
 
-    writeFileSync(docsDataPath, JSON.stringify(docsData, null, 2), 'utf-8');
-    writeFileSync(searchIndexPath, JSON.stringify(searchIndex, null, 2), 'utf-8');
+    if (!existsSync(docsContentDir)) {
+        mkdirSync(docsContentDir, { recursive: true });
+    }
+
+    writeFileSync(docsNavPath, JSON.stringify(docsNavData), 'utf-8');
+    writeFileSync(searchIndexPath, JSON.stringify(searchIndex), 'utf-8');
+
+    // 2. Generate Individual Doc Content Files
+    let contentFilesWritten = 0;
+    projectsMap.forEach(project => {
+        const projectContentDir = join(docsContentDir, project.id);
+        if (!existsSync(projectContentDir)) {
+            mkdirSync(projectContentDir, { recursive: true });
+        }
+
+        project.allDocs.forEach(doc => {
+            const docContentData = {
+                ...doc,
+                toc: tocMap[`${project.id}/${doc.slug}`] || []
+            };
+            const docPath = join(projectContentDir, `${doc.slug}.json`);
+            writeFileSync(docPath, JSON.stringify(docContentData), 'utf-8');
+            contentFilesWritten++;
+        });
+    });
 
     console.log('\n✅ Precompilation complete!');
-    console.log(`   📄 Generated: ${docsDataPath}`);
+    console.log(`   📄 Generated: ${docsNavPath} (Navigation only)`);
     console.log(`   🔍 Generated: ${searchIndexPath}`);
+    console.log(`   📂 Generated: ${contentFilesWritten} individual document files in public/docs-content/`);
     console.log(`   📊 Total projects: ${projectsMap.size}`);
     console.log(`   📚 Total documents: ${searchIndex.length}`);
 }

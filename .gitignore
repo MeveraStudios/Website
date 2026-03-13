@@ -42,7 +42,8 @@ build
 .cache
 
 # Generated documentation files (from precompile script)
-public/docs-data.json
+public/docs-nav.json
+public/docs-content/
 public/search-index.json
 
 # Optional: TypeScript build info

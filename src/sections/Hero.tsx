@@ -1,7 +1,19 @@
+
 import { Link } from 'react-router-dom';
 import { ArrowRight, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
+import { fetchDocContent } from '@/lib/docs';
+
+// Expose a way to preload the Docs chunk and initial data
+const preloadDocsRoute = () => {
+  import('@/pages/Docs').then(m => m.Docs);
+  // Prefetch the initial 'Get Started' payload
+  const parts = SITE_CONFIG.getStartedUrl.split('/').filter(Boolean);
+  if (parts.length >= 3 && parts[1] && parts[2]) {
+    fetchDocContent(parts[1], parts[2]);
+  }
+};
 
 export function Hero() {
   return (
@@ -35,7 +47,12 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in [animation-delay:600ms]">
-            <Button size="lg" className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all" asChild>
+            <Button 
+              size="lg" 
+              className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all" 
+              asChild
+              onMouseEnter={preloadDocsRoute}
+            >
               <Link to={SITE_CONFIG.getStartedUrl}>
                 Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />

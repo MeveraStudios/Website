@@ -8,16 +8,18 @@ export interface DocFile {
   slug: string;
   /** Full file path relative to docs folder */
   path: string;
-  /** File content as string */
-  content: string;
+  /** File content as string (optional for nav items) */
+  content?: string;
   /** Parsed frontmatter */
   frontmatter: DocFrontmatter;
   /** Project this doc belongs to */
-  project: string;
+  project?: string;
   /** Category within the project */
   category: string;
   /** File extension (.md or .mdx) */
-  extension: string;
+  extension?: string;
+  /** Precompiled table of contents */
+  toc?: TocItem[];
 }
 
 // Frontmatter metadata from markdown files
@@ -57,7 +59,7 @@ export interface DocProject {
   /** Categories within this project */
   categories: DocCategory[];
   /** All docs flattened */
-  allDocs: DocFile[];
+  allDocs?: DocFile[];
   /** Project metadata from config */
   meta: {
     emoji: string;
