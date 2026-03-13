@@ -29,6 +29,9 @@ export function Docs() {
   // Use the hook to get documentation data
   const { projects, isLoaded } = useDocs();
 
+  // Fetch the current document content (unconditionally call hooks)
+  const { doc, isLoading } = useDocContent(projectId || '', slug || '');
+
   // Show loading state while data is being fetched
   if (!isLoaded) {
     return (
@@ -57,7 +60,7 @@ export function Docs() {
         return <Navigate to={`/docs/${firstProject.id}/${firstDoc.slug}`} replace />;
       }
     }
-    return <div>No documentation found</div>;
+    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found</div><Footer /></div>;
   }
 
   // Redirect to first doc in project if no slug provided
@@ -66,11 +69,8 @@ export function Docs() {
     if (firstDoc) {
       return <Navigate to={`/docs/${project.id}/${firstDoc.slug}`} replace />;
     }
-    return <div>No documentation found for this project</div>;
+    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
   }
-
-  // Fetch the current document content
-  const { doc, isLoading } = useDocContent(projectId || '', slug);
 
   // Get prev/next navigation
   const { prev, next } = getDocNavigation(project, slug);

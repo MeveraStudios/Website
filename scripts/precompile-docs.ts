@@ -255,24 +255,19 @@ function findMarkdownFiles(dir: string, baseDir: string = dir): string[] {
 function extractToc(content: string): TocItem[] {
     const toc: TocItem[] = [];
     const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+    const idCounts = new Map<string, number>();
     let match;
-    let currentParentId = '';
 
     while ((match = headingRegex.exec(content)) !== null) {
         const level = match[1].length;
         const text = match[2].trim();
-        const slug = text.toLowerCase()
+        const baseSlug = text.toLowerCase()
             .replace(/[^\w\s-]/g, '')
             .replace(/\s+/g, '-');
 
-        let id = slug;
-
-        if (level === 2) {
-            currentParentId = slug;
-            id = slug;
-        } else if (level === 3 && currentParentId) {
-            id = `${currentParentId}.${slug}`;
-        }
+        const count = idCounts.get(baseSlug) || 0;
+        const id = count > 0 ? `${baseSlug}-${count}` : baseSlug;
+        idCounts.set(baseSlug, count + 1);
 
         toc.push({ level, text, id });
     }
