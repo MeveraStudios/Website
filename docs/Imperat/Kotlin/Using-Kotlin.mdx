@@ -4,3 +4,202 @@ description: "Learn how to use Kotlin with Imperat and take advantage of its fea
 order: 1
 ---
 # Using Kotlin with Imperat
+Imperat has first-class Kotlin support, including:
+
+- **Default parameter values** - works seamlessly with Imperat's optional argument system, no `@Default` annotation required
+- **Nullable parameters** - nullable types (`Player?`) are automatically treated as optional arguments
+- **Suspend functions** - commands can be declared as `suspend fun`, letting you perform async work (database calls, HTTP requests, etc.) without blocking the server thread
+
+---
+
+## Dependencies
+
+The Kotlin integration requires two additional dependencies that are **not bundled** with Imperat by default, to keep file size down.
+
+**Gradle (Kotlin DSL):**
+
+```kotlin
+dependencies {
+    // Required: enables Kotlin reflection so Imperat can read default parameter
+    // values, nullability, and other Kotlin metadata at runtime
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.3.10")
+
+    // Optional: only needed if you want to use suspend commands
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+}
+```
+
+**Gradle (Groovy DSL):**
+
+```groovy
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-reflect:2.3.10'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+}
+```
+
+---
+
+## Initialization
+
+To use Kotlin features, you must switch Imperat into Kotlin parsing mode using `setCommandParsingMode(CommandParsingMode.KOTLIN)`. Without this, Kotlin-specific features like default parameters won't be recognized.
+
+If you plan to use `suspend` commands, you also need to provide a `CoroutineScope`. Imperat will launch all suspend command executions inside this scope.
+
+```kotlin
+class MyPlugin : JavaPlugin() {
+
+    lateinit var imperat: BukkitImperat
+
+    override fun onEnable() {
+        imperat = BukkitImperat.builder(this)
+            // Enables Kotlin reflection support - required for default params, nullable types, etc.
+            .setCommandParsingMode(CommandParsingMode.KOTLIN)
+            // Provide a scope if you want to use suspend commands.
+            // SupervisorJob ensures one failed command doesn't cancel the rest.
+            .setCoroutineScope(CoroutineScope(SupervisorJob() + Dispatchers.Default))
+            .build()
+
+        imperat.registerCommand(ExampleCommand())
+    }
+}
+```
+
+---
+
+## How Kotlin Parsing Works
+
+When `CommandParsingMode.KOTLIN` is active, Imperat uses a different command class parser internally. During registration, it uses `kotlin-reflect` to inspect each command method's `KFunction` metadata - the richer representation of a function that Kotlin exposes at runtime alongside the standard Java `Method`.
+
+From that metadata, Imperat can determine:
+
+- Whether a parameter has a **default value** (`kParam.isOptional`)
+- Whether a parameter's type is **nullable** (`kParam.type.isMarkedNullable`)
+- Whether the method is a **suspend function** (detected by the presence of a trailing `Continuation` parameter in the Java bytecode)
+
+Any parameter that is optional or nullable is automatically marked as optional in the generated command argument tree, just as if you had used `@Default` in Java.
+
+> **Note:** Without `kotlin-reflect` on the classpath, Imperat cannot read this metadata and Kotlin-specific behavior won't work. The dependency is deliberately optional to avoid bundling it for Java-only users.
+
+---
+
+## Default Parameter Values
+
+In Kotlin mode, you can use native default parameter values instead of Imperat's `@Default` annotation. Imperat reads the `KFunction` signature and automatically marks parameters with defaults as optional in the generated command tree.
+
+```kotlin
+@Command(["gamemode", "gm"])
+@Permission("server.gamemode")
+class GameModeCommand {
+
+    @Execute
+    fun changeGamemode(
+        player: Player,
+        @Named("mode") mode: GameMode,
+        // 'target' is optional - defaults to the sender if not provided
+        @Named("target") target: Player = player
+    ) {
+        target.gameMode = mode
+        player.sendMessage("Gamemode updated to ${mode.name}")
+
+        if (target != player) {
+            target.sendMessage("Your gamemode was updated by ${player.name}")
+        }
+    }
+}
+```
+
+**Usage:**
+```
+/gamemode <mode> [target]
+```
+:::note
+`[target]` is automatically declared as an **optional** argument, when we used kotlin-default
+:::
+
+
+### How argument resolution works
+
+When the command runs without a `target`, Imperat resolves the argument to `null` for that position. Rather than calling the function directly via Java reflection, Imperat uses the Kotlin reflection API to fill in a map of parameters. Any parameter **omitted** from that map receives its Kotlin default value automatically.
+
+In other words: Imperat passes only the arguments it has values for, and Kotlin fills in the rest.
+
+---
+
+## Suspend Commands
+
+Marking a command method as `suspend` allows you to call suspending functions directly inside your command handler - for example, making non-blocking database queries or API calls without blocking the server thread.
+
+```kotlin
+@Command(["profile"])
+class ProfileCommand {
+
+    @Execute
+    suspend fun profile(
+        player: Player,
+        @Named("target") target: Player = player
+    ) {
+        // This suspends without blocking the main thread
+        val stats = loadPlayerStats(target)
+        player.sendMessage("Stats for ${target.name}: $stats")
+    }
+
+    private suspend fun loadPlayerStats(player: Player): String {
+        delay(200) // simulate an async database call
+        return "Kills: 52, Wins: 9"
+    }
+}
+```
+
+> **Note:** `kotlinx-coroutines-core` must be on the classpath for suspend commands to work. Declaring a `suspend` command without it will throw an error at registration time.
+
+### How suspend execution works
+
+Kotlin's `suspend` functions compile down to regular Java methods with an extra `Continuation` parameter appended at the end. Imperat detects this trailing parameter during registration - if the last Java parameter of a method is of type `Continuation`, the method is treated as a suspend function.
+
+At that point, Imperat wraps the method's executor with a coroutine-aware one. When a player runs the command, instead of calling the function directly, the executor does:
+
+```kotlin
+coroutineScope.launch {
+    kFunction.callSuspendBy(paramMap)
+}
+```
+
+> **Note**: Make sure that the code contained by the suspend function uses thread-safe algorithms and APIs only, commands may run asynchronously and be incompatible with some APIs such as the Bukkit API.
+
+---
+
+## Subcommands
+
+Default parameters and suspend functions work the same way inside `@SubCommand` methods.
+
+```kotlin
+@Command(["rank"])
+class RankCommand {
+
+    @SubCommand("create")
+    fun create(
+        sender: CommandSender,
+        @Named("name") name: String,
+        // weight is optional, defaults to 0
+        @Named("weight") weight: Int = 0
+    ) {
+        sender.sendMessage("Created rank '$name' with weight $weight")
+    }
+
+    @SubCommand("delete")
+    suspend fun delete(
+        sender: CommandSender,
+        @Named("name") name: String
+    ) {
+        delay(100) // e.g. async database delete
+        sender.sendMessage("Deleted rank '$name'")
+    }
+}
+```
+
+**Usage:**
+```
+/rank create <rank> [weight] → weight defaults to 0
+/rank delete <rank>
+```
