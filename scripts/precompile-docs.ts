@@ -11,6 +11,7 @@
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,6 +49,7 @@ interface DocFile {
     project: string;
     category: string;
     extension: string;
+    lastUpdatedAt?: string;
 }
 
 interface DocCategory {
@@ -375,6 +377,22 @@ function precompileDocs() {
             }
             // Otherwise, use rootCategoryName from _category_.yml in project root
 
+            // Get last updated date from git
+            let lastUpdatedAt = undefined;
+            try {
+                // Get the timestamp of the last commit that modified this file
+                const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, { 
+                    encoding: 'utf-8',
+                    stdio: ['pipe', 'pipe', 'ignore'] 
+                }).trim();
+                
+                if (stdout) {
+                    lastUpdatedAt = stdout;
+                }
+            } catch (e) {
+                // Ignore errors (e.g., file not tracked by git yet)
+            }
+
             const docFile: DocFile = {
                 slug,
                 path: `/docs${relPath}`,
@@ -382,7 +400,8 @@ function precompileDocs() {
                 frontmatter,
                 project: projectId,
                 category: categoryName,
-                extension
+                extension,
+                lastUpdatedAt
             };
 
             project.allDocs.push(docFile);

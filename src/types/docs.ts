@@ -20,6 +20,8 @@ export interface DocFile {
   extension?: string;
   /** Precompiled table of contents */
   toc?: TocItem[];
+  /** Last updated datestring from git */
+  lastUpdatedAt?: string;
 }
 
 // Frontmatter metadata from markdown files

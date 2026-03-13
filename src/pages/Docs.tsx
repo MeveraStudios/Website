@@ -126,7 +126,7 @@ export function Docs() {
                     {FEATURES.lastUpdated && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Last updated: {new Date().toLocaleDateString()}</span>
+                        <span>Last updated: {doc.lastUpdatedAt ? new Date(doc.lastUpdatedAt).toLocaleDateString() : 'Unknown'}</span>
                       </div>
                     )}
 
