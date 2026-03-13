@@ -4,6 +4,7 @@ import { ArrowRight, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
 import { fetchDocContent } from '@/lib/docs';
+import { FadeInUp } from '@/components/animators/FadeInUp';
 
 // Expose a way to preload the Docs chunk and initial data
 const preloadDocsRoute = () => {
@@ -23,27 +24,34 @@ export function Hero() {
       <div className="container px-4 mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center">
 
+
           {/* Badge / Label */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 animate-fade-in backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            v2.0 Documentation Live
-          </div>
+          <FadeInUp delay={0.1}>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 backdrop-blur-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              v2.0 Documentation Live
+            </div>
+          </FadeInUp>
 
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 animate-fade-in [animation-delay:200ms]">
-            Mevera Studios <br />
-            <span className="text-2xl md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-blue-600 animate-pulse block mt-4 font-normal tracking-wide">
-              Where ideas becomes reality
-            </span>
-          </h1>
+          <FadeInUp delay={0.2}>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8">
+              Mevera Studios <br />
+              <span className="text-2xl md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-blue-600 animate-pulse block mt-4 font-normal tracking-wide">
+                Where ideas becomes reality
+              </span>
+            </h1>
+          </FadeInUp>
 
           {/* Subheading */}
-          <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in [animation-delay:400ms]">
-            {SITE_CONFIG.description}. Access comprehensive guides, API references, and tools designed for the next generation of development.
-          </p>
+          <FadeInUp delay={0.3}>
+            <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+              {SITE_CONFIG.description}. Access comprehensive guides, API references, and tools designed for the next generation of development.
+            </p>
+          </FadeInUp>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in [animation-delay:600ms]">
