@@ -77,7 +77,7 @@ export function Docs() {
 
   // Generate edit URL (fallback if doc not loaded)
   const editUrl = doc 
-    ? `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${doc.slug}${doc.extension}`
+    ? `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}${doc.path.replace(/^\/docs/, '')}`
     : `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${slug}.md`;
 
   return (
