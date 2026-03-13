@@ -272,22 +272,25 @@ export async function fetchSearchIndex() {
   return searchIndexCache || [];
 }
 
-export function searchDocs(query: string) {
-  if (!searchIndexCache) {
+export async function searchDocs(query: string) {
+  const indexCache = await fetchSearchIndex();
+  
+  if (!indexCache || indexCache.length === 0) {
     return [];
   }
 
   const results: { title: string; excerpt: string; href: string; project: string }[] = [];
   const lowerQuery = query.toLowerCase();
 
-  searchIndexCache.forEach(doc => {
+  indexCache.forEach(doc => {
     const content = doc.content.toLowerCase();
     const title = doc.title.toLowerCase();
 
     if (title.includes(lowerQuery) || content.includes(lowerQuery)) {
       const index = content.indexOf(lowerQuery);
-      const start = Math.max(0, index - 50);
-      const end = Math.min(content.length, index + query.length + 100);
+      const safeIndex = index !== -1 ? index : 0;
+      const start = Math.max(0, safeIndex - 50);
+      const end = Math.min(content.length, safeIndex + query.length + 100);
       const excerpt = doc.content.slice(start, end).replace(/[#*`]/g, '');
 
       results.push({

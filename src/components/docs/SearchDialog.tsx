@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { searchDocs } from '@/lib/docs';
+import { searchDocs, fetchSearchIndex } from '@/lib/docs';
 import type { SearchResult } from '@/types/docs';
 
 export function SearchDialog() {
@@ -44,15 +44,29 @@ export function SearchDialog() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Preload search index when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchSearchIndex().catch(console.error);
+    }
+  }, [open]);
+
   // Search when query changes
   useEffect(() => {
+    let isActive = true;
     if (query.trim()) {
-      const searchResults = searchDocs(query);
-      setResults(searchResults);
-      setSelectedIndex(0);
+      searchDocs(query).then((searchResults) => {
+        if (isActive) {
+          setResults(searchResults);
+          setSelectedIndex(0);
+        }
+      }).catch(console.error);
     } else {
       setResults([]);
     }
+    return () => {
+      isActive = false;
+    };
   }, [query]);
 
   const handleSelect = useCallback((result: SearchResult) => {
