@@ -77,35 +77,37 @@ export function Sidebar({ project, className }: SidebarProps) {
 
   return (
     <aside className={cn('hidden lg:block w-64 shrink-0', className)}>
-      <ScrollArea className="h-[calc(100vh-4rem)]">
-        <div className="py-6 pr-4">
-          {/* Project Header */}
-          <div className="mb-6 px-3">
-            <Link
-              to={`/docs/${project.id}/getting-started`}
-              className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors"
-            >
-              <span className="text-2xl">{project.meta.emoji}</span>
-              <span>{project.name}</span>
-            </Link>
-            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-              {project.description}
-            </p>
-          </div>
+      <div className="sticky top-24">
+        <ScrollArea className="h-[calc(100vh-8rem)]">
+          <div className="py-2 pr-4">
+            {/* Project Header */}
+            <div className="mb-6 px-3">
+              <Link
+                to={`/docs/${project.id}/getting-started`}
+                className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors"
+              >
+                <span className="text-2xl">{project.meta.emoji}</span>
+                <span>{project.name}</span>
+              </Link>
+              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                {project.description}
+              </p>
+            </div>
 
-          {/* Categories */}
-          <nav>
-            {project.categories.map((category) => (
-              <CategorySection
-                key={category.name}
-                category={category}
-                currentSlug={currentSlug}
-                projectId={project.id}
-              />
-            ))}
-          </nav>
-        </div>
-      </ScrollArea>
+            {/* Categories */}
+            <nav>
+              {project.categories.map((category) => (
+                <CategorySection
+                  key={category.name}
+                  category={category}
+                  currentSlug={currentSlug}
+                  projectId={project.id}
+                />
+              ))}
+            </nav>
+          </div>
+        </ScrollArea>
+      </div>
     </aside>
   );
 }
