@@ -61,7 +61,7 @@ function PageTitle() {
         const docName = docSlug
           ? docSlug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
           : 'Documentation';
-        title = `${docName} | ${projectName} - ${SITE_CONFIG.brandName}`;
+        title = `${docName} | ${projectName} - ${SITE_CONFIG.brandName}`.replace("%20", " ");
       }
     }
 
