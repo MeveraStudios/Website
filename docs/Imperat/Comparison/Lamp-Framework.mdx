@@ -1,0 +1,228 @@
+---
+title: "Using Imperat vs Lamp"
+description: "A guide to comparing Imperat and Lamp."
+order: 1
+---
+# Using Imperat vs Lamp
+Lamp maybe different from Imperat in some ways.However, commands built using Lamp, can be easily converted to Imperat. Here are some examples of how to convert Lamp commands to Imperat:
+
+## Example 1: Basic /Greet Command
+
+### Lamp Command
+```java
+public class GreetCommands {
+
+    @Command("greet")
+    @Description("Greets the specified player")
+    @CommandPermission("test.plugin.greet")
+    public void greet(BukkitCommandActor actor, @Default("me") Player target) {
+        target.sendMessage("Welcome, " + target.getName() + "!");
+    }
+}
+```
+
+### Imperat Command
+```java
+@RootCommand("greet")
+@Description("Greets the specified player")
+@Permission("test.plugin.greet")
+public class GreetCommand {
+
+    @Execute
+    public void execute(BukkitCommandSource source, @Default("me") Player target) {
+        target.sendMessage("Welcome, " + target.getName() + "!");
+    }
+}
+```
+
+
+## Example 2: Teleport Command Variants
+The teleport command can be implemented in various ways using Lamp, and these can be easily adapted to Imperat.
+The following variants will be implemented on both frameworks for illustration purposes:
+- `/teleport <x> <y> <z>`
+- `/teleport <target> <x> <y> <z>`
+- `/teleport <target> here`
+
+### Lamp Command
+```java
+public class TeleportCommands {
+
+    @Command({"teleport", "tp"})
+    public void teleport(Player sender, double x, double y, double z) {
+        Location location = new Location(sender.getWorld(), x, y, z);
+        sender.teleport(location);
+    }
+
+    @Command({"teleport", "tp"})
+    public void teleport(Player sender, EntitySelector<LivingEntity> target, double x, double y, double z) {
+        Location location = new Location(sender.getWorld(), x, y, z);
+        for (LivingEntity entity : target)
+            entity.teleport(location);
+    }
+
+    @Command("teleport <target> here")
+    public void teleportHere(Player sender, EntitySelector<LivingEntity> target) {
+        for (LivingEntity entity : target)
+            entity.teleport(sender);
+    }
+}
+```
+
+
+### Imperat Command
+Variants based on single args can be implemented using the `@Optional` annotation, allowing for more flexible command definitions. 
+Here’s how you can implement the teleport command with variants in Imperat:
+```java
+@RootCommand({"teleport", "tp"})
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(Player source, @Optional TargetSelector target, double x, double y, double z) {
+        Location location = new Location(source.getWorld(), x, y, z);
+        if(target != null) {
+             for (LivingEntity entity : target)
+                entity.teleport(location);
+        } else {
+            source.teleport(location);
+        }
+    }
+
+    @SubCommand(value= "here", attachTo= "<target>")
+    public void teleportHere(Player source, @InheritedArg TargetSelector target) {
+        for (LivingEntity entity : target)
+            entity.teleport(source.getLocation());
+    }
+
+}
+```
+
+Or you can directly set them as variants:
+```java
+@RootCommand({"teleport", "tp"})
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(Player source, double x, double y, double z) {
+        Location location = new Location(source.getWorld(), x, y, z);
+        source.teleport(location);
+    }
+
+    @Execute
+    public void teleport(Player source, TargetSelector target, double x, double y, double z) {
+        Location location = new Location(source.getWorld(), x, y, z);
+        for (LivingEntity entity : target)
+            entity.teleport(location);
+    }
+
+    @SubCommand(value= "here", attachTo= "<target>")
+    public void teleportHere(Player source, @InheritedArg TargetSelector target) {
+        for (LivingEntity entity : target)
+            entity.teleport(source.getLocation());
+    }
+
+}
+```
+
+Or you can just use `Location` as a required argument , along with a custom arg-type for `Location` that can parse `here` string as the player's current location:
+```java
+@RootCommand({"teleport", "tp"})
+public class TeleportCommand {
+    @Execute
+    public void teleport(Player source, Location location) {
+        source.teleport(location);
+    }
+
+    @Execute
+    public void teleport(Player source, TargetSelector target, Location location) {
+        for (LivingEntity entity : target)
+            entity.teleport(location);
+    }
+    //no sub command needed for "here" variant, as the custom Location arg-type can handle it directly
+}
+```
+
+Here's an example of the custom `ArgumentType` for `Location` that can parse the `here` string:
+```java
+public class LocationArgumentType implements ArgumentType<BukkitCommandSource, Location> {
+
+    @Override
+    public Location parse(ExecutionContext<BukkitCommandSource> context, Cursor<BukkitCommandSource> cursor, String input) throws ArgumentParseException {
+        if (input.equalsIgnoreCase("here")) {
+            var source = context.getSource();
+            if (!source.isConsole()) {
+                return source.asPlayer().getLocation();
+            } else {
+                throw new ArgumentParseException("Only players can use 'here' as a location.");
+            }
+        }
+        // Implement parsing for coordinates (e.g., "100 64 200")
+        String[] parts = input.split(" ");
+        if (parts.length != 3) {
+            throw new ArgumentParseException("Invalid location format. Use 'x y z' or 'here'.");
+        }
+        try {
+            double x = Double.parseDouble(parts[0]);
+            double y = Double.parseDouble(parts[1]);
+            double z = Double.parseDouble(parts[2]);
+            return new Location(context.getSource().asPlayer().getWorld(), x, y, z);
+        } catch (NumberFormatException e) {
+            throw new ArgumentParseException("Coordinates must be numbers.");
+        }
+    }
+}
+```
+
+Then register the custom `ArgumentType`:
+```java
+BukkitImperat imperat = BukkitImperat.builder(yourPluginInstance)
+.registerArgType(Location.class, new LocationArgumentType())
+.build();
+```
+
+The examples above demonstrate how to convert Lamp commands to Imperat, showcasing the flexibility and ease of use of Imperat's command framework. 
+With Imperat, you can create complex command structures with ease, while still maintaining readability and maintainability in your code.
+
+## Example 3: Command with Subcommands
+Let's say you have the command `/bank`, and it has the following usages:
+- `/bank <player> add <currency-type> <amount>`
+- `/bank <player> remove <currency-type> <amount>`
+
+### In Lamp
+This is how it would look in Lamp:
+```java
+public class BankCommands {
+    @Command("bank <player> add")
+    public void addCurrency(Player sender, Player player, CurrencyType currencyType, double amount) {
+        // Implementation for adding currency
+    }
+
+    @Command("bank <player> remove")
+    public void removeCurrency(Player sender, Player player, CurrencyType currencyType, double amount) {
+        // Implementation for removing currency
+    }
+}
+```
+
+With Imperat, you can structure this command with subcommands for better organization:
+```java
+@RootCommand("bank")
+public class BankCommand {
+
+    @Execute
+    public void execute(Player sender, Player player) {
+        // This method can be used to show help or default behavior when only /bank <player> is used
+        
+    }
+
+    @SubCommand(value= "add", attachTo= "<player>")
+    public void addCurrency(Player sender, @InheritedArg Player player, CurrencyType currencyType, double amount) {
+        // Implementation for adding currency
+    }
+
+    @SubCommand(value= "remove", attachTo= "<player>")
+    public void removeCurrency(Player sender, @InheritedArg Player player, CurrencyType currencyType, double amount) {
+        // Implementation for removing currency
+    }
+
+}
+```
