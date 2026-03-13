@@ -4,3 +4,38 @@ description: "A guide to comparing Imperat and Cloud."
 order: 2
 ---
 # Using Imperat vs Cloud
+Let's demonstrate how a command of the following format can be implemented in both Imperat and Cloud frameworks:
+- `/command literal <number> [string]`
+
+## Cloud Command
+```java
+public class YourCommand{
+
+    @Command("command literal|alias <number> [string]")
+    public void execute(
+        CommandSender source, 
+        @Argument("number") int number, 
+        @Default("string!") String string
+    ) {
+        // Command logic here
+    }
+}
+```
+
+## Imperat Command
+```java
+@RootCommand("command")
+public class YourCommand {
+
+    @SubCommand({ "literal", "alias" })
+    public void execute(
+        CommandSource source, 
+        @Argument("number") int number, 
+        @Default("string!") String string
+    ) {
+        // Command logic here
+    }
+}
+```
+As you can see, the structure of the command is quite similar in both frameworks. The main differences lie in the annotations used to define the command and its parameters. 
+Imperat uses `@RootCommand` and `@SubCommand` to define the command hierarchy, while Cloud uses a single `@Command` annotation with a specific format for literals and arguments.
