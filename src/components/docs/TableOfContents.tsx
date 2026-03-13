@@ -33,6 +33,14 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
         }
       });
 
+      // If at (or near) the bottom of the page, always highlight the last header
+      const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      if (nearBottom && items.length > 0) {
+        lastActiveIdRef.current = items[items.length - 1].id;
+        setActiveIds([items[items.length - 1].id]);
+        return;
+      }
+
       // Keep only ids in our items list, preserving document order.
       const filtered = items
         .filter(item => intersectingIds.has(item.id))
