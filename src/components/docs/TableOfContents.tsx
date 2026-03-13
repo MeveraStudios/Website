@@ -9,11 +9,13 @@ interface TableOfContentsProps {
 }
 
 export function TableOfContents({ items, className }: TableOfContentsProps) {
+  // 1. Intersection Observer for Scroll Tracking
   const [activeIds, setActiveIds] = useState<string[]>([]);
   const [highlighterStyle, setHighlighterStyle] = useState({ top: 0, height: 0, opacity: 0 });
+  const lastActiveIdRef = useRef<string | null>(null);
+  const intersectingIds = useRef(new Set<string>()).current;
   const itemsRef = useRef<{ [key: string]: HTMLAnchorElement | null }>({});
 
-  // 1. Intersection Observer for Scroll Tracking
   useEffect(() => {
     const observerOptions = {
       rootMargin: '-40px 0% -20% 0%',
@@ -21,24 +23,45 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     };
 
     const handleIntersect = (entries: IntersectionObserverEntry[]) => {
-      setActiveIds((prev) => {
-        const newActive = new Set(prev);
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            newActive.add(entry.target.id);
-          } else {
-            newActive.delete(entry.target.id);
-          }
-        });
-        
-        return items
-          .filter(item => newActive.has(item.id))
-          .map(item => item.id);
+      // Mutate a stable set so we always work with the true current
+      // intersection state, not a potentially stale closure over `prev`.
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          intersectingIds.add(entry.target.id);
+        } else {
+          intersectingIds.delete(entry.target.id);
+        }
       });
+
+      // Keep only ids in our items list, preserving document order.
+      const filtered = items
+        .filter(item => intersectingIds.has(item.id))
+        .map(item => item.id);
+
+      if (filtered.length > 0) {
+        lastActiveIdRef.current = filtered[filtered.length - 1];
+        setActiveIds(filtered);
+        return;
+      }
+
+      // Fallback: nothing is currently intersecting (fast scroll, or between
+      // two headings). Find the last heading already past the viewport top.
+      const scrollPos = window.scrollY + 100;
+      for (let i = items.length - 1; i >= 0; i--) {
+        const el = document.getElementById(items[i].id);
+        if (el && el.offsetTop <= scrollPos) {
+          lastActiveIdRef.current = items[i].id;
+          setActiveIds([items[i].id]);
+          return;
+        }
+      }
+
+      // Nothing passed yet (top of page) — clear highlight.
+      setActiveIds([]);
     };
 
     const observer = new IntersectionObserver(handleIntersect, observerOptions);
-    
+
     // Tiny delay to ensure DOM is ready
     const timeoutId = setTimeout(() => {
       items.forEach((item) => {
@@ -88,7 +111,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
 
   const svgPath = useMemo(() => {
     if (coords.length === 0) return '';
-    
+
     let path = '';
     const stepHeight = 12;
 
@@ -161,12 +184,12 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
           <List className="w-4 h-4" />
           <p className="text-sm font-medium">On this page</p>
         </div>
-        
+
         <nav className="relative">
           {/* The Stepped Masked Track */}
-          <div 
+          <div
             className="absolute left-0 top-0 bottom-0 w-6 bg-border/40 pointer-events-none transition-all duration-300"
-            style={{ 
+            style={{
               maskImage: maskUrl,
               WebkitMaskImage: maskUrl,
               maskRepeat: 'no-repeat',
@@ -174,7 +197,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
             }}
           >
             {/* The Highlighter moving within the mask */}
-            <div 
+            <div
               className="absolute w-full bg-primary transition-all duration-300 ease-in-out"
               style={{
                 top: highlighterStyle.top,
