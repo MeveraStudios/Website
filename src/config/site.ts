@@ -41,7 +41,7 @@ export const SITE_CONFIG = {
   getStartedUrl: '/docs/Imperat/getting-started',
 
   // URL for the GitHub button on homepage
-  githubUrl: 'https://github.com/MeveraStudios',
+  githubUrl: 'https://github.com/MeveraStudios/Website',
 
   // Discord invite URL (set to null if not applicable)
   discordUrl: 'https://discord.mevera.studio',
