@@ -1,0 +1,45 @@
+---
+title: "Argument Variants"
+description: "Learn about the variants of arguments within similar pathways"
+order: 10
+---
+# Argument Variants
+In some cases, you may have multiple pathways that are similar in their arguments sequence, but differ in the type of specific arguments.
+That's why `ArgumentType` has the method `getPriority()`, so that when multiple similar pathways are present, the argument with the highest priority will be chosen
+from the command's tree.
+
+## Applied Example
+If we have this command with those two usages:
+  ```java
+@Command("example")
+public class MultipleVariantsCmd {
+
+    @Execute
+    public void withString(YourSource source, String str1) {
+        source.reply("Executed variant one with str1=" + str1);
+    }
+
+    @Execute
+    public void withInt(YourSource source, int i1) {
+        source.reply("Executed variant two with int1=" + i1);
+    }
+
+}
+```
+### Example Analysis
+When the user executes `/example 123`.
+**WHICH pathway will be chosen to be executed?**
+`withInt()` shall be executed since `123` is most suited with the type of this argument.
+
+**Why `withInt()` was chosen ?**
+Because each `ArgumentType` has its own `Priority` where numeric arg types like `IntArgument` has a higher priority than `StringArgument` by default.
+
+## Conclusion
+When an input is provided, imperat matches that input with the existing tree of the root-command used.
+If it finds multiple nodes matching the given raw-input, it chooses the **highest priority matching** node to be executed.
+
+:::info
+the `tree` represents all the possible pathways of a root-command.
+`node` here refers to an argument/literal in the tree, and `matching` means that the raw-input provided by the user can be parsed into the type of that node's argument.
+Matching is determined by the `ArgumentType#matches` method, which checks if the raw-input can be successfully parsed into the expected type.
+:::
