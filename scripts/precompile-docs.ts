@@ -251,6 +251,27 @@ function findMarkdownFiles(dir: string, baseDir: string = dir): string[] {
     return files;
 }
 
+function cleanHeadingText(text: string): string {
+    return text
+        .replace(/\*\*(.+?)\*\*/g, '$1')   // Remove bold
+        .replace(/\*(.+?)\*/g, '$1')       // Remove italic
+        .replace(/`(.+?)`/g, '$1')         // Remove inline code
+        .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+        // Remove real HTML/JSX tags (lowercase tag names with optional attrs / self-closing)
+        .replace(/<\/?[a-z][a-zA-Z0-9-]*(\s[^>]*)?\/?>/g, '')
+        // For the remaining angle-bracket expressions (e.g. generic types like <T>, <A, B>)
+        // strip the brackets and keep the inner text
+        .replace(/<([^>]+)>/g, '$1')
+        .trim();
+}
+
+function slugify(text: string): string {
+    return cleanHeadingText(text)
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-');
+}
+
 /**
  * Extract table of contents from markdown content
  */
@@ -263,9 +284,7 @@ function extractToc(content: string): TocItem[] {
     while ((match = headingRegex.exec(content)) !== null) {
         const level = match[1].length;
         const text = match[2].trim();
-        const baseSlug = text.toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-');
+        const baseSlug = slugify(text);
 
         const count = idCounts.get(baseSlug) || 0;
         const id = count > 0 ? `${baseSlug}-${count}` : baseSlug;

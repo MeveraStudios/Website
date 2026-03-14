@@ -7,6 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Strip markdown formatting from heading text.
+ * Real HTML/JSX tags (e.g. <span>, <br />) are removed entirely.
+ * Generic type parameters (e.g. <T>, <A, B>) have their brackets stripped,
+ * keeping the inner type text (Optional<T> → OptionalT).
  */
 function cleanHeadingText(text: string): string {
   return text
@@ -14,7 +17,11 @@ function cleanHeadingText(text: string): string {
     .replace(/\*(.+?)\*/g, '$1')       // Remove italic
     .replace(/`(.+?)`/g, '$1')         // Remove inline code
     .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
-    .replace(/<[^>]+>/g, '')           // Remove HTML/JSX tags
+    // Remove real HTML/JSX tags (lowercase tag names with optional attrs / self-closing)
+    .replace(/<\/?[a-z][a-zA-Z0-9-]*(\s[^>]*)?\/?>/g, '')
+    // For the remaining angle-bracket expressions (e.g. generic types like <T>, <A, B>)
+    // strip the brackets and keep the inner text
+    .replace(/<([^>]+)>/g, '$1')
     .trim();
 }
 
