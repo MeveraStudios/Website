@@ -135,12 +135,23 @@ export function useDocs() {
  * React hook to fetch and provide a specific document's content
  */
 export function useDocContent(projectId: string, slug: string) {
-  const [doc, setDoc] = useState<DocFile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cacheKey = `${projectId}/${slug}`;
+  const cached = docContentCache.get(cacheKey) ?? null;
+
+  const [doc, setDoc] = useState<DocFile | null>(cached);
+  const [isLoading, setIsLoading] = useState(cached === null);
 
   useEffect(() => {
     if (!projectId || !slug) return;
-    
+
+    // Already in cache — nothing to do
+    const cacheKey = `${projectId}/${slug}`;
+    if (docContentCache.has(cacheKey)) {
+      setDoc(docContentCache.get(cacheKey)!);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     let isMounted = true;
 
@@ -214,13 +225,13 @@ export function getDoc(projectId: string, slug: string): DocFile | undefined {
   if (docContentCache.has(cacheKey)) {
     return docContentCache.get(cacheKey);
   }
-  
+
   // Fall back to finding the nav item
   if (!cachedDocsNavData) return undefined;
-  
+
   const project = cachedDocsNavData.projects.find(p => p.id === projectId);
   if (!project) return undefined;
-  
+
   for (const cat of project.categories) {
     const doc = cat.docs.find(d => d.slug === slug);
     if (doc) return doc;
@@ -274,7 +285,7 @@ export async function fetchSearchIndex() {
 
 export async function searchDocs(query: string) {
   const indexCache = await fetchSearchIndex();
-  
+
   if (!indexCache || indexCache.length === 0) {
     return [];
   }

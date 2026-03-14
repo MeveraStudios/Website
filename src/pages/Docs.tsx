@@ -108,7 +108,7 @@ export function Docs() {
                 <p className="text-muted-foreground">Loading page...</p>
               </div>
             ) : (
-              <>
+              <div key={slug} className="animate-fadein">
                 {/* Document Header */}
                 <div className="mb-8">
                   <h1 className="text-4xl font-bold tracking-tight mb-4">
@@ -161,7 +161,7 @@ export function Docs() {
                   next={next}
                   projectId={project.id}
                 />
-              </>
+              </div>
             )}
           </main>
 
