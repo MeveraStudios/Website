@@ -1,7 +1,6 @@
 ---
 title: Getting Started
 description: Learn how to get started with Imperat
-category: Introduction
 order: 1
 ---
 
