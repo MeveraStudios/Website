@@ -102,10 +102,15 @@ export function Docs() {
               <SearchDialog />
             </div>
 
-            {isLoading || !doc ? (
+            {isLoading ? (
               <div className="py-20 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Loading page...</p>
+              </div>
+            ) : !doc ? (
+              <div className="py-20 text-center">
+                <p className="text-4xl font-bold mb-4">404</p>
+                <p className="text-muted-foreground">This page doesn&apos;t exist.</p>
               </div>
             ) : (
               <div key={slug} className="animate-fadein">
