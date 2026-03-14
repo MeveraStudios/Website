@@ -54,7 +54,7 @@ public class CustomBoard implements LegacyBoardAdapter {
 
 This will be displayed in-game as the following:
 
-<img src="https://github.com/MeveraStudios/Website/tree/main/assets/scofi-scroll.gif" alt="Scofi-scroll" width="250" />
+<img src="../../assets/scofi-scroll.gif" alt="Scofi-scroll" width="250" />
 
 :::note[NOTICE]
 You can also create lines without the need of creating a `Line` object,
@@ -91,7 +91,7 @@ public @NotNull Body<String> getBody(Player player) {
 ```
 
 This will be displayed in-game as the following:
-<img src="https://github.com/MeveraStudios/Website/tree/main/assets/scofi-highlight.gif" alt="Scofi-highlight" width="250" />
+<img src="../../assets/scofi-highlight.gif" alt="Scofi-highlight" width="250" />
 
 
 ## Custom animations
@@ -159,7 +159,7 @@ public class CustomBoard implements LegacyBoardAdapter {
 The example above should create a nice looking animation for the title
 In-game it should look like the following:
 
-<img src="https://github.com/MeveraStudios/Website/tree/main/assets/scofi-custom.gif" alt="Scofi-custom" width="250" />
+<img src="../../assets/scofi-custom.gif" alt="Scofi-custom" width="250" />
 
 :::info
 1- Custom animations can be create for both the modern and the legacy scoreboards.
