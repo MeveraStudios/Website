@@ -20,8 +20,8 @@ The builder requires an `InputStream` (typically `System.in`).
 To dispatch a command from the input stream:
 
 ```java
-imperat.dispatch();                    // uses System output
-imperat.dispatch(myConsoleLogger);     // uses a custom ConsoleLogger
+imperat.execute();                    // uses System output
+imperat.execute(myConsoleLogger);     // uses a custom ConsoleLogger
 ```
 
 ## Default Argument Types
