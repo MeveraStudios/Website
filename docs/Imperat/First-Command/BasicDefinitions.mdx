@@ -5,132 +5,78 @@ order: 1
 ---
 
 # Basic Definitions
-Before diving into the details of Imperat, it's essential to understand some basic definitions that will help you grasp the concepts and terminology used throughout the documentation.
-Understanding these basic definitions will help you navigate through the Imperat documentation and effectively utilize the framework to build powerful command hierarchies for your applications.
+
+Essential terminology for understanding Imperat.
 
 ## Placeholders
-You might often see names like `PLATFORMSOURCE`, `PLATFORMIMPERAT` in the documentation,
-They refer to the specific implementations of Imperat for different platforms (e.g., Bukkit, Sponge, etc.).
-`PLATFORMSOURCE` represents the source/sender of a command for that platform.
-`PLATFORMIMPERAT` refers to the Imperat instance for that platform.
 
-## Command 
-A Command is a fundamental unit of functionality in Imperat. It represents an action that can be executed by the user.
- Commands can have subcommands, arguments, and various properties represented as `pathways` with certain characteristics that define the behavior of the command.
+`PLATFORMSOURCE` and `PLATFORMIMPERAT` are placeholders for platform-specific implementations (Bukkt, Sponge, etc.).
+
+- `PLATFORMSOURCE` — the command sender (player, console, etc.)
+- `PLATFORMIMPERAT` — the Imperat instance for that platform
+
+## Command
+
+A **Command** is an executable action. It contains pathways (ways to run it) and can have subcommands and arguments.
 
 ### Root Command
-Root Command is the top-level Command in a command hierarchy. It serves as the entry point for executing commands and can have multiple subcommands and pathways.
-Its the apex command that all other commands branch out from, and it often represents the main functionality or purpose of the command system, meaning they have no parent command and are the starting point for command execution.
- Root commands can have multiple subcommands and pathways, allowing for a flexible and organized command structure. They are essential for defining the overall structure and functionality of a command system in Imperat.
 
+The top-level command in a hierarchy. Entry point for command execution with no parent. Can have subcommands and pathways.
 
 ### Subcommand
-A Subcommand is a Command that is nested within another Command, known as the parent Command.
-Subcommands allow for a hierarchical structure of commands, enabling more complex and organized command systems.
-Subcommands can have their own arguments and properties, and they can be executed independently of their parent Command. They are often used to group related commands together and provide a more intuitive command structure for users.
 
-## Raw-Argument/Input
-A Raw-Argument, also known as `Raw-Input`, refers to the unprocessed input provided by the user when executing a command.
-**It is the original string input that the user types**, which has not yet been parsed or converted into a specific data type.
-Raw-Arguments are typically used as the initial input for command execution and are processed by the command system 
-to extract meaningful information and convert it into the appropriate types for command execution.
+A Command nested within another (parent) Command. Can have its own pathways, and each pathway can have its own arguments.
+
+## Raw-Input
+If user enters `/sum 5 10`, this whole string after the command label (`5 10`) is the `raw-input`. 
+It is the unprocessed string that gets parsed into arguments.
+
+### Raw-Argument
+The `raw-argument` is the entire unprocessed string after the command label, like `5 10`.
+The unprocessed string the user types before its parsed to a typed argument. 
 
 ## Argument
-An Argument is a parameter that a `Command` can accept. 
-It provides additional information or input required for the Command to execute properly. 
-Arguments can be of various types, such as strings, numbers, or custom objects, and they can have specific validation rules.
 
-Arguments are classified into four types based on their position and requirements:
-- **Literal Argument**: A fixed value that must be provided for the Command to execute.Thus, It is used to define specific **subcommands**.
-- **Required Argument**: An argument that must be provided by the user for the Command to execute. It is essential for the Command's functionality and cannot be omitted.
-- **Optional Argument**: An argument that can be provided by the user but is not mandatory for the Command to execute. It allows for more flexible command usage and can have default values if not provided.
-- **Flag Argument**: A special type of argument that represents a certain option or setting , this option can be represented as boolean for on/off toggling states **(Switch)** or it can be represented as a value that can be set **(True-Flag)**, 
-it is often used to modify the behavior of a Command without requiring additional input.
-- **Greedy Argument**: An argument that captures all remaining input from the user. It is often used for commands that require a variable number of arguments or for commands that need to capture a large amount of input.
+A parameter a Command accepts. Classified by type:
 
-:::tip 
-Flags can be entered in any order, regardless of their position in the command, allowing users to customize command execution without worrying about argument placement.
+- **Literal** — fixed value, used for subcommands
+- **Required** — must be provided
+- **Optional** — can be omitted, may have defaults
+- **Flag** — toggles options (Switch) or sets values (True-Flag)
+- **Greedy** — captures all remaining input
+
+:::tip
+Flags can be entered in any order, not just in sequence.
 :::
 
 <Admonition type="custom" sideColor="#00d4ff" bgColor="#00d4ff20" title="PRO-TIP" icon="LightBulb">
 
-Flags are classified into two types:
-- **Switch**: A boolean flag that can be toggled on or off. It is often used to enable or disable certain features or options in a Command.
-- **True-Flag**: A flag that can be set to a specific value. It is often used to provide additional information or settings for a Command that require a specific value rather than just an on/off state.
-The value of a True-Flag can be of various types, such as strings, numbers, or custom objects, depending on the requirements of the Command.
+Flags have two types:
+- **Switch** — boolean on/off toggle
+- **True-Flag** — set to a specific value (string, number, etc.)
 
 </Admonition>
 
-```mermaid
-graph TD
-    A[Argument Types] --> B[Literal Argument]
-    A --> C[Required Argument]
-    A --> D[Optional Argument]
-    A --> E[Flag Argument]
-    A --> F[Greedy Argument]
-    E --> E1[Switch]
-    E --> E2[True-Flag]
-    
-    style A fill:#6366f1,stroke:#4f46e5,stroke-width:3px,color:#fff
-    style E fill:#00d4ff,stroke:#0099cc,stroke-width:2px,color:#000
-    style E1 fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style E2 fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style B fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style C fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style D fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style F fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    
-    linkStyle default stroke:#fbbf24,stroke-width:2px
-```
-
 ## Pathway
-**A Pathway is a specific sequence of arguments and properties that define how a Command can be executed.**
-**It represents a specific way to execute a Command**, including the required arguments, optional arguments, flags, 
-and other metadata that define how the Command should be executed.
 
-A Command can have multiple Pathways, allowing for flexible command structures and various ways to execute the same command with different parameters sequences.
-There are three types of Pathways:
+A specific way to execute a Command — the sequence of arguments and options that triggers it. 
+A Command can have multiple pathways.
 
 ### Main Pathway
-It's a pathway with **expected arguments**, meaning that it requires **specific sequence of input** from the user to execute the command.
-A `Command` can have multiple main pathways, each with different arguments and properties,
-allowing for various ways to execute the same command with different parameters.
 
-example pathway: `/print <message>`.
-In this pathway, the command is `print` and it has one required argument `message`.
+Requires specific arguments in sequence. Example: `/print <message>`
 
 ### Default Pathway
-**It is the unique pathway with NO arguments.**
-Meaning that it can be executed without providing any arguments, 
-making it the default way to execute the command when no arguments are supplied by the user.
-It can be used to provide a default behavior for a Command.
 
-example pathway: `/print`
-In this pathway, the command is `print` and it can be executed without any arguments or with optional arguments like `message` in this case.
-
-
-```mermaid
-graph TD
-    A[Pathway Types] --> B[Main Pathway]
-    A --> C[Default Pathway]
-                
-    style A fill:#6366f1,stroke:#4f46e5,stroke-width:3px,color:#fff
-    style B fill:#34d399,stroke:#22c55e,stroke-width:2px,color:#000
-    style C fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#000
-    
-    linkStyle default stroke:#fbbf24,stroke-width:2px
-```
+No arguments required. Example: `/print`
 
 ## Context
-Context is an object that holds information about the current state of command operation (e.g: execution, parsing, suggestion, etc). 
-It provides access to various properties and methods that allow you to interact with the command system and manage the flow of command execution.
-It allows you to access the arguments provided by the user, manage the execution flow, access the source/sender of the command, and send responses back to the user.
 
-It has two main types:
-- **Execution Context**: This context is used during the execution of a Command.
-- **Suggestion Context**: This context is used during the suggestion phase when the user is typing a command and needs suggestions for possible completions.
+An object holding the current state of command operation (execution, parsing, suggestion).
 
-Each type of context provides specific properties and methods relevant to its **purpose**, allowing you to effectively manage command execution and provide a seamless user experience when interacting with the command system in Imperat.
+- **Execution Context** — during command execution
+- **Suggestion Context** — while user is typing, for tab-completion
 
 ## ImperatConfig
-ImperatConfig is the class designed to hold all customizable features of the framework, allowing users to customize the behaviour of the features provided.
+
+Holds all customizable framework settings.
