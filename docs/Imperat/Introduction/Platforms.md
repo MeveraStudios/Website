@@ -27,7 +27,7 @@ as shown in the table below:
 
 | Platform Name      | Implementation to Use         | CommandSource (Command Sender)     |
 |--------------------|-------------------------------|-----------------------------|
-| imperat-bukkit     | `BukkitImperat`               | `BukkitCommandCommandSource`              |
+| imperat-bukkit     | `BukkitImperat`               | `BukkitCommandSource`              |
 | imperat-bungee     | `BungeeImperat`               | `BungeeCommandSource`              |
 | imperat-velocity   | `VelocityImperat`             | `VelocityCommandSource`            |
 | imperat-minestom   | `MinestomImperat`             | `MinestomCommandSource`            |
