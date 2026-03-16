@@ -1,6 +1,6 @@
 ---
 title: "Minestom"
-description: "The Minestom platform for minecraft servers"
+description: "The Minestom platform for Minecraft servers"
 order: 4
 ---
 

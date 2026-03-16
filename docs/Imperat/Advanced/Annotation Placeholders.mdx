@@ -7,7 +7,7 @@ order: 7
 You can use placeholders in strings provided to Imperat's annotations, such as `@RootCommand`, `@SubCommand`, `@Execute`, etc...
 These placeholders allow you to dynamically insert values into the annotation strings, making your command definitions more flexible and adaptable to different contexts.
 
-Its you (the developer) who defines these placeholders, and their corresponding values, when building the Imperat instance through `PLATFORMIMPERAT.builder()`.
+It's you (the developer) who defines these placeholders, and their corresponding values, when building the Imperat instance through `PLATFORMIMPERAT.builder()`.
 For example, you can define a placeholder called `default_description` and use it in your command annotations like this:
 ```java
 @RootCommand("example")
@@ -38,7 +38,7 @@ When Imperat processes the `@Description` annotation on the `ExampleCommand` cla
 allowing you to have dynamic descriptions for your commands based on your configuration or any other logic you choose to implement.
 
 :::tip
-This is can be useful when you want your value to be dynamic and not hardcoded in the annotation, 
+This can be useful when you want your value to be dynamic and not hardcoded in the annotation, 
 for example, if you want to have different descriptions for different languages 
 or if you want to update the description without having to recompile your code, 
 so you can simply update that value in a configuration file or a database then reload your app/plugin.

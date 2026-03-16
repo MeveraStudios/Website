@@ -1,6 +1,6 @@
 ---
 title: "Velocity"
-description: "Velocity proxy platform for minecraft networks"
+description: "Velocity proxy platform for Minecraft networks"
 order: 3
 ---
 

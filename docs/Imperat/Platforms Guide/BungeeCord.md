@@ -1,6 +1,6 @@
 ---
-title: "Bungeecord"
-description: "The Bungeecord proxy platform for minecraft networks"
+title: "BungeeCord"
+description: "The BungeeCord proxy platform for Minecraft networks"
 order: 2
 ---
 # BungeeCord

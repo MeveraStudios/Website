@@ -7,7 +7,7 @@ order: 9
 **Context Arguments** are arguments, where their values are loaded/deduced from the **context** of the command.
 
 ## How is this useful?
-Imagine you have multiple pathways where there's an object that must always loaded from the use of the loaded input-arguments.
+Imagine you have multiple pathways where there's an object that must always be loaded from the use of the loaded input-arguments.
 
 Without Context Arguments: you will have to write the loading code for this object in every `pathway-method`.
 With Context Arguments: you shall set the loading code for this object **ONCE** and then it can be automatically loaded as a parameter provided in your `pathway-method`.
@@ -19,7 +19,7 @@ Let's imagine you're working on a guild system where you're creating a complex h
 `/guild invite <user>`
 `/guild join <guild>`
 
-In All subcommands' `pathway-method` *(except for the subcommand **create**)*, we will need to fetch the guild of the `source` *(aka command-sender)*, to be used for the logic of the subcommand's execution.
+In all subcommands' `pathway-method` *(except for the subcommand **create**)*, we will need to fetch the guild of the `source` *(aka command-sender)*, to be used for the logic of the subcommand's execution.
 
 #### Without Context Arguments:
 ```java

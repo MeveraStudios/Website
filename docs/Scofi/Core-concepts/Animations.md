@@ -1,6 +1,6 @@
 ---
 title: Animations
-description: Animations are a sequence of changes that happens to a scoreboard entity
+description: Animations are a sequence of changes that happen to a scoreboard entity
 order: 2
 ---
 
@@ -14,11 +14,11 @@ There are 2 types of built-in animations:
 
 :::caution
 Scrolling and Highlighting were designed to be available ONLY for Legacy users.
-they will arrive soon to be available for adventure/modern users.
+They will arrive soon to be available for adventure/modern users.
 :::
 
 ## Scrolling animation
-You can easily set an entity to be move and animate an infinite-like cycle of a text-scroll.
+You can easily set an entity to move and animate an infinite-like cycle of a text-scroll.
 Scrolling has 2 main options, the `width` and the `spaceBetween`.
 
 The `width`: Specifies how many characters of the text are visible at once during the scroll animation. It determines the "window" size of the scrolling text.
@@ -162,7 +162,7 @@ In-game it should look like the following:
 <img src="../../assets/scofi-custom.gif" alt="Scofi-custom" width="250" />
 
 :::info
-1- Custom animations can be create for both the modern and the legacy scoreboards.
+1- Custom animations can be created for both the modern and the legacy scoreboards.
 
 2- When Creating a title, its either a title with text **OR** with animation and **NOT** both.
 :::

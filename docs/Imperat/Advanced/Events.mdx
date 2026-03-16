@@ -35,7 +35,7 @@ imperat.listen(yourEventClass.class, (event) -> {
 In the example above, we are subscribing to the `CommandPreProcessEvent` event.
 The second parameter is a lambda function that will be executed every time the event is fired.
 The `Priority` parameter allows you to specify the order in which listeners are executed when multiple listeners are subscribed to the same event.
-Its a wrapper around an integer value, where higher values indicate higher priority.
+It's a wrapper around an integer value, where higher values indicate higher priority.
 However, the class has some predefined constants for common priorities, such as `Priority.HIGHEST`, `Priority.HIGH`, `Priority.NORMAL`, `Priority.LOW`, and `Priority.LOWEST`.
 
 The `ExecutionStrategy` parameter allows you to specify whether the listener should be executed synchronously or asynchronously.

@@ -1,6 +1,6 @@
 ---
 title: "Bukkit/Spigot/Paper"
-description: "The Bukkit/Spigot/Paper Platform for minecraft servers"
+description: "The Bukkit/Spigot/Paper Platform for Minecraft servers"
 order: 1
 ---
 

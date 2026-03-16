@@ -40,7 +40,7 @@ You need to create a `BoardAdapter`, now there are 2 types of adapters:
 - `LegacyBoardAdapter` for **1.8-1.16.5**
 - `ModernBoardAdapter` for **1.17 and above**.
 
-First you need to determine what minecraft-version are you going to depend on,
+First you need to determine what Minecraft version you are going to depend on,
 in order to decide which adapter you're going to use.
 
 Each adapter decides what every part of the scoreboard is based on, for example,

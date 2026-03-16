@@ -20,7 +20,7 @@ Imperat supports various platforms as shown in the table below:
 
 
 ## Platform Differences
-The main differences between all platforms is the implementation of `Imperat` that represents the framework on this platform
+The main differences between all platforms are the implementation of `Imperat` that represents the framework on this platform
  along with the Implementation of `CommandSource` that represents the command-sender on this platform.
 They are following the naming format: `<platform>Imperat`, Same with the senders/sources : `<platform>CommandSource` (except for CLI)
 as shown in the table below:
