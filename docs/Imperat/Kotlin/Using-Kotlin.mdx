@@ -113,8 +113,13 @@ class GameModeCommand {
 ```
 /gamemode <mode> [target]
 ```
+
 :::note
-`[target]` is automatically declared as an **optional** argument, when we used kotlin-default
+`[target]` is automatically declared as an **optional** argument when using Kotlin default values.
+:::
+
+:::note
+If both are present on the same parameter, Java `@Default` takes precedence over Kotlin default values.
 :::
 
 
@@ -165,7 +170,9 @@ coroutineScope.launch {
 }
 ```
 
-> **Note**: Make sure that the code contained by the suspend function uses thread-safe algorithms and APIs only, commands may run asynchronously and be incompatible with some APIs such as the Bukkit API.
+:::caution
+Make sure that the code contained by the suspend function uses thread-safe algorithms and APIs only, commands may run asynchronously and be incompatible with some APIs such as the Bukkit API.
+:::
 
 ---
 
