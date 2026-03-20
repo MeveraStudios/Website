@@ -87,13 +87,12 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
 
     @Override
     public @Nullable Rank parse(
-            @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull String input
     ) throws CommandException {
-        Rank rank = yourRankRegistry.getRank(correspondingInput);
+        Rank rank = yourRankRegistry.getRank(input);
         if (rank == null) {
-            throw new UnknownRankException(correspondingInput);
+            throw new UnknownRankException(input);
         }
         // for testing purposes, we will just return a new Rank with the name equal to the input
         return rank;

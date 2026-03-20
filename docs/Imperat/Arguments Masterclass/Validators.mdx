@@ -23,13 +23,12 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
 
     @Override
     public @Nullable Rank parse(
-            @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull String input
     ) throws CommandException {
-        Rank rank = yourRankRegistry.getRank(correspondingInput);
+        Rank rank = yourRankRegistry.getRank(input);
         if (rank == null) { //[!code focus]
-            throw new UnknownRankException(correspondingInput); // ![code focus]
+            throw new UnknownRankException(input); // ![code focus]
         } //![code focus]
 
         // for testing purposes, we will just return a new Rank with the name equal to the input
@@ -50,7 +49,7 @@ public class BirthdayValidator implements ArgValidator<PLATFORMSOURCE> {
 
     @Override
     public void validate(
-            Context<PLATFORMSOURCE> context,
+            CommandContext<PLATFORMSOURCE> context,
             ParsedArgument<PLATFORMSOURCE> parsedArgument
     ) throws CommandException {
         var parsedValue = parsedArgument.getArgumentParsedValue();
@@ -78,12 +77,11 @@ public class DateArgumentType extends ArgumentType<PLATFORMSOURCE, Date> {
 
     @Override
     public @Nullable Date parse(
-            @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull String input
     ) throws CommandException {
         try {
-            return dateFormat.parse(correspondingInput);
+            return dateFormat.parse(input);
         } catch (ParseException e) {
             throw new CommandException("Invalid date format. Please use the format 'yyyy-MM-dd'.");
         }

@@ -89,14 +89,23 @@ Then create our custom argument type `MessageArgumentType`:
 public final class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
 
     @Override
+    public Message parse(
+            @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull String input
+    ) throws CommandException {
+        //Here is the main logic for parsing the command input into a Message object.
+        //Since this is a greedy argument, we will take all remaining input and create a message out of it
+        return new Message(input);
+    }
+
+    @Override
     public @Nullable Message parse(
             @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull Cursor<PLATFORMSOURCE> cursor
     ) throws CommandException {
         //we do not care about the corresponding input, since this is a greedy argument,
         // we will just take all the remaining input and create a message out of it
-        return new Message(cursor.collectRemainingRaw());
+        return parse(context, cursor.collectRemainingRaw());
     }
 
     @Override
@@ -205,12 +214,21 @@ import studio.mevera.imperat.context.internal.Cursor;
 import studio.mevera.imperat.exception.CommandException;
 
 public class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
+    @Override
+    public Message parse(
+            @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull String input
+    ) throws CommandException {
+        //Here is the main logic for parsing the command input into a Message object.
+        //Since this is a greedy argument, we will take all remaining input and create a message out of it
+        return new Message(input);
+    }
+
 
     @Override
     public @Nullable Message parse(
             @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull Cursor<PLATFORMSOURCE> cursor
     ) throws CommandException {
         int limit = -1;
         Argument<PLATFORMSOURCE> parameter = cursor.currentParameterIfPresent();
@@ -226,7 +244,7 @@ public class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
                     .ifPresent(builder::append);
             consumed++;
         }
-        return new Message(builder.toString());
+        return parse(context, builder.toString());
     }
 
     @Override

@@ -1,0 +1,89 @@
+---
+title: "Using @PathwayCommand"
+description: "Learn how to compress nested subcommands into a single pathway with @PathwayCommand."
+order: 4
+---
+
+Since version **3.1.0**, Imperat introduced the `@PathwayCommand` annotation, which allows you to compress a nested subcommand structure into a single pathway. 
+This is particularly useful for complex pathways/heirarchies that would otherwise require multiple subcommand classes and methods.
+
+## Using @PathwayCommand
+`@PathwayCommand` can be used on methods to flatten the command structure. 
+When you annotate a method with `@PathwayCommand`, it treats the entire pathway leading to that method as a single command execution point,
+ rather than creating separate subcommands for each level of the hierarchy.
+
+ Let's say you have a command structure like this:
+ ```
+ /rank <rank> permission set <perm> [value]
+ /rank <rank> permission unset <perm>
+ /rank <rank> permission list
+ /rank <rank> permission clear
+ ```
+
+### With `@PathwayCommand`, you can represent all of these pathways in a single method, like this:
+```java
+public class RankCommand {
+
+    @PathwayCommand("rank <rank> permission set <perm> [value]")
+    public void setPermission(TestCommandSource source, String rank, String perm, @Default("true") boolean value) {
+        // set a permission for your rank
+    }
+
+    @PathwayCommand("rank <rank> permission unset <perm>")
+    public void unsetPermission(TestCommandSource source, String rank, String perm) {
+        // unset a permission from your rank
+    }
+
+    @PathwayCommand("rank <rank> permission list")
+    public void listRankPermissions(TestCommandSource source, String rank) {
+        // list your rank permissions
+    }
+
+    @PathwayCommand("rank <rank> permission clear")
+    public void clearPermissions(TestCommandSource source, String rank) {
+        // clear all permissions of a rank.
+    }
+
+}
+```
+
+### Without @PathwayCommand
+You would need to create multiple subcommand classes and methods to represent each level of the hierarchy, which can become cumbersome.
+example:
+```java
+@RootCommand("rank")
+public class RankCommand {
+
+    @Execute
+    public void rankPathway(TestCommandSource source, String rank) {
+        // This method would be the entry point for the <rank> argument
+    }
+
+    @SubCommand(value = "permission", attachTo = "<rank>")
+    public class PermissionSub {
+
+        @SubCommand(value = "set")
+        public void setPermission(TestCommandSource source, @InheritedArg String rank, String perm, @Default("true") boolean value) {
+            // set a permission for your rank
+        }
+
+        @SubCommand(value = "unset")
+        public void unsetPermission(TestCommandSource source, @InheritedArg String rank, String perm) {
+            // unset a permission from your rank
+        }
+
+        @SubCommand(value = "list")
+        public void listRankPermissions(TestCommandSource source, @InheritedArg String rank) {
+            // list your rank permissions
+        }
+
+        @SubCommand(value = "clear")
+        public void clearPermissions(TestCommandSource source, @InheritedArg String rank) {
+            // clear all permissions of a rank.
+        }
+
+    }
+
+
+}
+```

@@ -29,31 +29,66 @@ public final class Point2D {
 }
 ```
 
-Next, we can create a compound argument type that parses the input into a `Point2D` object:
+Next, we can create a compound argument type that parses the input into a `Point2D` object.
+:::note
+Since v3.1.0, Imperat provides two methods for parsing arguments:
+- `parse(CommandContext, String)` — for simple arguments that consume a single raw-argument
+- `parse(ExecutionContext, Cursor)` — for complex arguments that consume multiple raw-arguments (compound arguments)
+
+The method `parse(ExecutionContext, Cursor)` is designed to be used in **execution ONLY**.
+while the `parse(CommandContext, String)` is designed to be used in any conntext or the following scenarios:
+- **parsing default values**
+- **validating input when searching for the compatible pathway right before execution**
+
+Internally, the `parse(ExecutionContext, Cursor)` method calls the `parse(CommandContext, String)` method with the corresponding/current raw-input in queue (aka `Cursor<PLATFORMSOURCE>`),
+, so you can choose to implement your parsing logic in either of the two methods based on your needs, 
+but it's generally recommended to implement the parsing logic in the `parse(CommandContext, String)` method for simplicity, 
+unless you have specific reasons to use the `parse(ExecutionContext, Cursor)` method for more complex parsing scenarios.
+:::
+
+and here we have a complex scenario where we want to parse two separate inputs (x and y) into a single `Point2D` object, 
+so we will implement the parsing logic in the `parse(ExecutionContext, Cursor)` method:
+
+
 ```java
 public class Point2DArgumentType extends ArgumentType<PLATFORMSOURCE, Point2D> {
-
-
+    
     @Override
     public @Nullable Point2D parse(
             @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor,
-            @NotNull String correspondingInput
+            @NotNull Cursor<PLATFORMSOURCE> cursor
     ) throws CommandException {
-        //example input: '/teleport 10 20'
-        // the format for this arg is '<x> <y>'
-        // correspondingInput is the expected raw to be the '10' in the example raw;
+        //Here is the main logic for parsing the command input into a Point2D object.
+        
         String xInput = correspondingInput;
         String yInput = cursor.nextInput();
 
-        if (yInput == null) {
+        return parse(context, xInput + " " + yInput); 
+        // we can reuse the other parse method to handle the parsing logic and error handling, 
+        // we just need to combine the two inputs into a single string that matches the expected format for that method.
+    }
+
+    @Override
+    public Point2D parse(
+        CommandContext<PLATFORMSOURCE> context,
+        String correspondingInput
+    ) {
+        //example input: '/teleport 10 20'
+        // the format for this arg is '<x> <y>'
+        // ASSUME that the correspondingInput is the x coordinate and the next input in the cursor is the y coordinate, separated by a space.
+        String[] coords = correspondingInput.split(" ");
+        if (coords.length != 2) {
             throw new CommandException("Invalid coordinates, expected format: <x> <y>");
         }
-
-        return new Point2D(
-                Double.parseDouble(xInput), Double.parseDouble(yInput)
-        );
+        try {
+            double x = Double.parseDouble(coords[0]);
+            double y = Double.parseDouble(coords[1]);
+            return new Point2D(x, y);
+        } catch (NumberFormatException e) {
+            throw new CommandException("Invalid coordinates, expected numerical coordinates for <x> <y>");
+        }
     }
+
 
     @Override //CRITICAL: you must override this method to return the number of raw-arguments that your compound argument will consume, in this case, it will consume 2 raws for x and y
     public int getNumberOfParametersToConsume() {
