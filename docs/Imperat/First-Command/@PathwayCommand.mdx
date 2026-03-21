@@ -4,10 +4,10 @@ description: "Learn how to compress nested subcommands into a single pathway wit
 order: 4
 ---
 
+# Using @PathwayCommand
 Since version **3.1.0**, Imperat introduced the `@PathwayCommand` annotation, which allows you to compress a nested subcommand structure into a single pathway. 
 This is particularly useful for complex pathways/heirarchies that would otherwise require multiple subcommand classes and methods.
 
-## Using @PathwayCommand
 `@PathwayCommand` can be used on methods to flatten the command structure. 
 When you annotate a method with `@PathwayCommand`, it treats the entire pathway leading to that method as a single command execution point,
  rather than creating separate subcommands for each level of the hierarchy.
