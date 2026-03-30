@@ -20,9 +20,7 @@ Use the built-in dependency-resolver through `ConfigBuilder#dependencyResolver`.
 
 ```java
 PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
-    .dependencyResolver(config -> {
-        config.register(YourClass.class, () -> new YourClass(/* parameters */));
-    })
+    .dependencyResolver(YourClass.class, () -> new YourClass(/*parameters*/))
     .build();
 ```
 

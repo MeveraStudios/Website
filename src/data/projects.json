@@ -13,10 +13,23 @@
         "titleHoverColor": "#e11d48"
     },
     {
+        "id": "Lotus",
+        "logoPath": "🌸",
+        "title": "Lotus",
+        "description": "High-performance, GUI framework for minecraft",
+        "docLink": "/docs/Lotus/Introduction",
+        "color": "#ec4899", 
+        "featured": true,
+        "githubRepo": "https://github.com/MeveraStudios/Lotus",
+        "hoverAnimator": "DefaultAnimator",
+        "titleColor": "#ffffff",
+        "titleHoverColor": "#ec4899"
+    },
+    {
         "id": "Scofi",
         "logoPath": "🎨",
         "title": "Scofi",
-        "description": "Modern, lightweight UI component library with theming support for React and Vue applications.",
+        "description": "Modern, lightweight scoreboard library for Minecraft with a focus on performance and ease of use.",
         "docLink": "/docs/Scofi/Introduction",
         "color": "#8b5cf6",
         "featured": true,

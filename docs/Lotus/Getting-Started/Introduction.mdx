@@ -1,0 +1,42 @@
+---
+title: Getting Started
+description: Starting on Lotus
+order: 1
+---
+# Introduction
+Lotus is a modern gui library for paper/spigot, designed to be ensure smooth development experience when creating guis using paper/spigot.
+
+## Installation
+Lotus is hosted on **maven-central**, so no need to add any specific repository.
+<LatestVersionBlock 
+    owner="MeveraStudios" 
+    repo="lotus"
+    group="studio.mevera" 
+    id="lotus"
+/>
+
+## Basic Definitions
+Before we start, let's define some basic terms that we will be using throughout the documentation.
+- **Menu**: A menu is a template for creating custom gui that can be opened for a player.
+- **MenuView**: Represents an opened menu session for a player.
+- **Button**: A button is an interactive element that can be added to a menu, it can be clicked by the player to perform an action.
+- **Pagination**: A feature that allows you to split the content of a menu into multiple pages, and navigate between them.
+
+
+## Integrating Lotus
+To use lotus, you need to initialize a `Lotus` instance in your `onEnable` method.
+Here is a simple example:
+```java
+public class Test extends JavaPlugin {
+
+   private Lotus api;
+	
+   @Override
+   public void onEnable() {
+     api = Lotus.load(this);
+   }
+
+}
+```
+
+### Creating your first menu
