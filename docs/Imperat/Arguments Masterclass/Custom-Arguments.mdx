@@ -63,8 +63,7 @@ public class UnknownRankException extends SelfHandledException {
 
     @Override
     public <S extends Source> void handle(
-            ImperatConfig<S> config,
-            Context<S> context
+            CommandContext<S> context
     ) {
         var sender = context.source();
         sender.reply("Unknown rank: '" + input + "'");
