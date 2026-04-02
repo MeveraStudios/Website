@@ -1,0 +1,165 @@
+---
+title: Menu Content
+description: Learn how to define the content of your menus in Lotus using the Content interface, allowing you to specify the buttons and their properties within each menu.
+order: 4
+---
+
+# Menu Content
+In Lotus, the content of a menu defines the buttons and their properties that will be displayed within the menu. The content is defined through the `getContent` method of the `Menu` interface.
+
+## Constructing Content
+To create content, you need to return an instance of `Content` through a built-in builder.
+```java
+    @Override
+    public @NotNull Content getContent(DataRegistry extraData, Player opener, Capacity capacity) {
+        Content content = Content.builder(capacity).build();
+        return content;
+    }
+```
+
+
+## Creating an ItemStack.
+To create the `ItemStack` for the button, you can use the `ItemStackBuilder` provided by Lotus, which allows you to easily create and customize item stacks with a fluent API.
+There are two builders, one that is based on legacy chatcolor codes and another that is based on Adventure components, you can choose the one that suits your needs and preferences.
+
+use `ItemBuilder#legacy` for the legacy builder:
+```java
+ItemStack fancyStoneItem = ItemBuilder.legacy(Material.STONE)
+        .setDisplay("&athe Fancy Stone")
+        .setLore(
+            "&7-----------",
+            "&eJust a fancy stone!",
+            "&7-----------"
+        )
+        .build();
+```
+
+or use `ItemBuilder#modern` for the modern builder:
+```java
+ItemStack fancyStoneItem = ItemBuilder.modern(MiniMessage.miniMessage(), Material.STONE)
+        .setDisplay("<green> The Fancy Stone")
+        .setRichLore(
+            "<gray>-----------",
+            "<yellow>Just a fancy stone!",
+            "<gray>-----------"
+        )
+        .build();
+```
+
+:::danger{label="READ THIS"}
+If you're going to use the **modern** in either `ItemBuilder` or `MenuTitle`, 
+make sure to have the Adventure library included in your project.
+or just use a platform that has built-in support for Adventure, like Modern Paper.
+:::
+
+## Button
+A `Button` is an interactive element that can be added to a menu, it can be clicked by the player to perform an action.
+It's a combination between an `ItemStack` and a function that will be executed when the player clicks the item.
+You can create a button like this:
+```java
+Button fancyStoneButton = Button.clickable(
+        fancyStoneItem,
+        ButtonClickAction.plain((menuView, event) -> {
+            //handle click
+            
+        })
+);
+```
+
+### Handling Button Clicks
+When creating a button, you can specify the action that will be executed when the player clicks the button.
+In the example above, we used `ButtonClickAction.plain` to create a simple click action that executes a lambda function when the button is clicked.
+
+Here's an example of clicking the button to give the player an item and then close the menu:
+```java
+    @Override
+    public @NotNull Content getContent(DataRegistry extraData, Player opener, Capacity capacity) {
+        ItemStack fancyStoneItem = ItemBuilder.modern(MiniMessage.miniMessage(), Material.STONE)
+                                      .setDisplay("<green> The Fancy Stone")
+                                      .setRichLore(
+                                              "<gray>-----------",
+                                              "<yellow>Just a fancy stone!",
+                                              "<gray>-----------"
+                                      )
+                                      .build();
+        Button fancyStoneButton = Button.clickable(
+                fancyStoneItem,
+                ButtonClickAction.plain((menuView, clickEvent) -> {
+                    //handle click
+                    //give the player the fancy stone item
+                    opener.getInventory().addItem(fancyStoneItem);
+                    opener.sendMessage("You have been given " + fancyStoneItem.getItemMeta().getDisplayName());
+                    
+                    //cancel the
+                    clickEvent.setCancelled(true);
+
+                    //close the player's inventory after the click
+                    opener.closeInventory();
+                })
+        );
+
+        Content content = Content.builder(capacity)
+                                  .setButton(0, fancyStoneButton)
+                                  .build();
+        return content;
+    }
+```
+
+### Overview of the Menu we made along the way
+```java
+public class TutorialMenu implements Menu {
+
+    @Override
+    public @NotNull MenuTitle getTitle(DataRegistry extraData, Player opener) {
+        return MenuTitles.createModern("<blue><bold> Welcome " + opener.getName());
+    }
+
+    @Override
+    public @NotNull Capacity getCapacity(DataRegistry extraData, Player opener) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public @NotNull Content getContent(DataRegistry extraData, Player opener, Capacity capacity) {
+        ItemStack fancyStoneItem = ItemBuilder.modern(MiniMessage.miniMessage(), Material.STONE)
+                                      .setDisplay("<green> The Fancy Stone")
+                                      .setRichLore(
+                                              "<gray>-----------",
+                                              "<yellow>Just a fancy stone!",
+                                              "<gray>-----------"
+                                      )
+                                      .build();
+        Button fancyStoneButton = Button.clickable(
+                fancyStoneItem,
+                ButtonClickAction.plain((menuView, clickEvent) -> {
+                    //handle click
+                    //give the player the fancy stone item
+                    opener.getInventory().addItem(fancyStoneItem);
+                    opener.sendMessage("You have been given " + fancyStoneItem.getItemMeta().getDisplayName());
+
+                    //cancel the
+                    clickEvent.setCancelled(true);
+
+                    //close the player's inventory after the click
+                    opener.closeInventory();
+                })
+        );
+
+        Content content = Content.builder(capacity)
+                                  .setButton(0, fancyStoneButton)
+                                  .build();
+        return content;
+    }
+}
+
+```
+
+## Opening the Menu
+To open the menu for a player, you can use the `open` method provided by the `Lotus` instance.
+```java
+lotus.openMenu(player, new TutorialMenu());
+```
+You can cache the instance of the menu and reuse it.
+
+### Result:
+<img src="../../assets/Tutorial-Menu-Example.gif" alt="Menu Example" />
