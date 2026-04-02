@@ -21,10 +21,11 @@ The builder requires a `Plugin` instance.
 
 | Method                            | Description                                                                                       |
 |-----------------------------------|---------------------------------------------------------------------------------------------------|
-| `applyBrigadier(boolean)`         | Enables Brigadier integration for Paper servers (1.13+). Provides improved client-side suggestions and argument types. |
 | `setAdventureProvider(provider)`  | Overrides the auto-detected Adventure provider with a custom one.                                 |
 
-When `applyBrigadier(true)` is set, Imperat registers commands through Brigadier for richer client-side tab completion.  
+
+### Integrating Brigadier
+When `BukkitImperat.builder(plugin, true)` is used, Imperat registers commands through Brigadier for richer client-side tab completion.  
 When it is **not** set, Imperat falls back to an async tab listener on Paper (if supported).
 
 ## Default Argument Types
@@ -74,7 +75,6 @@ Held in `BukkitResponseKey`.
 | `ONLY_CONSOLE`             | `"Only console can do this!"`                                                | —                                                                 |
 | `UNKNOWN_PLAYER`           | `"A player with the name '%input%' doesn't seem to be online"`               | `input`                                                           |
 | `UNKNOWN_OFFLINE_PLAYER`   | `"A player with the name '%input%' doesn't seem to exist"`                   | `input`                                                           |
-| `UNKNOWN_WORLD`            | `"A world with the name '%input%' doesn't seem to exist"`                    | `input`                                                           |
 | `INVALID_LOCATION`         | `"Failed to parse location '%input%' due to: %cause%"`                       | `input`, `inputX`, `inputY`, `inputZ`, `inputYaw`, `inputPitch`, `cause` |
 | `INVALID_SELECTOR_FIELD`   | `"Invalid field-criteria format '%criteria_entered%'"`                        | `input`, `criteria_expression`                                    |
 | `UNKNOWN_SELECTOR_FIELD`   | `"Unknown selection field '%field_entered%'"`                                 | `input`, `field_entered`                                          |

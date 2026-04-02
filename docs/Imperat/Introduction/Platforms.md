@@ -39,11 +39,10 @@ as shown in the table below:
 ### BUKKIT Brigadier Integration
 
 You can integrate Imperat with Mojang's Brigadier for enhanced command features (like suggestions and argument types) on compatible servers (Minecraft 1.13+).
-Call the `applyBrigadier(true)` method while configuring your Imperat instance. This method must be the **FIRST** one called in the builder chain:
+Just add a boolean parameter (which represents whether imperat will integrate with brigadier or not) in  your builder method:
 
 ```java
-BukkitImperat imperat = BukkitImperat.builder(this)
-    .applyBrigadier(true)
+BukkitImperat imperat = BukkitImperat.builder(this, true)
     .build();
 ```
 
