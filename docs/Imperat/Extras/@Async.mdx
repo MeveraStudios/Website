@@ -43,7 +43,37 @@ public class BalanceCommand {
 ```
 
 **Without `@Async`:** The method blocks the main thread until `database.getBalance(...)` finishes.  
-**With `@Async`:** The method runs in the background. The main thread returns immediately.
+**With `@Async`:** The method runs in the background through `ForkJoinPool.commonPool()`. The main thread returns immediately.
+
+:::note
+The default `ForkJoinPool.commonPool()` is shared across the entire application, 
+so be mindful of how many async tasks you run to avoid overwhelming it. If you need more control, consider using a custom `ExecutorService` (see below).
+:::
+
+### Custom ExecutorService
+You can specify a custom `ExecutorService` to supply your custom thread/thread-pool for async execution. This is useful if you want to manage your own threads or use a different thread pool.
+Just create a class that implements `ExecutorServiceProvider`.
+```java
+public class CustomExecutorProvider implements ExecutorServiceProvider {
+    private final ExecutorService executor = Executors.newFixedThreadPool(10);
+
+    @Override
+    public ExecutorService provideExecutorService() {
+        return executor;
+    }
+}
+```
+
+Then declare it in your `@Async` annotation:
+
+```java
+@Async(CustomExecutorProvider.class)
+```
+
+:::tip
+If your custom `ExecutorService` requires parameters in its constructor, you MUST inject its instance through imperat's dependency injection system.
+For more details read the [Dependency Injection](../InstanceFactory.mdx) documentation.
+:::
 
 ## Important Notes
 
