@@ -115,7 +115,7 @@ Learn more about suggestions in the [Suggestions](../Imperat/Suggestions.mdx) se
 Register your custom argument type so Imperat knows how to use it:
 ```java
 PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
-    .registerArgType(Rank.class, new RankArgumentType())
+    .argType(Rank.class, new RankArgumentType())
     .build();
 ```
 

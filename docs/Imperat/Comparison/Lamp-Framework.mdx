@@ -175,7 +175,7 @@ public class LocationArgumentType implements ArgumentType<BukkitCommandSource, L
 Then register the custom `ArgumentType`:
 ```java
 BukkitImperat imperat = BukkitImperat.builder(yourPluginInstance)
-.registerArgType(Location.class, new LocationArgumentType())
+.argType(Location.class, new LocationArgumentType())
 .build();
 ```
 
