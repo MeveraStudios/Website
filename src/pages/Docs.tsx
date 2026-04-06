@@ -75,10 +75,9 @@ export function Docs() {
   // Get prev/next navigation
   const { prev, next } = getDocNavigation(project, slug);
 
-  // Generate edit URL (fallback if doc not loaded)
-  const editUrl = doc 
-    ? `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}${doc.path.replace(/^\/docs/, '')}`
-    : `${SITE_CONFIG.githubUrl}/edit/main/docs/${project.id}/${slug}.md`;
+  const editUrl = doc
+    ? `${SITE_CONFIG.githubUrl}/edit/main${doc.path}`
+    : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-docs">
@@ -135,7 +134,7 @@ export function Docs() {
                       </div>
                     )}
 
-                    {FEATURES.editPageLinks && (
+                    {FEATURES.editPageLinks && editUrl && (
                       <Button variant="link" size="sm" asChild className="h-auto p-0">
                         <a
                           href={editUrl}

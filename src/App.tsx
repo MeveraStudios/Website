@@ -30,13 +30,42 @@ import './App.css';
 // Preload documentation data
 preloadDocs();
 
-// Scroll to top on route change
-function ScrollToTop() {
-  const { pathname } = useLocation();
+// Scroll to top on normal navigation, or to the requested hash target once it exists.
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    const targetId = decodeURIComponent(hash.slice(1));
+    let frameId = 0;
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const scrollToHash = () => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      if (attempts < maxAttempts) {
+        attempts += 1;
+        frameId = window.requestAnimationFrame(scrollToHash);
+      }
+    };
+
+    scrollToHash();
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [pathname, hash]);
 
   return null;
 }
@@ -92,7 +121,7 @@ function NotFound() {
 function AppRoutes() {
   return (
     <>
-      <ScrollToTop />
+      <ScrollManager />
       <PageTitle />
       <Suspense fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -103,7 +132,7 @@ function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/docs/:projectId/:slug" element={<Docs />} />
           <Route path="/docs/:projectId" element={<Docs />} />
-          <Route path="/docs" element={<Navigate to="/docs/Imperat/getting-started" replace />} />
+          <Route path="/docs" element={<Navigate to={SITE_CONFIG.getStartedUrl} replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -12,7 +12,7 @@ Imperat uses annotations to define commands. The framework processes these at ru
 
 ## @RootCommand
 
-A class annotated with `@RootCommand` defines a [Root Command](/docs/Imperat/First-Command/BasicDefinitions#root-command).
+A class annotated with `@RootCommand` defines a [Root Command](/docs/Imperat/BasicDefinitions#root-command).
 
 - **Nested classes** with `@RootCommand` are independent Root Commands, NOT subcommands
 - **Methods** with `@RootCommand` inside a command class are also independent Root Commands (not subcommands of that class)
@@ -25,7 +25,7 @@ Commands can have metadata like permissions and cooldowns via additional annotat
 
 ## @Execute
 
-A method annotated with `@Execute` defines a [Command Pathway](/docs/Imperat/First-Command/BasicDefinitions#pathway) — the behavior that runs when the command is invoked.
+A method annotated with `@Execute` defines a [Command Pathway](/docs/Imperat/BasicDefinitions#pathway) — the behavior that runs when the command is invoked.
 
 **Rules for a valid `@Execute` method:**
 1. Must be `public`

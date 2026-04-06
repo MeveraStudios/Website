@@ -22,13 +22,29 @@ const DOCS_DIR = join(ROOT_DIR, 'docs');
 const PUBLIC_DIR = join(ROOT_DIR, 'public');
 const CONFIG_PATH = join(ROOT_DIR, 'src', 'data', 'projects.json');
 
+type YamlValue = string | number | boolean;
+
+interface ProjectConfig {
+    id: string;
+    logoPath: string;
+    title: string;
+    description: string;
+    docLink?: string;
+    color: string;
+    featured?: boolean;
+    githubRepo?: string;
+    hoverAnimator?: string;
+    titleColor?: string;
+    titleHoverColor?: string;
+}
+
 // Ensure public directory exists
 if (!existsSync(PUBLIC_DIR)) {
     mkdirSync(PUBLIC_DIR, { recursive: true });
 }
 
 // Load project configuration
-const projectsConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+const projectsConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as ProjectConfig[];
 
 // TypeScript interfaces (matching src/types/docs.ts)
 interface DocFrontmatter {
@@ -119,8 +135,8 @@ interface SearchIndexItem {
 /**
  * Parse YAML-like content (simplified parser)
  */
-function parseYAML(content: string): Record<string, any> {
-    const result: Record<string, any> = {};
+function parseYAML(content: string): Record<string, YamlValue> {
+    const result: Record<string, YamlValue> = {};
     content.split('\n').forEach(line => {
         const colonIndex = line.indexOf(':');
         if (colonIndex > 0) {
@@ -256,7 +272,7 @@ function cleanHeadingText(text: string): string {
         .replace(/\*\*(.+?)\*\*/g, '$1')   // Remove bold
         .replace(/\*(.+?)\*/g, '$1')       // Remove italic
         .replace(/`(.+?)`/g, '$1')         // Remove inline code
-        .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+        .replace(/\[(.+?)]\(.+?\)/g, '$1') // Remove links, keep text
         // Remove real HTML/JSX tags (lowercase tag names with optional attrs / self-closing)
         .replace(/<\/?[a-z][a-zA-Z0-9-]*(\s[^>]*)?\/?>/g, '')
         // For the remaining angle-bracket expressions (e.g. generic types like <T>, <A, B>)
@@ -307,7 +323,7 @@ function precompileDocs() {
     const tocMap: Record<string, TocItem[]> = {};
 
     // Initialize projects from config
-    projectsConfig.forEach((project: any) => {
+    projectsConfig.forEach((project) => {
         projectsMap.set(project.id, {
             id: project.id,
             name: project.title,
@@ -408,13 +424,13 @@ function precompileDocs() {
                 if (stdout) {
                     lastUpdatedAt = stdout;
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors (e.g., file not tracked by git yet)
             }
 
             const docFile: DocFile = {
                 slug,
-                path: `/docs${relPath}`,
+                path: `/docs/${projectId}${relPath}`,
                 content: body,
                 frontmatter,
                 project: projectId,

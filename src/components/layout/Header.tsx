@@ -63,6 +63,7 @@ function Logo() {
 export function Header() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const getProjectHref = (project: typeof PROJECTS[number]) => project.docLink || `/docs/${project.id}`;
 
   const isActive = (path: string) => {
     if (path.startsWith('/#')) return false;
@@ -92,7 +93,7 @@ export function Header() {
               {PROJECTS.map((project) => (
                 <DropdownMenuItem key={project.id} asChild>
                   <Link
-                    to={`/docs/${project.id}/getting-started`}
+                    to={getProjectHref(project)}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <span>{project.emoji}</span>
@@ -174,7 +175,7 @@ export function Header() {
                     className="justify-start gap-2"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Link to={`/docs/${project.id}/getting-started`}>
+                    <Link to={getProjectHref(project)}>
                       <span>{project.emoji}</span>
                       {project.name}
                     </Link>

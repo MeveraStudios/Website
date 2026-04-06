@@ -19,6 +19,7 @@ export function Footer() {
   const yearRange = startYear === currentYear
     ? String(currentYear)
     : `${startYear}-${currentYear}`;
+  const getProjectHref = (project: typeof PROJECTS[number]) => project.docLink || `/docs/${project.id}`;
 
   return (
     <footer className="border-t border-border bg-background/50">
@@ -81,7 +82,7 @@ export function Footer() {
               {PROJECTS.map((project) => (
                 <li key={project.id}>
                   <Link
-                    to={`/docs/${project.id}/getting-started`}
+                    to={getProjectHref(project)}
                     className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
                   >
                     <span>{project.emoji}</span>
