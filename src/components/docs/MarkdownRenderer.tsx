@@ -17,6 +17,8 @@ import { Admonition } from './Admonition';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
 import LatestVersionBlockComponent from '@/components/LatestVersionBlock';
+import SnapshotRepoBlockComponent from '@/components/SnapshotRepoBlock';
+import ShadingBlockComponent from '@/components/ShadingBlock';
 import { cn, slugify, rehypeHeadingIds } from '@/lib/utils';
 import '@/styles/admonitions.css';
 import '@/styles/code-theme.css';
@@ -106,6 +108,10 @@ const components = {
   latestversionblock: ({ owner, repo, group, id }: any) => (
     <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} />
   ),
+  SnapshotRepoBlock: () => <SnapshotRepoBlockComponent />,
+  snapshotrepoblock: () => <SnapshotRepoBlockComponent />,
+  ShadingBlock: () => <ShadingBlockComponent />,
+  shadingblock: () => <ShadingBlockComponent />,
   tabs: ({ defaultvalue, children, className }: any) => (
     <TabsComponent defaultValue={defaultvalue} className={className}>{children}</TabsComponent>
   ),

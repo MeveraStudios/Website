@@ -17,6 +17,8 @@ import { Admonition } from './Admonition';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs, TabItem } from './Tabs';
 import LatestVersionBlock from '@/components/LatestVersionBlock';
+import SnapshotRepoBlock from '@/components/SnapshotRepoBlock';
+import ShadingBlock from '@/components/ShadingBlock';
 import { cn, slugify, rehypeHeadingIds } from '@/lib/utils';
 import '@/styles/admonitions.css';
 import '@/styles/code-theme.css';
@@ -57,6 +59,8 @@ const mdxComponents = {
   Tabs,
   TabItem,
   LatestVersionBlock,
+  SnapshotRepoBlock,
+  ShadingBlock,
   Admonition,
   CodeBlock,
   MermaidDiagram,

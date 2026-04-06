@@ -43,3 +43,18 @@ Ensure you use the **same version**
 for both `imperat-core` and the platform-specific module (e.g., `imperat-bukkit`) to avoid compatibility issues.
 :::
 
+## Shading Imperat into your project.
+
+To avoid classpath conflicts, shade and relocate Imperat packages in your final artifact.
+
+<ShadingBlock />
+
+### Snapshots
+If you would like to use/test the latest features on the experimental builds(per commit),
+Then use the snapshot version of the NEXT current version.
+
+For **example**:
+If current latest official version is `3.4.0`, then the **LATEST** snapshot version would be `3.5.0-SNAPSHOT`
+
+You must have the snapshots repo added:
+<SnapshotRepoBlock />
