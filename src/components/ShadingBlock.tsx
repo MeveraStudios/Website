@@ -25,29 +25,41 @@ export default function ShadingBlock() {
   </executions>
 </plugin>`;
 
-  const groovy = `plugins {
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
-}
+    const groovy = `plugins {
+    id 'com.gradleup.shadow' version '8.3.6'
+  }
 
-tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
+
+  tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     archiveClassifier.set('')
     relocate 'studio.mevera', 'your.package.libs.mevera'
-}
+  }
 
-assemble.dependsOn(tasks.named('shadowJar'))`;
+  assemble.dependsOn(tasks.named('shadowJar'))`;
 
-  const kotlin = `plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
-}
+    const kotlin = `plugins {
+    id("com.gradleup.shadow") version "8.3.6"
+  }
 
-tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+  java {
+    toolchain {
+      languageVersion.set(JavaLanguageVersion.of(17))
+    }
+  }
+
+  tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
     archiveClassifier.set("")
     relocate("studio.mevera", "your.package.libs.mevera")
-}
+  }
 
-tasks.named("assemble") {
+  tasks.named("assemble") {
     dependsOn(tasks.named("shadowJar"))
-}`;
+  }`;
 
   return (
     <Tabs defaultValue="maven">
