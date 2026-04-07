@@ -26,11 +26,16 @@ public class RankCommand {
         source.reply("/rank <rank> setpermission <permission> [value]");
     }
 
-    @SubCommand(value = "setpermission", attachment = AttachmentMode.MAIN)
+    @SubCommand(value = "setpermission", attachTo= "<rank>")
     public class SetPermission {
 
         @Execute
-        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission, @Default("false") Boolean value) { //![code focus]
+        public void setPermission(
+            PLATFORMSOURCE source,
+            @InheritedArg Rank rank,
+            String permission,
+            @Default("false") Boolean value
+        ) {
             // In a real implementation, you would set the specified player's rank here.
             rank.addPermission(permission, value);
             source.reply("Added permission '" + permission + "' with value '" + value + "' to rank '" + rank.getName() + "'");
@@ -82,7 +87,7 @@ public class RankCommand {
     public class SetPermission {
 
         @Execute
-        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission, @DefaultProvider(ExampleDefaultProvider.class) Boolean value) { //![code focus]
+        public void setPermission(PLATFORMSOURCE source, Rank rank, String permission, @DefaultProvider(ExampleDefaultProvider.class) Boolean value) {
             // In a real implementation, you would set the specified player's rank here.
             rank.addPermission(permission, value);
             source.reply("Added permission '" + permission + "' with value '" + value + "' to rank '" + rank.getName() + "'");

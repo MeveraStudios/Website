@@ -11,7 +11,7 @@ Let's demonstrate how a command of the following format can be implemented in bo
 ```java
 public class YourCommand{
 
-    @Command("command literal|alias <number> [string]")
+    @RootCommand("command literal|alias <number> [string]")
     public void execute(
         CommandSender source, 
         @Argument("number") int number, 

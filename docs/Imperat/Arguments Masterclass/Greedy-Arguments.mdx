@@ -53,7 +53,7 @@ In this case, you would not need to use the `@Greedy` annotation on the paramete
 Some of the default argument types provided by Imperat are greedy by nature, such as:
 - Arrays (e.g., `String[]`, `Integer[]`, etc.)
 - Lists (e.g., `List<String>`, `List<Integer>`, etc.)
-- Wrappers of type `T` where `T` is a greedy type (e.g., `Optional<T>`, `CompletableFuture<T>`, etc.)
+- Wrappers of type `T` **where `T` is a greedy type** (e.g., `Optional<T>`, `CompletableFuture<T>`, etc.)
 
 When you use these types as parameters in your command,
  they will automatically capture all remaining input as a single value for that argument, without needing the `@Greedy` annotation.
@@ -91,21 +91,12 @@ public final class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Mess
     @Override
     public Message parse(
             @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull Argument<PLATFORMSOURCE> argument,
             @NotNull String input
     ) throws CommandException {
         //Here is the main logic for parsing the command input into a Message object.
         //Since this is a greedy argument, we will take all remaining input and create a message out of it
         return new Message(input);
-    }
-
-    @Override
-    public @Nullable Message parse(
-            @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor
-    ) throws CommandException {
-        //we do not care about the corresponding input, since this is a greedy argument,
-        // we will just take all the remaining input and create a message out of it
-        return parse(context, cursor.collectRemainingRaw());
     }
 
     @Override
@@ -200,59 +191,9 @@ The default greedy argument types provided by Imperat (arrays, lists, and wrappe
 
 
 ## Implementing Limitation Logic for Custom Greedy Arguments
-If you want to implement custom limitation logic for a greedy argument, you can do so in the `parse` method of your custom argument type.
-In the `parse` method, you can access the `limit` parameter from the `@Greedy` annotation and implement your custom logic to determine how many inputs to capture based on that limit.
-Here's an example of how you might implement custom limitation logic for a greedy argument in a custom argument type:
-
-```java
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import studio.mevera.imperat.command.arguments.Argument;
-import studio.mevera.imperat.command.arguments.type.ArgumentType;
-import studio.mevera.imperat.context.ExecutionContext;
-import studio.mevera.imperat.context.internal.Cursor;
-import studio.mevera.imperat.exception.CommandException;
-
-public class MessageArgumentType extends ArgumentType<PLATFORMSOURCE, Message> {
-    @Override
-    public Message parse(
-            @NotNull CommandContext<PLATFORMSOURCE> context,
-            @NotNull String input
-    ) throws CommandException {
-        //Here is the main logic for parsing the command input into a Message object.
-        //Since this is a greedy argument, we will take all remaining input and create a message out of it
-        return new Message(input);
-    }
-
-
-    @Override
-    public @Nullable Message parse(
-            @NotNull ExecutionContext<PLATFORMSOURCE> context,
-            @NotNull Cursor<PLATFORMSOURCE> cursor
-    ) throws CommandException {
-        int limit = -1;
-        Argument<PLATFORMSOURCE> parameter = cursor.currentParameterIfPresent();
-        if(parameter != null) {
-            limit = parameter.greedyLimit();
-        }
-
-        StringBuilder builder = new StringBuilder(correspondingInput);
-        int consumed = 1; // already consumed the first token as correspondingInput
-        while (cursor.hasNextRaw() && (limit == -1 || consumed <= limit)) {
-            builder.append(" ");
-            cursor.popRaw()
-                    .ifPresent(builder::append);
-            consumed++;
-        }
-        return parse(context, builder.toString());
-    }
-
-    @Override
-    public boolean isGreedy(Argument<PLATFORMSOURCE> parameter) {
-        return true;
-    }
-}
-```
+If you want to set a limit on a greedy custom-argument, then declare its type as greedy and annotate its method-parameter with `@Greedy(limit= x)`,
+where `x` is the limit you want to set.
+You don't really need to change anything in the parsing logic.
 
 Here is how you can apply this limited custom greedy argument type to your command:
 ```java

@@ -88,7 +88,7 @@ Any parameter that is optional or nullable is automatically marked as optional i
 In Kotlin mode, you can use native default parameter values instead of Imperat's `@Default` annotation. Imperat reads the `KFunction` signature and automatically marks parameters with defaults as optional in the generated command tree.
 
 ```kotlin
-@Command(["gamemode", "gm"])
+@RootCommand(["gamemode", "gm"])
 @Permission("server.gamemode")
 class GameModeCommand {
 
@@ -136,7 +136,7 @@ In other words: Imperat passes only the arguments it has values for, and Kotlin 
 Marking a command method as `suspend` allows you to call suspending functions directly inside your command handler - for example, making non-blocking database queries or API calls without blocking the server thread.
 
 ```kotlin
-@Command(["profile"])
+@RootCommand(["profile"])
 class ProfileCommand {
 
     @Execute
@@ -181,7 +181,7 @@ Make sure that the code contained by the suspend function uses thread-safe algor
 Default parameters and suspend functions work the same way inside `@SubCommand` methods.
 
 ```kotlin
-@Command(["rank"])
+@RootCommand(["rank"])
 class RankCommand {
 
     @SubCommand("create")

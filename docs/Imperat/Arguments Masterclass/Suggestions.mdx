@@ -88,6 +88,7 @@ public class RankArgumentType extends ArgumentType<PLATFORMSOURCE, Rank> {
     @Override
     public @Nullable Rank parse(
             @NotNull CommandContext<PLATFORMSOURCE> context,
+            @NotNull Argument<PLATFORMSOURCE> argument,
             @NotNull String input
     ) throws CommandException {
         Rank rank = yourRankRegistry.getRank(input);
