@@ -1,24 +1,26 @@
 ---
-title: "Auto Command Help"
-description: "Learn how to use Imperat Command Help with filtering, rendering, and custom theming for practical command UX."
+title: Auto Command Help
+description: Learn the new Imperat help API using CommandHelp, HelpQuery, HelpRenderer, and HelpSender.
 order: 3
 ---
-# What is the Help API?
+# Auto Command Help
 
-Every command in Imperat is backed by a tree of nodes. 
-Each executable path through that tree is a `CommandPathway` — one concrete usage a user can type.
+Imperat can build help for a command automatically from its command tree.
 
-The help API exists to **display those pathways in a structured and organized view** to the command source (player, console, etc.). It lets you:
+The new help API is simple:
 
-- Query the command tree for all its executable pathways.
-- Filter which pathways to show (by permission, name, depth, or any custom logic).
-- Format and render the results using a theme you control.
+- `CommandHelp` gets the help data
+- `HelpQuery` controls what to include
+- `HelpRenderer` controls how it looks
+- `HelpSender` controls how it is sent
+
+That means you are fully in control of the output.
 
 ---
 
-## The Example Command
+## Example Command
 
-We'll work with this annotated command throughout the entire guide:
+We'll use this command in the examples:
 
 ```java
 @RootCommand("group")
@@ -26,11 +28,9 @@ public final class GroupCommand {
 
     @Execute
     public void defaultUsage(
-            PLATFORMSOURCE source,
-            @Context CommandHelp<PLATFORMSOURCE> commandHelp
+            @Context CommandHelp<PLATFORMSOURCE> help
     ) {
         // Runs when user types: /group
-        // We display help here
     }
 
     @Execute
@@ -39,7 +39,6 @@ public final class GroupCommand {
             PLATFORMSOURCE source,
             @Named("group") Group group
     ) {
-        // Runs when user types: /group <group>
         source.reply("entered group name= " + group.name());
     }
 
@@ -50,7 +49,6 @@ public final class GroupCommand {
             @InheritedArg @Named("group") Group group,
             @Named("permission") String permission
     ) {
-        // Runs when user types: /group <group> setperm <permission>
     }
 
     @SubCommand(value = "setprefix", attachTo = "<group>")
@@ -60,273 +58,222 @@ public final class GroupCommand {
             @InheritedArg @Named("group") Group group,
             @Named("prefix") String prefix
     ) {
-        // Runs when user types: /group <group> setprefix <prefix>
     }
 }
 ```
 
-This command has 3 usages (pathways):
-1. `/group <group>`
-2. `/group <group> setperm <permission>`
-3. `/group <group> setprefix <prefix>`
-
 ---
 
-## Step 1: Get `CommandHelp` via `@Context`
+## Step 1: Inject `CommandHelp`
 
-To access the help system, inject `CommandHelp` into your method using `@Context`:
+Get `CommandHelp` through `@Context`:
 
 ```java
 @Execute
 public void defaultUsage(
-        PLATFORMSOURCE source,
-        @Context CommandHelp<PLATFORMSOURCE> commandHelp
+        @Context CommandHelp<PLATFORMSOURCE> help
 ) {
-    // commandHelp is ready to use
 }
 ```
 
-`CommandHelp` is automatically resolved by Imperat — you don't construct it yourself.
+You do not create it manually. Imperat provides it for you.
 
 ---
 
-## Step 2: Create a `HelpQuery`
+## Step 2: Show Default Help
 
-`HelpQuery` tells the system **what** help entries to retrieve. Build one using its fluent builder:
+The simplest usage is:
+
+```java
+help.show();
+```
+
+This uses Imperat's built-in text renderer and sends the result with `reply(...)`.
+
+Important: help is permission-aware by default. Commands the source cannot use are filtered out automatically.
+
+---
+
+## Step 3: Control What Gets Included With `HelpQuery`
+
+Use `HelpQuery` when you want to limit or filter the result.
 
 ```java
 HelpQuery<PLATFORMSOURCE> query = HelpQuery.<PLATFORMSOURCE>builder()
         .build();
 ```
 
-That's it for a basic query — it uses sensible defaults (max 50 entries, max depth 25).
+Useful options:
 
-### Builder Options
+| Method | Purpose |
+|---|---|
+| `.limit(int)` | Maximum number of help entries |
+| `.maxDepth(int)` | Maximum tree depth to scan |
+| `.filter(HelpFilter)` | Include only matching pathways |
+| `.conditionalRootUsage(...)` | Decide whether the root usage should be included |
 
-| Method                  | Default | Description                                        |
-|-------------------------|---------|----------------------------------------------------|
-| `.limit(int)`           | `50`    | Maximum number of help entries to return            |
-| `.maxDepth(int)`        | `25`    | Maximum tree depth to traverse                     |
-| `.filter(HelpFilter)`   | none    | Add a filter to include/exclude pathways            |
-| `.conditionalRootUsage(Predicate)` | `size > 0` | Condition for including the root command's own path |
-
-### What does `conditionalRootUsage` do?
-
-When the help system traverses the command tree, it encounters the **root node** (the command itself, e.g. `group`). The root node may or may not have its own executable pathway.
-
-The `conditionalRootUsage` predicate decides whether that root pathway gets included in the help results. The default `(u) -> u.size() > 0` means: **include the root's own pathway only if it has at least one parameter**. If the root command has no parameters (empty pathway), it is excluded.
-
-You can override this. For example, to never include the root:
+Example:
 
 ```java
-HelpQuery.<PLATFORMSOURCE>builder()
-        .conditionalRootUsage(pathway -> false)
+HelpQuery<PLATFORMSOURCE> query = HelpQuery.<PLATFORMSOURCE>builder()
+        .filter(pathway -> !pathway.getLastArgument().isCommand())
         .build();
 ```
 
----
-
-## Step 3: Create a `HelpTheme`
-
-`HelpTheme` controls **how** help entries look when displayed. For plain text output, extend `TextBasedHelpTheme`:
+Then show it:
 
 ```java
-public class MyHelpTheme extends TextBasedHelpTheme<PLATFORMSOURCE> {
-
-    @Override
-    public @NotNull String getHeaderContent(ExecutionContext<PLATFORMSOURCE> context) {
-        return "======== Command Help ========";
-    }
-
-    @Override
-    public @NotNull String getFooterContent(ExecutionContext<PLATFORMSOURCE> context) {
-        return "=============================";
-    }
-
-    @Override
-    public @NotNull UsageFormatter<PLATFORMSOURCE, String> getUsageFormatter() {
-        return (lastCommand, pathway, context, theme) -> {
-            return HelpComponent.plainText(
-                    context.command().getName() + " " + pathway.formatted()
-            );
-        };
-    }
-}
-```
-
-You must implement 3 things:
-
-| Method                | Purpose                                         |
-|-----------------------|-------------------------------------------------|
-| `getHeaderContent()`  | Text shown **above** the help list              |
-| `getFooterContent()`  | Text shown **below** the help list              |
-| `getUsageFormatter()` | Formats each `CommandPathway` into a help line  |
-
-> **Note:** Header and footer are **shown by default**. See Step 5 to disable them.
-
----
-
-## Step 4: Display Help
-
-Now combine the query and theme inside your command method:
-
-```java
-@Execute
-public void defaultUsage(
-        PLATFORMSOURCE source,
-        @Context CommandHelp<PLATFORMSOURCE> commandHelp
-) {
-    commandHelp.display(
-            HelpQuery.<PLATFORMSOURCE>builder().build(),
-            new MyHelpTheme()
-    );
-}
-```
-
-When a user types `/group`, this will output:
-
-```
-======== Command Help ========
-group <group>
-group <group> setperm <permission>
-group <group> setprefix <prefix>
-=============================
+help.show(query);
 ```
 
 ---
 
-## Step 5: Header & Footer Options
+## Step 4: Fully Control Rendering
 
-Header and footer are **shown by default**. To disable them:
+If you want custom output, provide your own `HelpRenderer`.
 
 ```java
-MyHelpTheme theme = new MyHelpTheme();
-theme.setOptionValue(HelpTheme.Option.SHOW_HEADER, false);
-theme.setOptionValue(HelpTheme.Option.SHOW_FOOTER, false);
+help.show(
+        HelpQuery.<PLATFORMSOURCE>builder()
+                .filter(pathway -> !pathway.getLastArgument().isCommand())
+                .build(),
+        (context, result) -> {
+            List<String> lines = new ArrayList<>();
+            lines.add("======== Command Help ========");
 
-commandHelp.display(
+            for (HelpEntry<PLATFORMSOURCE> entry : result) {
+                lines.add(context.command().getName() + " " + entry.getUsage());
+            }
+
+            lines.add("=============================");
+            return lines;
+        }
+);
+```
+
+This gives you full control over:
+
+- headers
+- footers
+- line format
+- descriptions
+- grouping
+- paging logic
+- anything else you want
+
+You are not limited to strings. Your renderer can return any output type.
+
+---
+
+## Step 5: Fully Control Delivery
+
+If you also want to control how help is sent, provide a custom `HelpSender`.
+
+```java
+help.show(
+        query,
+        myRenderer,
+        (source, message) -> {
+            source.reply(message);
+        }
+);
+```
+
+This is useful when:
+
+- you want to send Adventure components
+- you want to send embeds or rich platform messages
+- you want paginated or buffered output
+- you want to route help somewhere other than normal replies
+
+---
+
+## Step 6: Query Without Sending Anything
+
+Sometimes you only want the data.
+
+```java
+HelpResult<PLATFORMSOURCE> result = help.query(
+        HelpQuery.<PLATFORMSOURCE>builder().build()
+);
+```
+
+Or render without sending:
+
+```java
+List<String> lines = help.render(
         HelpQuery.<PLATFORMSOURCE>builder().build(),
-        theme
+        new MyHelpRenderer()
 );
 ```
 
-Output without header/footer:
+This is useful for:
 
-```
-group <group>
-group <group> setperm <permission>
-group <group> setprefix <prefix>
-```
+- custom pagination systems
+- GUIs
+- web panels
+- testing
+- storing pre-rendered help output
 
 ---
 
-## Step 6: Add Filters
+## Built-in Filters
 
-Filters let you control **which** pathways appear in help. Each filter receives a `CommandPathway` and returns `true` to include it, `false` to exclude it.
+Imperat ships with reusable filters in `HelpFilters`.
 
-### Why filter at all?
-
-Without any filter, the help system shows **every executable pathway** in the command tree. For our `/group` command that's fine — all 3 pathways are meaningful usages.
-
-But in some commands, intermediate nodes in the tree are also executable, and their pathways may end with a subcommand literal rather than a real argument. Showing those can clutter the help output.
-
-### Inline filter (lambda)
-
-A common pattern is to exclude pathways whose last argument is a subcommand literal (keeping only the "leaf" usages with actual parameters):
+Examples:
 
 ```java
-commandHelp.display(
-        HelpQuery.<PLATFORMSOURCE>builder()
-                .filter((pathway) -> !pathway.getLastArgument().isCommand())
-                .build(),
-        new MyHelpTheme()
-);
+HelpFilters.childrenOnly();
+HelpFilters.nameContains("perm");
+HelpFilters.depth(1, 3);
+HelpFilters.hasOptionalParam();
+HelpFilters.withPermission("group.admin");
+HelpFilters.noPermission();
 ```
 
-**Without this filter**, if the command tree has an executable node at `setperm` itself (before the `<permission>` argument), that intermediate pathway would also appear in help — e.g. you'd see both `group <group> setperm` and `group <group> setperm <permission>`. The filter removes the intermediate one.
-
-**With this filter**, only pathways that end with a real argument (not a subcommand) are shown:
-
-```
-group <group>
-group <group> setperm <permission>
-group <group> setprefix <prefix>
-```
-
-### Built-in filters from `HelpFilters`
-
-| Filter                                    | Description                                       |
-|-------------------------------------------|---------------------------------------------------|
-| `HelpFilters.all()`                       | Includes everything (no-op)                       |
-| `HelpFilters.none()`                      | Excludes everything                               |
-| `HelpFilters.depth(min, max)`             | Only pathways with parameter count in range        |
-| `HelpFilters.hasPermission(source, ctx)`  | Only pathways the source has permission for        |
-| `HelpFilters.withPermission("perm.node")` | Only pathways requiring a specific permission      |
-| `HelpFilters.noPermission()`              | Only pathways with no permission requirement       |
-| `HelpFilters.nameContains("sub")`         | Pathway's formatted usage contains substring       |
-| `HelpFilters.nameMatches("regex")`        | Pathway's formatted usage matches regex            |
-| `HelpFilters.hasOptionalParam()`          | Only pathways with at least one optional parameter |
-| `HelpFilters.childrenOnly()`              | Excludes root-only pathways (size > 1)            |
-
-### Example: permission-based filter
-
-```java
-commandHelp.display(
-        HelpQuery.<PLATFORMSOURCE>builder()
-                .filter(HelpFilters.hasPermission(source, commandHelp.getContext()))
-                .build(),
-        new MyHelpTheme()
-);
-```
-
-### Combining filters
-
-Chain multiple `.filter()` calls (AND logic — all must pass):
+You can chain filters:
 
 ```java
 HelpQuery.<PLATFORMSOURCE>builder()
         .filter(HelpFilters.childrenOnly())
-        .filter(HelpFilters.hasPermission(source, commandHelp.getContext()))
+        .filter(HelpFilters.nameContains("perm"))
         .build();
 ```
 
-Or use `HelpFilter` combinators:
-
-```java
-HelpFilter<PLATFORMSOURCE> combined = HelpFilters.<PLATFORMSOURCE>childrenOnly()
-        .and(HelpFilters.nameContains("perm"));
-
-HelpQuery.<PLATFORMSOURCE>builder()
-        .filter(combined)
-        .build();
-```
-
-Available combinators: `.and()`, `.or()`, `.negate()`.
+You can also combine them with `and(...)`, `or(...)`, and `negate()`.
 
 ---
 
-## Full Working Example
-
-Putting it all together for our `/group` command:
+## Full Example
 
 ```java
 @Execute
 public void defaultUsage(
-        PLATFORMSOURCE source,
-        @Context CommandHelp<PLATFORMSOURCE> commandHelp
+        @Context CommandHelp<PLATFORMSOURCE> help
 ) {
-    commandHelp.display(
+    help.show(
             HelpQuery.<PLATFORMSOURCE>builder()
-                    .filter((pathway) -> !pathway.getLastArgument().isCommand())
+                    .filter(pathway -> !pathway.getLastArgument().isCommand())
                     .build(),
-            new MyHelpTheme()
+            (context, result) -> {
+                List<String> lines = new ArrayList<>();
+                lines.add("======== Command Help ========");
+
+                for (HelpEntry<PLATFORMSOURCE> entry : result) {
+                    lines.add(context.command().getName() + " " + entry.getUsage());
+                }
+
+                lines.add("=============================");
+                return lines;
+            }
     );
 }
 ```
 
-Output when user types `/group`:
+Example output:
 
-```
+```text
 ======== Command Help ========
 group <group>
 group <group> setperm <permission>
@@ -338,13 +285,21 @@ group <group> setprefix <prefix>
 
 ## Summary
 
-| Class              | Role                                           |
-|--------------------|-------------------------------------------------|
-| `CommandHelp`      | Entry point — injected via `@Context`           |
-| `HelpQuery`        | Configures **what** to retrieve (filters, limits)|
-| `HelpFilter`       | Decides per-`CommandPathway` inclusion/exclusion |
-| `HelpFilters`      | Pre-built common filters                        |
-| `HelpTheme`        | Controls **how** entries are rendered            |
-| `TextBasedHelpTheme` | Base class for plain-text themes              |
-| `UsageFormatter`   | Formats a single `CommandPathway` into output    |
-| `HelpComponent`    | The rendered output unit sent to the source      |
+| Type | Role |
+|---|---|
+| `CommandHelp` | Main entry point |
+| `HelpQuery` | Controls what help entries are collected |
+| `HelpResult` | Immutable result of the help query |
+| `HelpFilter` | Decides whether a pathway should be included |
+| `HelpFilters` | Common ready-made filters |
+| `HelpRenderer` | Turns `HelpResult` into output |
+| `HelpSender` | Sends the rendered output |
+
+The key idea is simple:
+
+- query the help data
+- render it however you want
+- send it however you want
+
+That is the entire new help API.
+
