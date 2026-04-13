@@ -28,6 +28,7 @@ public final class GroupCommand {
 
     @Execute
     public void defaultUsage(
+            PLATFORMSOURCE source,
             @Context CommandHelp<PLATFORMSOURCE> help
     ) {
         // Runs when user types: /group
@@ -71,6 +72,7 @@ Get `CommandHelp` through `@Context`:
 ```java
 @Execute
 public void defaultUsage(
+        PLATFORMSOURCE source,
         @Context CommandHelp<PLATFORMSOURCE> help
 ) {
 }
@@ -250,6 +252,7 @@ You can also combine them with `and(...)`, `or(...)`, and `negate()`.
 ```java
 @Execute
 public void defaultUsage(
+        PLATFORMSOURCE source,
         @Context CommandHelp<PLATFORMSOURCE> help
 ) {
     help.show(
@@ -301,5 +304,4 @@ The key idea is simple:
 - render it however you want
 - send it however you want
 
-That is the entire new help API.
 
