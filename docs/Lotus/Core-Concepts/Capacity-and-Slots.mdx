@@ -59,7 +59,7 @@ SlotMask fill  = SlotMask.full(capacity).excluding(Slot.of(22), Slot.of(26));
 
 `.excluding(...)` chains to subtract slots. The resulting mask's size is always **derived**, never mutated.
 
-You'll use `SlotMask` wherever Lotus needs to say "apply to these slots" — for example, [content fills](../Content-Builder/Content-Builder#fills) and pagination layouts.
+You'll use `SlotMask` wherever Lotus needs to say "apply to these slots" — for example, [content fills](/docs/Lotus/Content-Builder) and pagination layouts.
 
 ## How they connect
 
@@ -73,4 +73,4 @@ Every menu starts from a `Capacity`, places buttons at individual `Slot`s, and f
 
 ## What's next
 
-Now that you know the grid vocabulary, see how buttons are stored and queried → [Content](./Content).
+Now that you know the grid vocabulary, see how buttons are stored and queried → [Content](/docs/Lotus/Content).

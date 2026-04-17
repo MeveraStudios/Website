@@ -31,7 +31,7 @@ dependencies {
 ```
 
 :::caution
-Lotus is a **library**, not a plugin. You must shade (and preferably relocate) it into your final JAR so it ships with your plugin. See the [Advanced](../Advanced/Advanced) page if you need to share Lotus across multiple plugins.
+Lotus is a **library**, not a plugin. You must shade (and preferably relocate) it into your final JAR so it ships with your plugin.
 :::
 
 ## Boot once per plugin
@@ -67,8 +67,8 @@ Only build **one** `Lotus` per plugin. It keeps a live map of every open menu vi
 | `dynamicButtonAction`       | `false` | Opt-in: allows pickup/place interactions on buttons  |
 | `debug`                     | `false` | Gates `[lotus]` debug log lines                      |
 
-Read them back later with `lotus.options()`. See [Advanced → Lotus.Options](../Advanced/Advanced#lotusoptions) for in-depth notes.
+Read them back later with `lotus.options()`. See [Advanced](/docs/Lotus/Advanced) for in-depth notes.
 
 ## What's next
 
-You now have a running `Lotus` instance. Next, build your first menu in [Your First Menu](./First-Menu).
+You now have a running `Lotus` instance. Next, build your first menu in [Your First Menu](/docs/Lotus/First-Menu).

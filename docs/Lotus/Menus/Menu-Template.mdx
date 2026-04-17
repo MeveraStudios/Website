@@ -32,7 +32,7 @@ public final class ProfileMenu implements Menu {
 All three hooks receive the live `MenuView<?>`, so they can vary by player, data registry state, time of day — anything.
 
 :::tip
-Treat `title`, `capacity`, and `content` as **pure functions of the view**. If you need to cache expensive lookups, stash them in the view's [`DataRegistry`](../Data-Registry/Data-Registry), not in plugin-global state.
+Treat `title`, `capacity`, and `content` as **pure functions of the view**. If you need to cache expensive lookups, stash them in the view's [`DataRegistry`](/docs/Lotus/Data-Registry), not in plugin-global state.
 :::
 
 ## Optional methods
@@ -71,4 +71,4 @@ Each call returns the `MenuView<M>` for further interaction.
 
 ## What's next
 
-→ [The Menu View](./Menu-View) — the live, per-player side of a menu.
+→ [The Menu View](/docs/Lotus/Menu-View) — the live, per-player side of a menu.
