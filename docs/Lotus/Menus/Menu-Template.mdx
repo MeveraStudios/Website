@@ -1,0 +1,74 @@
+---
+title: The Menu Template
+description: How to implement the Menu interface — title, capacity, content, and optional metadata.
+order: 1
+---
+
+# The Menu Template
+
+A `Menu` is a **template**: a description of what the inventory should look like. It is not tied to any specific player — Lotus resolves the template per player when the menu is opened, producing a `MenuView`.
+
+## Required methods
+
+```java
+public final class ProfileMenu implements Menu {
+
+    @Override public @NotNull Component title(MenuView<?> view) {
+        return Component.text(view.viewer().getName() + "'s profile");
+    }
+
+    @Override public @NotNull Capacity capacity(MenuView<?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override public @NotNull Content content(MenuView<?> view) {
+        return Content.builder(capacity(view))
+            .set(1, 4, Button.of(head(view.viewer())))
+            .build();
+    }
+}
+```
+
+All three hooks receive the live `MenuView<?>`, so they can vary by player, data registry state, time of day — anything.
+
+:::tip
+Treat `title`, `capacity`, and `content` as **pure functions of the view**. If you need to cache expensive lookups, stash them in the view's [`DataRegistry`](../Data-Registry/Data-Registry), not in plugin-global state.
+:::
+
+## Optional methods
+
+| Method   | Default              | Purpose                                              |
+|----------|----------------------|------------------------------------------------------|
+| `name()` | class simple name    | Used by `lotus.registerMenu` / `openMenu(player, name)` |
+| `type()` | `InventoryType.CHEST`| Underlying Bukkit inventory type                     |
+
+Override `name()` when you want command-driven opens:
+
+```java
+@Override public @NotNull String name() { return "profile"; }
+```
+
+Override `type()` only if you need a non-chest inventory (e.g., `HOPPER`, `DISPENSER`):
+
+```java
+@Override public @NotNull InventoryType type() { return InventoryType.HOPPER; }
+```
+
+:::caution
+When using a non-chest `type()`, pair it with a matching `Capacity.of(InventoryType.X)` so the grid lines up with the underlying inventory.
+:::
+
+## Opening a menu
+
+```java
+lotus.openMenu(player, menu);                              // fresh DataRegistry
+lotus.openMenu(player, menu, DataRegistry.empty()
+    .put(Keys.TARGET, target.getUniqueId()));              // seeded with state
+lotus.openMenu(player, "profile");                         // requires registerMenu()
+```
+
+Each call returns the `MenuView<M>` for further interaction.
+
+## What's next
+
+→ [The Menu View](./Menu-View) — the live, per-player side of a menu.

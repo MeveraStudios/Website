@@ -1,0 +1,74 @@
+---
+title: Getting Started
+description: Install Lotus, add the dependency, and boot it once per plugin.
+order: 2
+---
+
+# Getting Started
+
+## Installation
+
+Lotus is published to **Maven Central** — no extra repository is required.
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="lotus"
+    group="studio.mevera"
+    id="lotus"
+/>
+
+### Gradle (Kotlin DSL) example
+
+```kotlin
+repositories {
+    maven("https://repo.papermc.io/repository/maven-public/")
+    mavenCentral()
+}
+
+dependencies {
+    implementation("studio.mevera:lotus:2.0.0")
+}
+```
+
+:::caution
+Lotus is a **library**, not a plugin. You must shade (and preferably relocate) it into your final JAR so it ships with your plugin. See the [Advanced](../Advanced/Advanced) page if you need to share Lotus across multiple plugins.
+:::
+
+## Boot once per plugin
+
+Construct a single `Lotus` instance in your `onEnable`. It registers its own Bukkit listener automatically.
+
+```java
+public final class MyPlugin extends JavaPlugin {
+
+    private Lotus lotus;
+
+    @Override
+    public void onEnable() {
+        this.lotus = Lotus.builder(this)
+            .allowBottomInventoryClick(true)   // let players shift-click their own hotbar
+            .debug(false)                      // [lotus] log lines when true
+            .build();
+    }
+
+    public Lotus lotus() { return lotus; }
+}
+```
+
+:::tip
+Only build **one** `Lotus` per plugin. It keeps a live map of every open menu view and dispatches every click through that map.
+:::
+
+## Available builder options
+
+| Option                      | Default | Effect                                               |
+|-----------------------------|---------|------------------------------------------------------|
+| `allowBottomInventoryClick` | `true`  | Clicks in the player inventory pass through normally |
+| `dynamicButtonAction`       | `false` | Opt-in: allows pickup/place interactions on buttons  |
+| `debug`                     | `false` | Gates `[lotus]` debug log lines                      |
+
+Read them back later with `lotus.options()`. See [Advanced → Lotus.Options](../Advanced/Advanced#lotusoptions) for in-depth notes.
+
+## What's next
+
+You now have a running `Lotus` instance. Next, build your first menu in [Your First Menu](./First-Menu).

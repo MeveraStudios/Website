@@ -1,0 +1,64 @@
+---
+title: The Menu Handler
+description: Opt into lifecycle hooks for open, close, pre-click, post-click, and drag events.
+order: 3
+---
+
+# The Menu Handler
+
+Some menus need to react to **lifecycle events** — not just render content. `MenuHandler` is the optional interface for that. The convenience type `InteractiveMenu` combines `Menu + MenuHandler` in one declaration.
+
+## Implementing `InteractiveMenu`
+
+```java
+public final class ShopMenu implements InteractiveMenu {
+
+    @Override public @NotNull Component title(MenuView<?> v)    { ... }
+    @Override public @NotNull Capacity capacity(MenuView<?> v)  { ... }
+    @Override public @NotNull Content content(MenuView<?> v)    { ... }
+
+    @Override
+    public boolean onPreClick(MenuView<?> view, InventoryClickEvent event) {
+        event.setCancelled(true);   // prevent item theft
+        return true;                // false would skip button dispatch
+    }
+
+    @Override
+    public void onPostClick(MenuView<?> view, InventoryClickEvent event) {
+        // after all button dispatch has run
+    }
+
+    @Override public void onOpen (MenuView<?> view, InventoryOpenEvent  event) { ... }
+    @Override public void onClose(MenuView<?> view, InventoryCloseEvent event) { ... }
+    @Override public void onDrag (MenuView<?> view, InventoryDragEvent  event) { ... }
+}
+```
+
+## The click flow
+
+```
+click
+  └─► onPreClick  ──(returns true)──►  Button.dispatch  ──►  repaint  ──►  onPostClick
+                └─(returns false)────────────────────────────────────────►  onPostClick
+```
+
+Key points:
+
+- `onPreClick` runs **before** the button's own click action. Return `false` to cancel the entire dispatch (buttons won't fire).
+- `onPostClick` **always** runs after dispatch, whether a button fired or not.
+- The `event.setCancelled(true)` idiom in `onPreClick` is how you prevent the player from picking buttons up out of the inventory.
+
+:::caution
+If you do **not** cancel the click (either via `onPreClick` or `dynamicButtonAction = false` at boot), players can pick up your buttons as items. This is the number-one source of "my menu is broken" reports.
+:::
+
+## When to use what
+
+- Need `event.setCancelled(true)` on every click? → `onPreClick` in a `MenuHandler`.
+- Need to cleanup state when a player closes the menu? → `onClose`.
+- Need to prevent drag-based item movement? → `onDrag`.
+- Only care about a **single button's** behaviour? → Use the button's own `ClickAction`, no handler needed.
+
+## What's next
+
+→ [Buttons](../Buttons/Button-Variants) — the full catalogue of interactive elements.

@@ -1,0 +1,133 @@
+---
+title: Your First Menu
+description: A guided walkthrough of writing, registering, and opening your first Lotus menu.
+order: 3
+---
+
+# Your First Menu
+
+Every menu in Lotus is a **template** — an implementation of the `Menu` interface that describes three things:
+
+1. A **title** (Adventure `Component`).
+2. A **capacity** (how many rows/slots).
+3. A **content** (which buttons sit in which slots).
+
+Each of these is resolved **per player** via a `MenuView<?>` parameter, so titles and layouts can depend on who's opening the menu.
+
+## Step 1 — Implement `Menu`
+
+```java
+public final class WelcomeMenu implements Menu {
+
+    @Override public @NotNull Component title(MenuView<?> view) {
+        return Component.text("Welcome, " + view.viewer().getName());
+    }
+
+    @Override public @NotNull Capacity capacity(MenuView<?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override public @NotNull Content content(MenuView<?> view) {
+        return Content.builder(capacity(view))
+            .set(1, 4, Button.of(new ItemStack(Material.PAPER)))
+            .build();
+    }
+}
+```
+
+Three methods, three responsibilities. Nothing else is required.
+
+:::note
+`view.viewer()` returns the `Player` who is about to see this menu — use it to personalise any of the three outputs.
+:::
+
+## Step 2 — Open it
+
+```java
+lotus.openMenu(player, new WelcomeMenu());
+```
+
+That's it. Lotus builds the inventory, renders the content, tracks the view, and routes clicks for you.
+
+## Step 3 — Add an interactive button
+
+Let's make that paper do something. Swap the `Button.of(...)` for `Button.clickable(...)`:
+
+```java
+return Content.builder(capacity(view))
+    .set(1, 4, Button.clickable(
+        new ItemStack(Material.PAPER),
+        (v, event) -> {
+            event.setCancelled(true);
+            v.viewer().sendMessage("Hello from Lotus!");
+            v.viewer().closeInventory();
+        }))
+    .build();
+```
+
+:::tip
+`event.setCancelled(true)` is the idiomatic way to prevent the player from picking the button up. If you want this applied to **every** button in a menu by default, implement `MenuHandler.onPreClick` — see [Menus → Menu Handler](../Menus/Menu-Handler).
+:::
+
+## Step 4 — Name and register it (optional)
+
+If you plan to open menus from commands or config by **name**:
+
+```java
+@Override public @NotNull String name() { return "welcome"; }
+```
+
+Then register once at boot:
+
+```java
+lotus.registerMenu(new WelcomeMenu());
+```
+
+And open by name from anywhere:
+
+```java
+lotus.openMenu(player, "welcome");   // case-insensitive
+```
+
+:::info
+`name()` defaults to the class's simple name (`WelcomeMenu`) if you don't override it.
+:::
+
+## Putting it all together
+
+```java
+public final class WelcomeMenu implements Menu {
+
+    @Override public @NotNull String name() { return "welcome"; }
+
+    @Override public @NotNull Component title(MenuView<?> view) {
+        return Component.text("Welcome, " + view.viewer().getName());
+    }
+
+    @Override public @NotNull Capacity capacity(MenuView<?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override public @NotNull Content content(MenuView<?> view) {
+        return Content.builder(capacity(view))
+            .fillBorder(Button.of(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)))
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.PAPER),
+                (v, event) -> {
+                    event.setCancelled(true);
+                    v.viewer().sendMessage("Hello from Lotus!");
+                    v.viewer().closeInventory();
+                }))
+            .build();
+    }
+}
+```
+
+## What's next
+
+You've written a working menu. From here, pick the area that matches what you want to build:
+
+- Want to understand the data types you just used? → [Core Concepts](../Core-Concepts/Capacity-and-Slots)
+- Want richer click behaviour? → [Buttons](../Buttons/Button-Variants)
+- Want layouts beyond `set(row, col, ...)`? → [Content Builder](../Content-Builder/Content-Builder)
+- Building a paged list? → [Pagination](../Pagination/Pagination)

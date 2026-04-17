@@ -1,0 +1,122 @@
+---
+title: Content Builder
+description: The fluent DSL for laying out buttons — set, fill, draw, and the apply escape hatch.
+order: 1
+---
+
+# Content Builder
+
+`ContentBuilder` is the fluent DSL for laying out buttons. Internally it wraps a mutable `Content`; call `.build()` when you're done to freeze the layout into a `Content` you return from `Menu.content(...)`.
+
+```java
+Capacity size = Capacity.ofRows(3);
+
+Content c = Content.builder(size)
+    .fillBorder(Button.of(glassPane()))
+    .set(1, 4, Button.clickable(diamond(), buyAction))
+    .build();
+```
+
+## Primitives — set a single slot
+
+```java
+.set(slot, button)                     // by Slot
+.set(row, column, button)              // by coordinates
+.buttons(Map<Slot, Button>)            // bulk write
+```
+
+## Fills — many slots at once
+
+```java
+.fill(mask, button)                    // every slot in the mask
+.fillAll(button)                       // every slot
+.fillBorder(button)                    // perimeter only
+```
+
+`fill(mask, button)` is the most flexible — combine it with `SlotMask` operations:
+
+```java
+.fill(SlotMask.range(size, Slot.of(9), Slot.of(17)), filler)    // middle row
+.fill(SlotMask.full(size).excluding(Slot.of(13)), filler)       // everything but center
+```
+
+:::tip
+`fillBorder` is the idiomatic way to frame a menu. Pair it with a dark-colored stained glass pane for a clean look that players instantly recognise as "this slot isn't for me".
+:::
+
+## Drawing lines
+
+```java
+.draw(start, Direction.RIGHT, button)                    // until the grid edge
+.draw(start, end, Direction.DOWN_RIGHT, button)          // bounded by an end slot
+```
+
+`Direction` covers all four cardinal directions and all four diagonals. The iterator stops at the grid edge or the bounded end.
+
+## The `apply` escape hatch
+
+When the DSL doesn't fit, `apply` hands you the mutable `Content` directly:
+
+```java
+.apply(content -> {
+    for (int i = 0; i < 9; i++) {
+        if (i % 2 == 0) content.set(Slot.of(i), evenButton);
+        else            content.set(Slot.of(i), oddButton);
+    }
+})
+```
+
+:::note
+Reach for `apply` only when you truly need imperative logic — e.g., loops over dynamic counts, conditional placement. If you find yourself using it for static layout, the fluent primitives will read better.
+:::
+
+## A complete example
+
+```java
+public @NotNull Content content(MenuView<?> view) {
+    Capacity size = capacity(view);
+
+    return Content.builder(size)
+        .fillBorder(Button.of(filler()))
+        .draw(Slot.at(1, 1, size), Slot.at(1, 7, size),
+              Direction.RIGHT, Button.of(divider()))
+        .set(2, 4, Button.clickable(confirm(),
+            (v, e) -> { commit(v); v.viewer().closeInventory(); }))
+        .set(2, 3, Button.clickable(cancel(),
+            (v, e) -> v.viewer().closeInventory()))
+        .build();
+}
+```
+
+## Runtime edits (after `build()`)
+
+Once you've built the content and it's attached to a view, you're in `ContentEditor` territory — use it to mutate during click handling:
+
+```java
+view.content().set(slot, newButton);
+view.content().update(slot, current -> current.withItem(brighter));
+view.content().remove(slot);
+view.content().clear();
+```
+
+:::tip
+Mutations made inside a click handler appear on the **next repaint**, which Lotus triggers automatically after click dispatch. If you mutate content outside a click (a scheduler task, a network callback), call `view.refresh()` yourself.
+:::
+
+## Merge & trim
+
+Combine two contents with `mergeWith` (the overlay wins when both define a slot):
+
+```java
+Content merged = base.mergeWith(overlay);
+```
+
+Cap the total button count — useful for bounded pagination layouts:
+
+```java
+content.trimTo(25);
+```
+
+## What's next
+
+→ [Data Registry](../Data-Registry/Data-Registry) — carry typed state per view and per button.

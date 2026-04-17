@@ -1,0 +1,155 @@
+---
+title: Pagination
+description: Immutable page definition paired with a per-player session — layout, source, renderer, navigation.
+order: 1
+---
+
+# Pagination
+
+Lotus pagination has a clean two-layer split:
+
+- **`Pagination<T>`** — the **recipe**: layout + data source + renderer. Immutable. Safe to store in a `static final`, share across players, and reuse forever.
+- **`PaginationSession<T>`** — a **live navigation**, tied to one player. Knows the current page and snapshot of items.
+
+:::tip
+Build the `Pagination<T>` **once** at boot. Call `.open(lotus, player)` to get a fresh session per viewer.
+:::
+
+## The three ingredients
+
+### 1. `PageLayout` — shape shared across every page
+
+Defines the capacity, fill area, navigation buttons, title, and any decorations common to every page.
+
+```java
+PageLayout layout = PageLayout.builder(Capacity.ofRows(6))
+    .title(ctx -> Component.text("Shop — page "
+        + (ctx.pageIndex() + 1) + "/" + ctx.totalPages()))
+    .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(arrow("←")))
+    .nextButton    (Slot.at(5, 5, capacity), ctx -> Button.of(arrow("→")))
+    .decorations(ctx -> Content.builder(capacity)
+        .fillBorder(Button.of(filler()))
+        .build())
+    .build();
+```
+
+**Defaults:**
+
+| Field              | Default                                                   |
+|--------------------|-----------------------------------------------------------|
+| `title`            | `"Page N"`                                                |
+| `fillMask`         | full capacity **minus** the two nav slots                 |
+| nav button slots   | bottom-left and bottom-right corners                      |
+| `decorations`      | empty                                                     |
+
+Customise the fill mask for more nuanced layouts:
+
+```java
+.fillMask(SlotMask.range(capacity, Slot.of(10), Slot.of(43))
+    .excluding(Slot.of(17), Slot.of(26), Slot.of(35)))
+```
+
+### 2. `ContentSource<T>` — where items come from
+
+Snapshotted once per session:
+
+```java
+ContentSource<ShopItem> fixed   = ContentSource.of(shopItems);
+ContentSource<ShopItem> dynamic = ContentSource.dynamic(player -> db.itemsFor(player));
+```
+
+:::caution
+`ContentSource.dynamic` is called **once per session** (at construction time), **not per page**. If you need real-time updates while the menu is open, close and re-open the session.
+:::
+
+### 3. `ComponentRenderer<T>` — how to draw one item
+
+Converts a single item into a `Button`. Receives a `PageContext` so it can react to page state:
+
+```java
+ComponentRenderer<ShopItem> renderer = (item, ctx) -> Button.clickable(
+    item.icon(),
+    (view, event) -> buy(view.viewer(), item)
+);
+```
+
+## Putting it together
+
+```java
+Pagination<ShopItem> pagination = Pagination.<ShopItem>builder()
+    .layout(layout)
+    .source(source)
+    .renderer(renderer)
+    .trimOverflow(true)   // items past fillMask.size() are discarded (default: true)
+    .build();
+
+PaginationSession<ShopItem> session = pagination.open(lotus, player);
+session.goTo(0);          // or session.next() / session.previous()
+```
+
+:::info
+`pagination.open(...)` returns a session positioned at page 0 **but not yet opened**. Call `goTo(0)` (or any valid page) to actually render the inventory.
+:::
+
+## Session control
+
+```java
+session.next();
+session.previous();
+session.goTo(3);
+session.close();
+
+session.currentIndex();
+session.totalPages();
+session.isFirst();
+session.isLast();
+session.viewer();
+session.definition();
+```
+
+- `next()` / `previous()` are **bounded** — they're no-ops at the edges.
+- `goTo(i)` validates against `totalPages` — out of range throws `IndexOutOfBoundsException`.
+- `close()` is **idempotent**.
+- After `close()`, further `goTo` throws `IllegalStateException`.
+
+## `PageContext` — the read-only snapshot
+
+Passed to every layout and renderer hook:
+
+```java
+public record PageContext(
+    int pageIndex,
+    int totalPages,
+    Player viewer,
+    PaginationSession<?> session
+) {
+    boolean isFirst();
+    boolean isLast();
+}
+```
+
+Use it to hide nav on edges, show `"Page 3/12"` in titles, or re-open the parent menu from a decoration button.
+
+## Reusing a definition
+
+A `Pagination<T>` is immutable — share it freely:
+
+```java
+public final class Shop {
+    public static final Pagination<ShopItem> PAGINATION = build();
+
+    private static Pagination<ShopItem> build() {
+        return Pagination.<ShopItem>builder()...build();
+    }
+
+    public static void open(Lotus lotus, Player p) {
+        PAGINATION.open(lotus, p).goTo(0);
+    }
+}
+```
+
+Each `open` spawns a fresh session with its own snapshot and page cursor. **No shared state to corrupt.**
+
+## What's next
+
+→ [Advanced](../Advanced/Advanced) — options, custom openers, lifecycle details, and package layout.

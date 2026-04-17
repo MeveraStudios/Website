@@ -1,0 +1,76 @@
+---
+title: Capacity, Slots & Slot Masks
+description: The immutable value types that describe a menu's grid, individual positions, and slot selections.
+order: 1
+---
+
+# Capacity, Slots & Slot Masks
+
+Lotus uses three immutable value types to describe **where things go** in a menu. You'll see them everywhere, so it's worth five minutes of reading.
+
+:::info
+All three are **immutable values** — safe to share across menus, store in `static final` constants, and use as map keys.
+:::
+
+## `Capacity` — the grid dimensions
+
+`Capacity` says how big the menu is, in rows × columns.
+
+```java
+Capacity chest  = Capacity.ofRows(3);                  // 3 × 9 chest
+Capacity hopper = Capacity.of(InventoryType.HOPPER);   // 1 × 5 hopper
+Capacity custom = new Capacity(6, 9);                  // 6 × 9 double chest
+```
+
+The `Capacity.of(InventoryType)` factory only supports the inventory types with a natural grid: `CHEST`, `HOPPER`, `DROPPER`, `DISPENSER`, `WORKBENCH`, and the `FURNACE` family.
+
+:::caution
+For any inventory type **not** in that list, reach for `Capacity.ofRows(int)` or the `Capacity(rows, cols)` constructor — passing an unsupported type throws at runtime.
+:::
+
+## `Slot` — a position
+
+A `Slot` is a single position, identified by its raw inventory index.
+
+```java
+Slot s      = Slot.at(1, 4, Capacity.ofRows(3));   // row 1, col 4 → index 13
+Slot first  = Slot.first();                        // index 0
+Slot last   = Slot.last(Capacity.ofRows(3));       // index 26
+
+int row = s.row(capacity);
+int col = s.column(capacity);
+```
+
+:::tip
+`Slot` is a **record** — it's equal by index, implements `Comparable`, and makes an excellent map key when you need to associate something with a position.
+:::
+
+## `SlotMask` — a selection of slots
+
+A `SlotMask` is a **declarative description** of "which slots" — not a mutable list. It's a sealed algebra you compose:
+
+```java
+SlotMask all   = SlotMask.full(capacity);
+SlotMask row   = SlotMask.range(capacity, Slot.of(9), Slot.of(17));
+SlotMask picks = SlotMask.of(capacity, Set.of(Slot.of(0), Slot.of(4)));
+
+SlotMask fill  = SlotMask.full(capacity).excluding(Slot.of(22), Slot.of(26));
+```
+
+`.excluding(...)` chains to subtract slots. The resulting mask's size is always **derived**, never mutated.
+
+You'll use `SlotMask` wherever Lotus needs to say "apply to these slots" — for example, [content fills](../Content-Builder/Content-Builder#fills) and pagination layouts.
+
+## How they connect
+
+```
+Capacity   → defines the grid
+  Slot     → picks one cell inside that grid
+  SlotMask → picks many cells inside that grid
+```
+
+Every menu starts from a `Capacity`, places buttons at individual `Slot`s, and fills regions with `SlotMask`s.
+
+## What's next
+
+Now that you know the grid vocabulary, see how buttons are stored and queried → [Content](./Content).

@@ -1,0 +1,135 @@
+---
+title: Advanced
+description: Options, custom openers, lifecycle edge-cases, error handling, and the public package layout.
+order: 1
+---
+
+# Advanced
+
+This page collects the less-common but still important knobs and corners of Lotus — things you don't need on day one, but will want when you're shipping real plugins.
+
+## `Lotus.Options`
+
+Immutable runtime configuration, set once at build time:
+
+```java
+Lotus lotus = Lotus.builder(plugin)
+    .allowBottomInventoryClick(true)   // let hotbar shift-clicks pass through
+    .dynamicButtonAction(false)        // advanced: allow buttons to be picked up / moved
+    .debug(false)                      // verbose [lotus] logs
+    .build();
+```
+
+| Option                      | Default | Effect                                               |
+|-----------------------------|---------|------------------------------------------------------|
+| `allowBottomInventoryClick` | `true`  | Clicks in the player inventory pass through normally |
+| `dynamicButtonAction`       | `false` | Opt-in: allows pickup/place interactions on buttons  |
+| `debug`                     | `false` | Gates `[lotus]` debug log lines                      |
+
+Read the active configuration back with `lotus.options()`.
+
+## Custom `ViewOpener`
+
+The **opener strategy** decides *how* a Bukkit `Inventory` is created and opened for a given `MenuView`. Lotus ships a sensible default that uses Adventure-native `Bukkit.createInventory(...)`.
+
+Replace the default per inventory type:
+
+```java
+lotus.registerOpener(InventoryType.HOPPER, (l, view) -> {
+    Inventory inv = Bukkit.createInventory(view, InventoryType.HOPPER, view.title());
+    // custom rendering, decorations, sound, etc.
+    ((BaseMenuView<?>) view).renderInto(inv);
+    view.viewer().openInventory(inv);
+    return inv;
+});
+```
+
+:::info
+`ViewOpener` lives in `studio.mevera.lotus.spi.opener` — it's an **SPI boundary**, stable to extend. Feel free to build on it.
+:::
+
+## Menu registration & command-driven opens
+
+```java
+lotus.registerMenu(new ShopMenu());
+lotus.openMenu(player, "shopmenu");            // case-insensitive lookup
+lotus.registeredMenu("shopmenu");              // Optional<Menu>
+```
+
+Great for config-driven menus where commands like `/menu <name>` resolve by string.
+
+## Tracking open views
+
+Lotus keeps a live map of `UUID → MenuView<?>`:
+
+```java
+lotus.viewOf(player);             // Optional<MenuView<?>>
+lotus.openViews();                // Collection<MenuView<?>>
+```
+
+Common idiom — broadcast a refresh when the backing data changes:
+
+```java
+for (MenuView<?> v : lotus.openViews()) {
+    if (v.menu() instanceof ShopMenu) v.refresh();
+}
+```
+
+## Refresh vs. manual mutation
+
+| When…                                                                 | Use                                                   |
+|-----------------------------------------------------------------------|-------------------------------------------------------|
+| The underlying **model** changed                                      | `view.refresh()` — re-runs `Menu.content(view)`       |
+| You need to swap **one slot** inside a click handler                   | `view.content().set(...)` / `update(...)` / `remove`  |
+| You mutated content **outside** a click (scheduler, network callback) | `view.refresh()` yourself                             |
+
+:::tip
+Lotus auto-repaints after click dispatch, so inside a `ClickAction` you almost never need to call `refresh()` explicitly.
+:::
+
+## Spanning buttons — lifecycle gotcha
+
+:::caution
+Removing a `SpanningButton` cleanly means clearing **every slot** in its footprint. Clearing one slot leaves orphaned copies visible in the others. Either keep a reference to the button and iterate its footprint, or call `content.clear()` and rebuild.
+:::
+
+## Repaint after button mutation
+
+`BaseMenuView.handleClick` always repaints after dispatch. This matters for:
+
+- `TransformingButton` — the new button's item appears **immediately**.
+- `CycleButton` — the advanced state's item appears **immediately**.
+
+You don't need to call anything. If you wrote a custom path that mutates `view.content()`, the same auto-repaint covers you.
+
+## Errors in click handlers
+
+If a button's dispatch throws a `RuntimeException`, Lotus catches it, logs via `lotus.logger().warn(...)`, and **keeps the menu usable**. Check plugin logs for:
+
+```
+[lotus] button dispatch failed in menu <name>
+```
+
+Nothing to handle in user code — just don't swallow exceptions silently upstream if you need to see them.
+
+## Public package layout
+
+For plugin authors browsing the jar:
+
+```
+studio.mevera.lotus
+├── Lotus, LotusBuilder          ← facade
+├── api/                         ← what you import
+│   ├── button/                  ← Button, variants, ClickAction
+│   ├── content/                 ← Content, ContentView/Editor, ContentBuilder
+│   ├── data/                    ← Key, DataRegistry
+│   ├── menu/                    ← Menu, InteractiveMenu, MenuView, MenuHandler
+│   ├── pagination/              ← Pagination, Session, Layout, Source, Renderer
+│   └── slot/                    ← Capacity, Slot, SlotMask, Direction, Iterator
+├── spi/                         ← extension points (ViewOpener, ...)
+└── internal/                    ← implementation details; do NOT import
+```
+
+:::danger{label="Stability contract"}
+Import from `api.*` and `spi.*` only. Anything under `internal.*` carries **no compatibility guarantees** and can change across minor versions.
+:::

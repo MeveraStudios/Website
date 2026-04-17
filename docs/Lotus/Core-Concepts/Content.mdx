@@ -1,0 +1,75 @@
+---
+title: Content
+description: The button map backing every menu view — read, write, iterate, fill.
+order: 2
+---
+
+# Content
+
+`Content` is the **button map** for a single menu view: which button sits in which slot. It has two halves:
+
+- **`ContentView`** — the read-only API (`get`, `forEach`).
+- **`ContentEditor`** — the mutation API (`set`, `remove`, `clear`, `fill`, ...).
+
+The `Content` interface extends both, so anywhere you hold a `Content` you can do both.
+
+## Creating content
+
+Most of the time, you build content with the fluent `ContentBuilder`:
+
+```java
+Content c = Content.builder(Capacity.ofRows(3))
+    .set(1, 4, Button.of(paperItem))
+    .build();
+```
+
+For ad-hoc mutation (e.g., starting empty and filling imperatively), use `Content.empty`:
+
+```java
+Content c = Content.empty(Capacity.ofRows(3));
+c.set(Slot.of(4), Button.of(item));
+```
+
+:::tip
+Prefer the [`ContentBuilder`](../Content-Builder/Content-Builder) for initial layout — it reads top-to-bottom like a UI description. Reserve direct mutation for **click-time edits** inside button handlers.
+:::
+
+## Reading content
+
+```java
+Optional<Button> maybe = c.get(Slot.of(4));
+c.forEach((slot, button) -> System.out.println(slot + " → " + button));
+```
+
+## Writing content
+
+```java
+c.set(Slot.of(4), Button.of(item));
+c.fill(SlotMask.full(capacity), Button.of(filler));
+c.remove(Slot.of(4));
+c.clear();
+```
+
+All writes happen in-place; the backing `MenuView` will repaint on the next render trigger (after a click dispatch, or when you call `view.refresh()`).
+
+## Merging two contents
+
+You can overlay one content on top of another — the overlay wins wherever both define a slot:
+
+```java
+Content base    = ...;
+Content overlay = ...;
+Content merged  = base.mergeWith(overlay);
+```
+
+## Trimming
+
+Useful when building bounded layouts like pagination pages:
+
+```java
+content.trimTo(25);   // drop buttons beyond index 25 (by slot order)
+```
+
+## What's next
+
+Head to [Menus → Menu Template](../Menus/Menu-Template) to see how `Content` fits into a full menu.

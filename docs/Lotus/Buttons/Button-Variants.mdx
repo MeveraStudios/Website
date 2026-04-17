@@ -1,0 +1,142 @@
+---
+title: Button Variants
+description: The six sealed Button variants — what each does, how to construct it, and when to reach for it.
+order: 1
+---
+
+# Button Variants
+
+`Button` is a **sealed interface** with exactly six implementations, each a Java `record`. You never implement `Button` yourself — you pick a variant through a static factory.
+
+| Variant              | Purpose                                               |
+|----------------------|-------------------------------------------------------|
+| `StaticButton`       | Display-only; clicking does nothing                   |
+| `ClickableButton`    | Runs a `ClickAction` on click                         |
+| `TransformingButton` | Replaces itself in the view on click                  |
+| `SpanningButton`     | One logical button across multiple slots              |
+| `CompositeButton`    | Dispatches click to several children in order         |
+| `CycleButton`        | N-state button; each click advances to the next state |
+
+All six share `item()`, `data()`, `withItem(...)`, and `dispatch(view, event)`.
+
+:::info
+Because `Button` is sealed, the compiler can exhaustively check `switch` expressions over it — add a new variant and every consumer will refuse to compile until it handles the new case. In practice, you rarely need to switch; factories and polymorphism cover most use cases.
+:::
+
+## Static — display only
+
+```java
+Button b = Button.of(new ItemStack(Material.PAPER));
+```
+
+No behaviour. Use for labels, decorations, borders, separators.
+
+## Clickable — run an action
+
+```java
+Button b = Button.clickable(
+    new ItemStack(Material.DIAMOND),
+    (view, event) -> view.viewer().sendMessage("clicked!")
+);
+```
+
+`ClickAction` is a functional interface, so it composes cleanly:
+
+```java
+ClickAction playSound = (v, e) -> v.viewer().playSound(...);
+ClickAction sendMsg   = (v, e) -> v.viewer().sendMessage("hi");
+ClickAction both      = playSound.andThen(sendMsg);
+```
+
+## Transforming — swap itself on click
+
+The button decides **at click time** what should replace it in the view:
+
+```java
+Button toggle = Button.transforming(
+    new ItemStack(Material.REDSTONE_LAMP),
+    (view, event) -> Button.of(new ItemStack(Material.GLOWSTONE))
+);
+```
+
+Return `null` from the transformer to leave the slot unchanged.
+
+:::tip
+`TransformingButton` is right for **one-shot state flips** ("reveal the answer", "consume this action"). For repeating state cycles (OFF → WHITELIST → BLACKLIST → OFF), use `CycleButton` instead — it's purpose-built for that.
+:::
+
+## Spanning — one button, many slots
+
+A single button whose visual and click target occupy **multiple slots** — banners, multi-cell icons, region selectors.
+
+```java
+SpanningButton banner = Button.spanning(
+    new ItemStack(Material.ORANGE_BANNER),
+    Set.of(Slot.of(0), Slot.of(1), Slot.of(2)),   // footprint
+    (view, event) -> view.viewer().sendMessage("banner!")
+);
+
+content.placeSpanning(banner);   // writes the same instance to every footprint slot
+```
+
+The click fires **once per event**, no matter which slot inside the footprint was clicked. `event.getSlot()` still tells you where the player actually clicked.
+
+:::caution
+Removing a spanning button requires clearing **every slot** in its footprint. Clearing only one slot leaves orphaned copies visible. Either iterate the footprint explicitly or `content.clear()` + rebuild.
+:::
+
+## Composite — one item, many effects
+
+Part of the GoF Composite pattern. The composite's item is the only one rendered; each child's action fires in declaration order:
+
+```java
+Button button = Button.composite(
+    new ItemStack(Material.EMERALD),
+    Button.clickable(item, (v, e) -> playSound(v)),
+    Button.clickable(item, (v, e) -> message(v)),
+    Button.clickable(item, (v, e) -> runCommand(v))
+);
+```
+
+:::danger{label="READ THIS"}
+**Don't** mix `TransformingButton` or `CycleButton` children inside a composite. The first mutating child wins and the later children will dispatch against a stale button slot. Compose pure side-effects only.
+:::
+
+## Cycle — multi-state
+
+Each click advances to the next state, wrapping at the end.
+
+```java
+Button filter = Button.cycle(
+    Button.clickable(off(),       (v, e) -> setFilter(v, "OFF")),
+    Button.clickable(whitelist(), (v, e) -> setFilter(v, "WHITELIST")),
+    Button.clickable(blacklist(), (v, e) -> setFilter(v, "BLACKLIST"))
+);
+```
+
+- The displayed item always comes from the **active** state.
+- On click, the active state's own `dispatch` runs **first** (so each state can have its own side-effect), **then** the view's content is updated to an advanced copy.
+- `CycleButton` is immutable — "advancing" creates a new instance and writes it back to the slot.
+
+Use for toggles, difficulty selectors, page-size pickers.
+
+## Attaching data to a button
+
+Every button carries its own `DataRegistry`. Attach metadata, read it back on click:
+
+```java
+Key<UUID> TARGET = Key.of("target", UUID.class);
+
+ClickableButton b = Button.clickable(item, (view, event) -> {
+    view.content().get(Slot.of(event.getSlot()))
+        .flatMap(btn -> btn.data().get(TARGET))
+        .ifPresent(uuid -> inspect(uuid));
+});
+b.data().put(TARGET, somePlayer.getUniqueId());
+```
+
+See [Data Registry](../Data-Registry/Data-Registry) for the full pattern and when to use it.
+
+## What's next
+
+→ [Content Builder](../Content-Builder/Content-Builder) — the DSL for placing all these buttons on a grid.

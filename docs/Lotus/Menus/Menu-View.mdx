@@ -1,0 +1,65 @@
+---
+title: The Menu View
+description: MenuView is the live instance of a menu for one player — your entry point from every hook.
+order: 2
+---
+
+# The Menu View
+
+While a `Menu` is a **template**, a `MenuView<M>` is the **live instance** — one per player, per open. Every hook (title, capacity, content, click actions, menu-handler callbacks) receives a `MenuView`.
+
+## What the view exposes
+
+| Method           | Description                                |
+|------------------|--------------------------------------------|
+| `menu()`         | The template that produced this view        |
+| `viewer()`       | The `Player` viewing the menu               |
+| `content()`      | Current `Content` (read + edit)             |
+| `data()`         | Per-view `DataRegistry`                     |
+| `title()`        | Resolved title for this view                |
+| `capacity()`     | Resolved capacity for this view             |
+| `getInventory()` | The Bukkit `Inventory` (nullable until opened) |
+| `isOpen()`       | Whether the view is still being shown       |
+| `refresh()`      | Re-run `Menu.content(view)` and repaint     |
+
+## Refreshing the view
+
+`view.refresh()` rebuilds the content from scratch. Use it when the underlying model changes and the menu should re-resolve everything:
+
+```java
+// elsewhere in your plugin, when inventory is restocked:
+for (MenuView<?> v : lotus.openViews()) {
+    if (v.menu() instanceof ShopMenu) v.refresh();
+}
+```
+
+:::tip
+Lotus **automatically repaints after every click dispatch**, so you don't need to call `refresh()` from inside a `ClickAction`. Only call it when you've mutated state from outside a click (e.g., a scheduler task or a network event).
+:::
+
+## Tracking open views
+
+Lotus keeps a live map of `UUID → MenuView<?>`:
+
+```java
+Optional<MenuView<?>> current = lotus.viewOf(player);
+Collection<MenuView<?>> all   = lotus.openViews();
+```
+
+A common pattern: broadcast a refresh to all viewers of a particular menu class when your backing data changes.
+
+## Runtime edits
+
+Inside a click handler, prefer **surgical** edits over full refresh:
+
+```java
+view.content().set(slot, newButton);
+view.content().update(slot, current -> current.withItem(brighter));
+view.content().remove(slot);
+```
+
+These are reflected on the next repaint (which happens automatically after click dispatch).
+
+## What's next
+
+→ [The Menu Handler](./Menu-Handler) — react to open, close, pre-click, post-click, and drag events.
