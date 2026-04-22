@@ -6,60 +6,91 @@ order: 2
 
 # The Menu View
 
-While a `Menu` is a **template**, a `MenuView<M>` is the **live instance** — one per player, per open. Every hook (title, capacity, content, click actions, menu-handler callbacks) receives a `MenuView`.
+`MenuView<C, M>` is the **live runtime object** for one player and one open menu.
 
-## What the view exposes
+If `Menu` is the blueprint, `MenuView` is the actual house currently being lived in.
 
-| Method           | Description                                |
-|------------------|--------------------------------------------|
-| `menu()`         | The template that produced this view        |
-| `viewer()`       | The `Player` viewing the menu               |
-| `content()`      | Current `Content` (read + edit)             |
-| `data()`         | Per-view `DataRegistry`                     |
-| `title()`        | Resolved title for this view                |
-| `capacity()`     | Resolved capacity for this view             |
-| `getInventory()` | The Bukkit `Inventory` (nullable until opened) |
-| `isOpen()`       | Whether the view is still being shown       |
-| `refresh()`      | Re-run `Menu.content(view)` and repaint     |
+You will see a `MenuView` in:
 
-## Refreshing the view
+- `title(...)`
+- `capacity(...)`
+- `content(...)`
+- button click handlers
+- menu handler callbacks
 
-`view.refresh()` rebuilds the content from scratch. Use it when the underlying model changes and the menu should re-resolve everything:
+## What You Can Read From A View
+
+| Method | Meaning |
+| --- | --- |
+| `menu()` | The menu template behind this view |
+| `viewer()` | The player looking at it |
+| `title()` | The resolved title used when it was opened |
+| `capacity()` | The resolved capacity used when it was opened |
+| `content()` | The current live `Content` object |
+| `data()` | The per-view `DataRegistry` |
+| `type()` | The inventory type |
+| `getInventory()` | The Bukkit inventory, or `null` before open / after close |
+| `isOpen()` | Whether the view is still active |
+| `refresh()` | Rebuild the content and repaint the inventory |
+
+## The Most Important Distinction
+
+`MenuView.refresh()` rebuilds **content**, not the whole menu shell.
 
 ```java
-// elsewhere in your plugin, when inventory is restocked:
-for (MenuView<?> v : lotus.openViews()) {
-    if (v.menu() instanceof ShopMenu) v.refresh();
+for (MenuView<?, ?> view : lotus.openViews()) {
+    if (view.menu() instanceof ShopMenu) {
+        view.refresh();
+    }
 }
 ```
 
-:::tip
-Lotus **automatically repaints after every click dispatch**, so you don't need to call `refresh()` from inside a `ClickAction`. Only call it when you've mutated state from outside a click (e.g., a scheduler task or a network event).
+:::warning
+`refresh()` does **not** change the inventory title or capacity. Those were resolved when the view
+was opened. If you need a new title or a different size, open a **new** menu.
 :::
 
-## Tracking open views
+## Runtime Edits Inside A Click
 
-Lotus keeps a live map of `UUID → MenuView<?>`:
-
-```java
-Optional<MenuView<?>> current = lotus.viewOf(player);
-Collection<MenuView<?>> all   = lotus.openViews();
-```
-
-A common pattern: broadcast a refresh to all viewers of a particular menu class when your backing data changes.
-
-## Runtime edits
-
-Inside a click handler, prefer **surgical** edits over full refresh:
+Inside a button handler, you can mutate only the part that changed:
 
 ```java
-view.content().set(slot, newButton);
-view.content().update(slot, current -> current.withItem(brighter));
-view.content().remove(slot);
+view.content().set(Slot.of(event.getSlot()), replacementButton);
+view.content().update(Slot.of(event.getSlot()), current -> current.withItem(brighterIcon));
+view.content().remove(Slot.of(event.getSlot()));
 ```
 
-These are reflected on the next repaint (which happens automatically after click dispatch).
+Lotus repaints automatically after button dispatch, so these changes show up right away.
 
-## What's next
+:::tip
+If the change happens **outside** a click, such as a scheduler task or a service callback, call
+`view.refresh()` yourself.
+:::
 
-→ [The Menu Handler](/docs/Lotus/Menu-Handler) — react to open, close, pre-click, post-click, and drag events.
+## Tracking Open Views
+
+Lotus keeps a live registry of open views:
+
+```java
+Optional<MenuView<?, ?>> current = lotus.viewOf(player);
+Collection<MenuView<?, ?>> allOpen = lotus.openViews();
+```
+
+This is useful for:
+
+- refreshing every open shop menu after stock changes
+- closing or inspecting a player's current menu
+- syncing all viewers of a shared data source
+
+## A Practical Pattern
+
+Use `data()` to keep the view-specific state close to the UI:
+
+```java
+int page = view.data().get(Keys.PAGE).orElse(0);
+UUID target = view.data().require(Keys.TARGET);
+```
+
+That keeps the view self-contained instead of scattering temporary menu state across your plugin.
+
+Next: [The Menu Handler](/docs/Lotus/Menu-Handler) for lifecycle hooks and click flow.

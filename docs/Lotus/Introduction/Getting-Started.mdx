@@ -1,74 +1,175 @@
 ---
 title: Getting Started
-description: Install Lotus, add the dependency, and boot it once per plugin.
+description: Pick your platform module, add the dependency, and boot Lotus once per plugin.
 order: 2
 ---
 
 # Getting Started
 
-## Installation
+## Prerequisites
 
-Lotus is published to **Maven Central** — no extra repository is required.
+:::warning{label="Java 21 Required"}
+Lotus `2.x` is built for **Java 21** across **all** modules, including `lotus-spigot`.
+Even if you target Spigot `1.8.8`, your build and runtime environment still need Java 21.
+:::
 
-<LatestVersionBlock
-    owner="MeveraStudios"
-    repo="lotus"
-    group="studio.mevera"
-    id="lotus"
-/>
+Before you start, decide which server API you are writing against:
 
-### Gradle (Kotlin DSL) example
+| Module | Use when | Title type |
+| --- | --- | --- |
+| `lotus-paper` | You are building for **Paper 1.21+** | `Component` |
+| `lotus-spigot` | You are building for **Spigot 1.8.8** | `String` |
+
+## Step 1 — Add The Right Artifact
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+Add the repositories you already need for Paper development:
 
 ```kotlin
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     mavenCentral()
 }
+```
 
-dependencies {
-    implementation("studio.mevera:lotus:2.0.0")
+Then add Lotus:
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="Lotus"
+    group="studio.mevera"
+    id="lotus-paper"
+/>
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+Add the repositories typically used for legacy Spigot development:
+
+```kotlin
+repositories {
+    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    mavenCentral()
 }
 ```
 
+Then add Lotus:
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="Lotus"
+    group="studio.mevera"
+    id="lotus-spigot"
+/>
+
+  </TabItem>
+</Tabs>
+
 :::caution
-Lotus is a **library**, not a plugin. You must shade (and preferably relocate) it into your final JAR so it ships with your plugin.
+Add **one** platform artifact, not both. `lotus-commons` is pulled in transitively, so you should
+**not** depend on it directly in a normal plugin.
 :::
 
-## Boot once per plugin
+## Step 2 — Shade Lotus Into Your Plugin
 
-Construct a single `Lotus` instance in your `onEnable`. It registers its own Bukkit listener automatically.
+Lotus is a **library**, not a standalone plugin. Your final JAR needs to include it.
+
+<ShadingBlock/>
+
+:::tip
+Relocating `studio.mevera` is strongly recommended, especially if your plugin ships with several
+embedded libraries.
+:::
+
+## Step 3 — Create One Lotus Runtime
+
+Construct **one** `Lotus` instance in `onEnable()`. The platform factory also registers the
+framework listener for you.
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
 ```java
+import net.kyori.adventure.text.Component;
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.paper.PaperLotus;
+
 public final class MyPlugin extends JavaPlugin {
 
-    private Lotus lotus;
+    private Lotus<Component> lotus;
 
     @Override
     public void onEnable() {
-        this.lotus = Lotus.builder(this)
-            .allowBottomInventoryClick(true)   // let players shift-click their own hotbar
-            .debug(false)                      // [lotus] log lines when true
-            .build();
+        this.lotus = PaperLotus.create(this);
     }
 
-    public Lotus lotus() { return lotus; }
+    public Lotus<Component> lotus() {
+        return lotus;
+    }
 }
 ```
 
-:::tip
-Only build **one** `Lotus` per plugin. It keeps a live map of every open menu view and dispatches every click through that map.
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.spigot.SpigotLotus;
+
+public final class MyPlugin extends JavaPlugin {
+
+    private Lotus<String> lotus;
+
+    @Override
+    public void onEnable() {
+        this.lotus = SpigotLotus.create(this);
+    }
+
+    public Lotus<String> lotus() {
+        return lotus;
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+You do **not** call `registerEvents(...)` yourself for Lotus. `PaperLotus.create(...)` and
+`SpigotLotus.create(...)` wire the listener automatically.
 :::
 
-## Available builder options
+## Step 4 — Customize The Builder If You Need To
 
-| Option                      | Default | Effect                                               |
-|-----------------------------|---------|------------------------------------------------------|
-| `allowBottomInventoryClick` | `true`  | Clicks in the player inventory pass through normally |
-| `dynamicButtonAction`       | `false` | Opt-in: allows pickup/place interactions on buttons  |
-| `debug`                     | `false` | Gates `[lotus]` debug log lines                      |
+Both platform factories accept a second argument: a `Consumer<LotusBuilder<C>>`.
 
-Read them back later with `lotus.options()`. See [Advanced](/docs/Lotus/Advanced) for in-depth notes.
+```java
+this.lotus = PaperLotus.create(this, builder -> builder
+    .allowBottomInventoryClick(false)
+    .dynamicButtonAction(false)
+    .debug(true)
+);
+```
 
-## What's next
+### What the options actually do
 
-You now have a running `Lotus` instance. Next, build your first menu in [Your First Menu](/docs/Lotus/First-Menu).
+| Option | Default | What it controls |
+| --- | --- | --- |
+| `allowBottomInventoryClick` | `true` | Whether clicks in the **player inventory below the menu** are allowed through |
+| `dynamicButtonAction` | `false` | Whether Lotus should internally move buttons when pickup/place inventory actions happen |
+| `debug` | `false` | Whether `lotus.logger().debug(...)` prints `[lotus]` lines |
+
+:::info
+Lotus already cancels clicks in the **top menu inventory** by default. `allowBottomInventoryClick`
+only affects the player's own inventory while the menu is open.
+:::
+
+## Step 5 — Know Your First Destination
+
+At this point you are ready to write a menu class and open it for a player. The next page walks
+through that from zero:
+
+[Your First Menu](/docs/Lotus/First-Menu)

@@ -6,59 +6,193 @@ order: 3
 
 # The Menu Handler
 
-Some menus need to react to **lifecycle events** — not just render content. `MenuHandler` is the optional interface for that. The convenience type `InteractiveMenu` combines `Menu + MenuHandler` in one declaration.
+`MenuHandler<C>` is the optional hook surface for **open**, **close**, **click**, and **drag**
+events. Use it when a menu needs lifecycle logic in addition to rendering.
 
-## Implementing `InteractiveMenu`
+If you want one type that combines menu layout and lifecycle hooks, implement:
+
+- `PaperInteractiveMenu` on Paper
+- `InteractiveMenu<String>` on Spigot
+
+## A Simple Guarded Menu
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
 ```java
-public final class ShopMenu implements InteractiveMenu {
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+import studio.mevera.lotus.paper.api.menu.PaperInteractiveMenu;
 
-    @Override public @NotNull Component title(MenuView<?> v)    { ... }
-    @Override public @NotNull Capacity capacity(MenuView<?> v)  { ... }
-    @Override public @NotNull Content content(MenuView<?> v)    { ... }
+public final class ConfirmMenu implements PaperInteractiveMenu {
 
     @Override
-    public boolean onPreClick(MenuView<?> view, InventoryClickEvent event) {
-        event.setCancelled(true);   // prevent item theft
-        return true;                // false would skip button dispatch
+    public Component title(MenuView<Component, ?> view) {
+        return Component.text("Confirm");
     }
 
     @Override
-    public void onPostClick(MenuView<?> view, InventoryClickEvent event) {
-        // after all button dispatch has run
+    public Capacity capacity(MenuView<Component, ?> view) {
+        return Capacity.ofRows(3);
     }
 
-    @Override public void onOpen (MenuView<?> view, InventoryOpenEvent  event) { ... }
-    @Override public void onClose(MenuView<?> view, InventoryCloseEvent event) { ... }
-    @Override public void onDrag (MenuView<?> view, InventoryDragEvent  event) { ... }
+    @Override
+    public Content content(MenuView<Component, ?> view) {
+        return Content.builder(view.capacity())
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.EMERALD_BLOCK),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(Component.text("Confirmed"))
+            ))
+            .build();
+    }
+
+    @Override
+    public boolean onPreClick(MenuView<Component, ?> view, InventoryClickEvent event) {
+        Slot confirmSlot = Slot.at(1, 4, view.capacity());
+        if (!Slot.of(event.getSlot()).equals(confirmSlot)) {
+            view.viewer().sendMessage(Component.text("Click the center button."));
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onOpen(MenuView<Component, ?> view, InventoryOpenEvent event) {
+        view.viewer().sendMessage(Component.text("Menu opened"));
+    }
+
+    @Override
+    public void onClose(MenuView<Component, ?> view, InventoryCloseEvent event) {
+        view.viewer().sendMessage(Component.text("Menu closed"));
+    }
 }
 ```
 
-## The click flow
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
 
+```java
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.InteractiveMenu;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+
+public final class ConfirmMenu implements InteractiveMenu<String> {
+
+    @Override
+    public String title(MenuView<String, ?> view) {
+        return ChatColor.GOLD + "Confirm";
+    }
+
+    @Override
+    public Capacity capacity(MenuView<String, ?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public Content content(MenuView<String, ?> view) {
+        return Content.builder(view.capacity())
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.EMERALD_BLOCK),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(ChatColor.GREEN + "Confirmed")
+            ))
+            .build();
+    }
+
+    @Override
+    public boolean onPreClick(MenuView<String, ?> view, InventoryClickEvent event) {
+        Slot confirmSlot = Slot.at(1, 4, view.capacity());
+        if (!Slot.of(event.getSlot()).equals(confirmSlot)) {
+            view.viewer().sendMessage(ChatColor.RED + "Click the center button.");
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onOpen(MenuView<String, ?> view, InventoryOpenEvent event) {
+        view.viewer().sendMessage(ChatColor.YELLOW + "Menu opened");
+    }
+
+    @Override
+    public void onClose(MenuView<String, ?> view, InventoryCloseEvent event) {
+        view.viewer().sendMessage(ChatColor.YELLOW + "Menu closed");
+    }
+}
 ```
-click
-  └─► onPreClick  ──(returns true)──►  Button.dispatch  ──►  repaint  ──►  onPostClick
-                └─(returns false)────────────────────────────────────────►  onPostClick
+
+  </TabItem>
+</Tabs>
+
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` The player opens a guarded menu, clicks a wrong slot, receives a
+warning message, and only the center button is allowed to execute its action.
+</Admonition>
+
+## The Real Click Flow
+
+For clicks in the **top menu inventory**, Lotus behaves like this:
+
+```text
+Lotus listener cancels the top-inventory click
+-> onPreClick(view, event)
+-> if true: button.dispatch(...)
+-> Lotus repaints the inventory
+-> onPostClick(view, event)
 ```
 
-Key points:
+If `onPreClick(...)` returns `false`, Lotus stops there.
 
-- `onPreClick` runs **before** the button's own click action. Return `false` to cancel the entire dispatch (buttons won't fire).
-- `onPostClick` **always** runs after dispatch, whether a button fired or not.
-- The `event.setCancelled(true)` idiom in `onPreClick` is how you prevent the player from picking buttons up out of the inventory.
-
-:::caution
-If you do **not** cancel the click (either via `onPreClick` or `dynamicButtonAction = false` at boot), players can pick up your buttons as items. This is the number-one source of "my menu is broken" reports.
+:::info
+`onPostClick(...)` runs only when `onPreClick(...)` returned `true`.
 :::
 
-## When to use what
+## What Lotus Already Does For You
 
-- Need `event.setCancelled(true)` on every click? → `onPreClick` in a `MenuHandler`.
-- Need to cleanup state when a player closes the menu? → `onClose`.
-- Need to prevent drag-based item movement? → `onDrag`.
-- Only care about a **single button's** behaviour? → Use the button's own `ClickAction`, no handler needed.
+- top-inventory clicks are cancelled before dispatch
+- drag events over the menu are cancelled
+- the clicked button is looked up and dispatched
+- the inventory is repainted after dispatch
 
-## What's next
+That means `MenuHandler` is for **behavior**, not for basic protection.
 
-→ [Buttons](/docs/Lotus/Button-Variants) — the full catalogue of interactive elements.
+## One Important Limitation
+
+Clicks in the **player inventory below the menu** do **not** go through `MenuHandler`.
+Those are controlled by `Lotus.Options.allowBottomInventoryClick(...)`.
+
+:::caution
+If your design depends on completely freezing the player's own inventory while the menu is open,
+set `allowBottomInventoryClick(false)` when you create the Lotus runtime.
+:::
+
+## When To Use Each Hook
+
+| Hook | Best use |
+| --- | --- |
+| `onPreClick` | Gate or deny a click before button logic runs |
+| `onPostClick` | Follow-up logic after a successful dispatch |
+| `onOpen` | Initialize view-local state or notify the player |
+| `onClose` | Cleanup or commit data |
+| `onDrag` | React to drag attempts over the menu |
+
+Next: [Button Variants](/docs/Lotus/Button-Variants).

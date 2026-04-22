@@ -6,70 +6,102 @@ order: 2
 
 # Content
 
-`Content` is the **button map** for a single menu view: which button sits in which slot. It has two halves:
+`Content` is the **live slot map** for a menu view. If a menu currently shows a button in slot 13,
+that fact lives in `Content`.
 
-- **`ContentView`** — the read-only API (`get`, `forEach`).
-- **`ContentEditor`** — the mutation API (`set`, `remove`, `clear`, `fill`, ...).
+Lotus splits the API into two halves:
 
-The `Content` interface extends both, so anywhere you hold a `Content` you can do both.
+- **`ContentView`** for reading
+- **`ContentEditor`** for writing
 
-## Creating content
+`Content` extends both, so in practice you usually just work with `Content`.
 
-Most of the time, you build content with the fluent `ContentBuilder`:
+## Create Content
+
+Most menus should build their initial layout with `Content.builder(...)`:
 
 ```java
-Content c = Content.builder(Capacity.ofRows(3))
-    .set(1, 4, Button.of(paperItem))
+Content content = Content.builder(Capacity.ofRows(3))
+    .set(1, 4, Button.of(new ItemStack(Material.PAPER)))
     .build();
 ```
 
-For ad-hoc mutation (e.g., starting empty and filling imperatively), use `Content.empty`:
+If you need an empty mutable map first, use `Content.empty(...)`:
 
 ```java
-Content c = Content.empty(Capacity.ofRows(3));
-c.set(Slot.of(4), Button.of(item));
+Content content = Content.empty(Capacity.ofRows(3));
+content.set(Slot.of(13), Button.of(new ItemStack(Material.PAPER)));
 ```
 
 :::tip
-Prefer the [`ContentBuilder`](/docs/Lotus/Content-Builder) for initial layout — it reads top-to-bottom like a UI description. Reserve direct mutation for **click-time edits** inside button handlers.
+Use the builder for **initial layout** and direct mutation for **runtime changes**.
+That keeps menu code readable.
 :::
 
-## Reading content
+## Read From Content
 
 ```java
-Optional<Button> maybe = c.get(Slot.of(4));
-c.forEach((slot, button) -> System.out.println(slot + " → " + button));
+Optional<Button> center = content.get(Slot.of(13));
+
+content.forEach((slot, button) -> {
+    System.out.println(slot + " -> " + button.item().getType());
+});
 ```
 
-## Writing content
+You can also stream the raw entries with `entries()`.
+
+## Write To Content
 
 ```java
-c.set(Slot.of(4), Button.of(item));
-c.fill(SlotMask.full(capacity), Button.of(filler));
-c.remove(Slot.of(4));
-c.clear();
+content.set(Slot.of(13), Button.of(icon));
+content.fill(SlotMask.full(content.capacity()), Button.of(filler));
+content.update(Slot.of(13), current -> current.withItem(brighterIcon));
+content.remove(Slot.of(13));
+content.clear();
 ```
 
-All writes happen in-place; the backing `MenuView` will repaint on the next render trigger (after a click dispatch, or when you call `view.refresh()`).
+These mutations happen **in place** on the live content object.
 
-## Merging two contents
+## How Repainting Works
 
-You can overlay one content on top of another — the overlay wins wherever both define a slot:
+If a button mutates content during a click, Lotus repaints the menu automatically after dispatch.
+That is why patterns like this work cleanly:
 
 ```java
-Content base    = ...;
+view.content().update(Slot.of(event.getSlot()), current -> current.withItem(newIcon));
+```
+
+:::warning{label="Refresh Only Rebuilds Content"}
+`view.refresh()` rebuilds **`menu.content(view)` only**. It does **not** recreate the inventory,
+recalculate the title, or resize the menu.
+If your title or capacity needs to change, open a **new** menu view instead.
+:::
+
+## Merge Two Content Maps
+
+You can overlay one content map on another:
+
+```java
+Content base = ...;
 Content overlay = ...;
-Content merged  = base.mergeWith(overlay);
+Content merged = base.mergeWith(overlay);
 ```
 
-## Trimming
+Where both define the same slot, the **overlay wins**.
 
-Useful when building bounded layouts like pagination pages:
+## `trimTo(...)` Is A Low-Level Tool
 
 ```java
-content.trimTo(25);   // drop buttons beyond index 25 (by slot order)
+content.trimTo(25);
 ```
 
-## What's next
+This method exists, but beginners usually do **not** need it. If you are deciding which items
+should appear in a menu, it is usually clearer to limit your source data **before** rendering.
 
-Head to [Menus → Menu Template](/docs/Lotus/Menu-Template) to see how `Content` fits into a full menu.
+## When You Will Touch Content Directly
+
+- inside a button click to swap one slot
+- inside a menu refresh path to rebuild a section
+- inside pagination decorations or renderers
+
+The next page that builds on this is [The Menu Template](/docs/Lotus/Menu-Template).

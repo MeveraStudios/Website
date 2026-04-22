@@ -6,25 +6,49 @@ order: 1
 
 # Data Registry
 
-`DataRegistry` is Lotus's type-safe container for **per-view** and **per-button** state. It replaces the `Map<String, Object>` pattern you'd otherwise reach for, with runtime type checks on both insert and read.
+`DataRegistry` is Lotus's **type-safe state bag** for temporary menu data.
 
-## `Key<T>` — typed identifiers
+Use it when you need a view or a button to remember something like:
 
-A `Key<T>` is a typed identifier: the type is metadata, the **identity is the name**.
+- the current page number
+- the selected category
+- the UUID of the model behind a clicked button
+
+## `Key<T>`
+
+A `Key<T>` names one piece of data and declares the expected type:
 
 ```java
 public final class Keys {
-    public static final Key<Integer> PAGE     = Key.of("page",     Integer.class);
-    public static final Key<UUID>    TARGET   = Key.of("target",   UUID.class);
-    public static final Key<String>  CATEGORY = Key.of("category", String.class);
+    public static final Key<Integer> PAGE = Key.of("page", Integer.class);
+    public static final Key<UUID> TARGET = Key.of("target", UUID.class);
+    public static final Key<String> CATEGORY = Key.of("category", String.class);
 }
 ```
 
 :::tip
-Declare keys as `public static final` constants in a central `Keys` class. Two keys are equal if their names match — define each key **once per concept** and reuse it everywhere.
+Declare keys once in a shared `Keys` class and reuse them. That keeps menu code consistent and
+searchable.
 :::
 
-## `DataRegistry` — the container
+## One Crucial Rule About Keys
+
+Key equality is based on the **name**, not the Java type.
+
+```java
+Key<Integer> PAGE = Key.of("page", Integer.class);
+Key<String> PAGE_TEXT = Key.of("page", String.class);
+```
+
+Those two keys conflict because they share the same name.
+
+:::warning
+Do **not** reuse the same key name for different types. Pick one name per concept and stick to it.
+:::
+
+## `DataRegistry`
+
+The registry API is intentionally small:
 
 ```java
 DataRegistry data = DataRegistry.empty();
@@ -32,82 +56,87 @@ DataRegistry data = DataRegistry.empty();
 data.put(Keys.PAGE, 2);
 data.put(Keys.TARGET, player.getUniqueId());
 
-int page              = data.require(Keys.PAGE);    // throws if missing
-Optional<UUID> target = data.get(Keys.TARGET);      // null-safe
-boolean hasPage       = data.contains(Keys.PAGE);
+int page = data.require(Keys.PAGE);
+Optional<UUID> target = data.get(Keys.TARGET);
+boolean hasPage = data.contains(Keys.PAGE);
 data.remove(Keys.PAGE);
 ```
 
+If the value is missing, `require(...)` throws. If the value exists but has the wrong type,
+Lotus throws a `ClassCastException`.
+
 :::caution
-Type checks run **both** on insert and on read — a wrong-typed value fails fast with a `ClassCastException` instead of becoming a mysterious `NullPointerException` somewhere downstream.
+That type-checking happens on **write** and on **read**, which is exactly what makes the API
+safer than `Map<String, Object>`.
 :::
 
-## Where registries live
+## Where You Will Use It
 
-### Per-view data
+### 1. Per-view state
 
-Every `MenuView` owns a registry. Seed it when opening the menu:
+Every `MenuView` has a registry:
 
 ```java
 DataRegistry seed = DataRegistry.empty()
     .put(Keys.TARGET, target.getUniqueId());
 
-lotus.openMenu(player, menu, seed);
+lotus.openMenu(player, new ProfileMenu(), seed);
 ```
 
-Read it from any hook:
+Later inside the menu:
 
 ```java
-@Override public @NotNull Content content(MenuView<?> view) {
-    UUID target = view.data().require(Keys.TARGET);
-    ...
-}
+UUID target = view.data().require(Keys.TARGET);
 ```
 
-### Per-button data
+### 2. Per-button state
 
-Every `Button` has its own registry too. Stamp each button with the model it represents, then read it back on click:
+Every `Button` also has a registry:
 
 ```java
-Button entry = Button.clickable(head(someone), (view, event) -> {
+Button entry = Button.clickable(icon, (view, event) -> {
     view.content().get(Slot.of(event.getSlot()))
-        .flatMap(b -> b.data().get(Keys.TARGET))
-        .ifPresent(uuid -> inspect(uuid));
+        .flatMap(button -> button.data().get(Keys.TARGET))
+        .ifPresent(this::inspectTarget);
 });
-entry.data().put(Keys.TARGET, someone.getUniqueId());
+
+entry.data().put(Keys.TARGET, targetUuid);
 ```
 
-This pattern scales especially well in **pagination** — the renderer stamps each item button with its backing model's ID, and a single click handler can recover the model from any slot.
+This is a great fit for paginated item lists.
 
-## Idioms
+## Good Retrieval Patterns
 
-**Defaults** — use `get(...).orElse(...)`:
+Use `get(...).orElse(...)` for defaults:
 
 ```java
 int page = view.data().get(Keys.PAGE).orElse(0);
 ```
 
-**Required invariants** — use `require(...)`:
+Use `require(...)` for invariants:
 
 ```java
-UUID target = view.data().require(Keys.TARGET);   // a missing value is a bug
+UUID target = view.data().require(Keys.TARGET);
 ```
 
-**Mutate inside a click handler** — the registry is mutable; changes persist for the life of the view:
+Use mutation when the view state changes:
 
 ```java
 view.data().put(Keys.PAGE, view.data().require(Keys.PAGE) + 1);
-view.refresh();   // re-resolve content with the new state
+view.refresh();
 ```
 
-## What **not** to do
+## What Not To Do
 
-:::danger{label="Anti-patterns"}
-- **Don't share** a single `DataRegistry` between views. One per view, one per button. The framework handles this for you — don't smuggle references around.
-- **Don't use it for cross-player state.** It's per-view. Global plugin state lives in your plugin, not in Lotus.
-- **Don't abuse keys as message passing.** If it's a click → action flow, a `ClickAction` closure captures its data naturally. Keys are for data that outlives any one click.
+:::danger{label="Anti-Patterns"}
+- Do **not** share one `DataRegistry` across several open views.
+- Do **not** use it for long-lived global plugin state.
+- Do **not** invent lots of throwaway key names inline; centralize them.
 :::
 
-## What's next
+## The Simple Heuristic
 
-→ [Pagination](/docs/Lotus/Pagination) — the pattern where per-button `DataRegistry` really shines.
+If the data should live **only as long as the menu or the button lives**, `DataRegistry` is a
+good fit.
+
+Next: [Pagination](/docs/Lotus/Pagination), where per-button data becomes especially useful.

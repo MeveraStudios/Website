@@ -6,117 +6,140 @@ order: 1
 
 # Content Builder
 
-`ContentBuilder` is the fluent DSL for laying out buttons. Internally it wraps a mutable `Content`; call `.build()` when you're done to freeze the layout into a `Content` you return from `Menu.content(...)`.
+`ContentBuilder` is the layout DSL most Lotus menus start with. It is the easiest way to describe
+**what goes where** without dropping down to manual slot mutation.
 
 ```java
-Capacity size = Capacity.ofRows(3);
-
-Content c = Content.builder(size)
-    .fillBorder(Button.of(glassPane()))
-    .set(1, 4, Button.clickable(diamond(), buyAction))
+Content content = Content.builder(Capacity.ofRows(3))
+    .fillBorder(Button.of(filler()))
+    .set(1, 4, Button.clickable(icon(), buyAction))
     .build();
 ```
 
-## Primitives — set a single slot
+## The Core Operations
+
+### Place one button
 
 ```java
-.set(slot, button)                     // by Slot
-.set(row, column, button)              // by coordinates
-.buttons(Map<Slot, Button>)            // bulk write
+.set(Slot.of(13), button)
+.set(1, 4, button)
 ```
 
-## Fills — many slots at once
+The `(row, column)` overload is usually the most readable.
+
+### Place many buttons
 
 ```java
-.fill(mask, button)                    // every slot in the mask
-.fillAll(button)                       // every slot
-.fillBorder(button)                    // perimeter only
+.buttons(Map.of(
+    Slot.of(10), leftButton,
+    Slot.of(13), centerButton,
+    Slot.of(16), rightButton
+))
 ```
 
-`fill(mask, button)` is the most flexible — combine it with `SlotMask` operations:
+### Fill regions
 
 ```java
-.fill(SlotMask.range(size, Slot.of(9), Slot.of(17)), filler)    // middle row
-.fill(SlotMask.full(size).excluding(Slot.of(13)), filler)       // everything but center
+.fill(mask, button)
+.fillAll(button)
+.fillBorder(button)
 ```
 
-:::tip
-`fillBorder` is the idiomatic way to frame a menu. Pair it with a dark-colored stained glass pane for a clean look that players instantly recognise as "this slot isn't for me".
+`fill(...)` becomes especially powerful with `SlotMask`:
+
+```java
+.fill(SlotMask.range(size, Slot.of(9), Slot.of(17)), divider)
+.fill(SlotMask.full(size).excluding(Slot.of(13)), filler)
+```
+
+:::note
+Rows and columns are **zero-based**. `set(1, 4, button)` means the second row and the fifth
+column.
 :::
 
-## Drawing lines
+## Drawing Lines
+
+You can draw until the edge:
 
 ```java
-.draw(start, Direction.RIGHT, button)                    // until the grid edge
-.draw(start, end, Direction.DOWN_RIGHT, button)          // bounded by an end slot
+.draw(Slot.at(1, 1, size), Direction.RIGHT, divider)
 ```
 
-`Direction` covers all four cardinal directions and all four diagonals. The iterator stops at the grid edge or the bounded end.
+Or between two explicit points:
 
-## The `apply` escape hatch
+```java
+.draw(Slot.at(1, 1, size), Slot.at(1, 7, size), Direction.RIGHT, divider)
+```
 
-When the DSL doesn't fit, `apply` hands you the mutable `Content` directly:
+This is useful for separators, outlines, diagonal effects, and guides.
+
+## `apply(...)` — The Escape Hatch
+
+If the fluent methods are not enough, `apply(...)` gives you the raw `Content` object:
 
 ```java
 .apply(content -> {
-    for (int i = 0; i < 9; i++) {
-        if (i % 2 == 0) content.set(Slot.of(i), evenButton);
-        else            content.set(Slot.of(i), oddButton);
+    for (int column = 0; column < 9; column++) {
+        content.set(Slot.at(0, column, size), topRowButton(column));
     }
 })
 ```
 
-:::note
-Reach for `apply` only when you truly need imperative logic — e.g., loops over dynamic counts, conditional placement. If you find yourself using it for static layout, the fluent primitives will read better.
-:::
+That lets you mix a readable DSL with custom loops when needed.
 
-## A complete example
+## A Complete Beginner Layout
 
 ```java
-public @NotNull Content content(MenuView<?> view) {
-    Capacity size = capacity(view);
+public Content content(MenuView<?, ?> view) {
+    Capacity size = view.capacity();
 
     return Content.builder(size)
         .fillBorder(Button.of(filler()))
-        .draw(Slot.at(1, 1, size), Slot.at(1, 7, size),
-              Direction.RIGHT, Button.of(divider()))
-        .set(2, 4, Button.clickable(confirm(),
-            (v, e) -> { commit(v); v.viewer().closeInventory(); }))
-        .set(2, 3, Button.clickable(cancel(),
-            (v, e) -> v.viewer().closeInventory()))
+        .draw(
+            Slot.at(1, 1, size),
+            Slot.at(1, 7, size),
+            Direction.RIGHT,
+            Button.of(divider())
+        )
+        .set(2, 3, Button.clickable(cancelIcon(), (menuView, event) -> {
+            menuView.viewer().closeInventory();
+        }))
+        .set(2, 5, Button.clickable(confirmIcon(), (menuView, event) -> {
+            commit(menuView.viewer());
+            menuView.viewer().closeInventory();
+        }))
         .build();
 }
 ```
 
-## Runtime edits (after `build()`)
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` A confirmation menu opens with a border, a horizontal divider, and
+separate cancel and confirm buttons on the last row.
+</Admonition>
 
-Once you've built the content and it's attached to a view, you're in `ContentEditor` territory — use it to mutate during click handling:
+## What Happens After `.build()`
+
+The result is still a mutable `Content` object. That means later you can do:
 
 ```java
-view.content().set(slot, newButton);
-view.content().update(slot, current -> current.withItem(brighter));
-view.content().remove(slot);
-view.content().clear();
+view.content().set(Slot.of(13), replacement);
+view.content().update(Slot.of(13), current -> current.withItem(highlightedIcon()));
+view.content().remove(Slot.of(13));
 ```
+
+Lotus repaints automatically after button dispatch.
 
 :::tip
-Mutations made inside a click handler appear on the **next repaint**, which Lotus triggers automatically after click dispatch. If you mutate content outside a click (a scheduler task, a network callback), call `view.refresh()` yourself.
+If your mutation happens outside a click handler, call `view.refresh()` to rebuild the menu
+content for that viewer.
 :::
 
-## Merge & trim
+## When To Prefer The Builder
 
-Combine two contents with `mergeWith` (the overlay wins when both define a slot):
+Reach for `ContentBuilder` when:
 
-```java
-Content merged = base.mergeWith(overlay);
-```
+- you are writing the initial menu layout
+- the shape of the menu matters to readability
+- you want future you to understand the menu at a glance
 
-Cap the total button count — useful for bounded pagination layouts:
-
-```java
-content.trimTo(25);
-```
-
-## What's next
-
-→ [Data Registry](/docs/Lotus/Data-Registry) — carry typed state per view and per button.
+Next: [Data Registry](/docs/Lotus/Data-Registry).

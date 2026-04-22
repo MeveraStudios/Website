@@ -6,99 +6,513 @@ order: 1
 
 # Pagination
 
-Lotus pagination has a clean two-layer split:
+Pagination is what you use when your menu has **more items than one inventory can show at once**.
+Instead of cramming everything into one screen, Lotus splits the content into multiple pages and
+adds navigation for you.
 
-- **`Pagination<T>`** — the **recipe**: layout + data source + renderer. Immutable. Safe to store in a `static final`, share across players, and reuse forever.
-- **`PaginationSession<T>`** — a **live navigation**, tied to one player. Knows the current page and snapshot of items.
+If this is your **first GUI framework**, think about pagination like this:
+
+- you describe what one paginated menu should look like
+- Lotus opens that menu for a player
+- Lotus keeps track of which page that player is currently viewing
+
+Lotus splits pagination into a **shared definition** and a **live player session**.
+
+- **`Pagination<T>`** is the reusable recipe
+- **`PaginationSession<T>`** is one player's active run through that recipe
+
+Build the definition once, then open it for as many players as you want.
 
 :::tip
-Build the `Pagination<T>` **once** at boot. Call `.open(lotus, player)` to get a fresh session per viewer.
+`pagination.open(lotus, player)` creates a new session, goes to page `0`, and opens the menu
+immediately.
 :::
 
-## The three ingredients
+:::info
+Page indexes are **zero-based**. That means:
 
-### 1. `PageLayout` — shape shared across every page
+- the first page is index `0`
+- the second page is index `1`
+- the third page is index `2`
 
-Defines the capacity, fill area, navigation buttons, title, and any decorations common to every page.
+That is why the examples use `ctx.pageIndex() + 1` when showing the page number in the menu title.
+Players should see `1`, `2`, `3`, while your code works with `0`, `1`, `2`.
+:::
+
+## The Three Pieces
+
+### 1. `PageLayout`
+
+The layout defines:
+
+- page capacity
+- title
+- fill area for page items
+- previous/next button slots
+- decorative content
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
 ```java
-PageLayout layout = PageLayout.builder(Capacity.ofRows(6))
-    .title(ctx -> Component.text("Shop — page "
-        + (ctx.pageIndex() + 1) + "/" + ctx.totalPages()))
-    .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(arrow("←")))
-    .nextButton    (Slot.at(5, 5, capacity), ctx -> Button.of(arrow("→")))
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+import studio.mevera.lotus.api.slot.SlotMask;
+import studio.mevera.lotus.paper.api.pagination.PaperPageLayout;
+
+Capacity capacity = Capacity.ofRows(6);
+
+PaperPageLayout<TagEntry> layout = PaperPageLayout.<TagEntry>builder(capacity)
+    .title(ctx -> Component.text("Tags " + (ctx.pageIndex() + 1) + "/" + ctx.totalPages()))
+    .fillMask(SlotMask.full(capacity).excluding(
+        Slot.at(5, 3, capacity),
+        Slot.at(5, 5, capacity)
+    ))
+    .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(new ItemStack(Material.ARROW)))
+    .nextButton(Slot.at(5, 5, capacity), ctx -> Button.of(new ItemStack(Material.ARROW)))
     .decorations(ctx -> Content.builder(capacity)
-        .fillBorder(Button.of(filler()))
+        .fillBorder(Button.of(new ItemStack(Material.GRAY_STAINED_GLASS_PANE)))
         .build())
     .build();
 ```
 
-**Defaults:**
-
-| Field              | Default                                                   |
-|--------------------|-----------------------------------------------------------|
-| `title`            | `"Page N"`                                                |
-| `fillMask`         | full capacity **minus** the two nav slots                 |
-| nav button slots   | bottom-left and bottom-right corners                      |
-| `decorations`      | empty                                                     |
-
-Customise the fill mask for more nuanced layouts:
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
 
 ```java
-.fillMask(SlotMask.range(capacity, Slot.of(10), Slot.of(43))
-    .excluding(Slot.of(17), Slot.of(26), Slot.of(35)))
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+import studio.mevera.lotus.api.slot.SlotMask;
+import studio.mevera.lotus.spigot.api.pagination.SpigotPageLayout;
+
+Capacity capacity = Capacity.ofRows(6);
+
+SpigotPageLayout<TagEntry> layout = SpigotPageLayout.<TagEntry>builder(capacity)
+    .title(ctx -> "Tags " + (ctx.pageIndex() + 1) + "/" + ctx.totalPages())
+    .fillMask(SlotMask.full(capacity).excluding(
+        Slot.at(5, 3, capacity),
+        Slot.at(5, 5, capacity)
+    ))
+    .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(new ItemStack(Material.ARROW)))
+    .nextButton(Slot.at(5, 5, capacity), ctx -> Button.of(new ItemStack(Material.ARROW)))
+    .decorations(ctx -> Content.builder(capacity)
+        .fillBorder(Button.of(new ItemStack(Material.STAINED_GLASS_PANE)))
+        .build())
+    .build();
 ```
 
-### 2. `ContentSource<T>` — where items come from
+  </TabItem>
+</Tabs>
 
-Snapshotted once per session:
+### 2. `ContentSource<T>`
+
+The source provides the full list of things you want to show.
+
+For example, in a tags menu, each item in the source could represent one available tag.
+Lotus then splits that list across pages automatically.
+
+There are **two common ways** to create a content source:
 
 ```java
-ContentSource<ShopItem> fixed   = ContentSource.of(shopItems);
-ContentSource<ShopItem> dynamic = ContentSource.dynamic(player -> db.itemsFor(player));
+ContentSource<TagEntry> fixed = ContentSource.of(entries);
+ContentSource<TagEntry> dynamic = ContentSource.dynamic(player -> tagService.entriesFor(player));
 ```
 
-:::caution
-`ContentSource.dynamic` is called **once per session** (at construction time), **not per page**. If you need real-time updates while the menu is open, close and re-open the session.
-:::
+## `ContentSource.of(...)` vs `ContentSource.dynamic(...)`
 
-### 3. `ComponentRenderer<T>` — how to draw one item
+This is one of the most important pagination choices, because it decides **where the page data comes
+from**.
 
-Converts a single item into a `Button`. Receives a `PageContext` so it can react to page state:
+| Option | Best for | What it does |
+| --- | --- | --- |
+| `ContentSource.of(entries)` | Same content for everyone | Reuses one fixed list for every player |
+| `ContentSource.dynamic(player -> ...)` | Per-player content | Builds the list from the current player |
+
+### Use `ContentSource.of(...)` when the list is shared
+
+Use `of(...)` when every player should see the **same items**.
+
+Examples:
+
+- a global tags list
+- a static list of menu actions
+- a help menu with the same entries for everyone
 
 ```java
-ComponentRenderer<ShopItem> renderer = (item, ctx) -> Button.clickable(
-    item.icon(),
-    (view, event) -> buy(view.viewer(), item)
+List<TagEntry> entries = List.of(
+    new TagEntry("Builder", builderIcon),
+    new TagEntry("Champion", championIcon)
+);
+
+ContentSource<TagEntry> source = ContentSource.of(entries);
+```
+
+With `of(...)`, Lotus stores a fixed copy of the list and uses that same list for all viewers.
+
+### Use `ContentSource.dynamic(...)` when the list depends on the player
+
+Use `dynamic(...)` when the items should change depending on **who opened the pagination**.
+
+Examples:
+
+- a friends list
+- a personal mailbox
+- a tags list filtered by the player's rank, world, or progress
+
+```java
+ContentSource<FriendEntry> source = ContentSource.dynamic(
+    player -> friendService.friendsOf(player.getUniqueId())
 );
 ```
 
-## Putting it together
+With `dynamic(...)`, Lotus calls your function with the current player and expects back the list
+that should be shown to that player.
 
-```java
-Pagination<ShopItem> pagination = Pagination.<ShopItem>builder()
-    .layout(layout)
-    .source(source)
-    .renderer(renderer)
-    .trimOverflow(true)   // items past fillMask.size() are discarded (default: true)
-    .build();
-
-PaginationSession<ShopItem> session = pagination.open(lotus, player);
-session.goTo(0);          // or session.next() / session.previous()
-```
-
-:::info
-`pagination.open(...)` returns a session positioned at page 0 **but not yet opened**. Call `goTo(0)` (or any valid page) to actually render the inventory.
+:::caution
+`ContentSource.dynamic(...)` is called **once when the session is created**, not once per page.
+If the backing data changes while a player is browsing, refresh or reopen the session.
 :::
 
-## Session control
+:::info
+`dynamic(...)` does **not** mean "live-updating every second".
+
+It means "build the list dynamically for this player when the pagination session starts".
+After that, the session works with its current snapshot until you reload it or reopen it.
+:::
+
+### Simple mental model
+
+- `of(...)`: "everyone gets this one prepared list"
+- `dynamic(...)`: "build a list for the player who just opened the menu"
+
+### Which one should beginners pick?
+
+- Pick `of(...)` if you already have one list and it should be the same for every player.
+- Pick `dynamic(...)` if your list needs the `Player` to decide what should appear.
+
+If you are unsure, start with `of(...)`. It is simpler. Move to `dynamic(...)` when you actually
+need player-specific results.
+
+### 3. `ComponentRenderer<T, X>`
+
+The renderer tells Lotus how to turn **one item from your source** into **one clickable button in
+the inventory**:
 
 ```java
+ComponentRenderer<TagEntry, ?> renderer = (entry, ctx) -> Button.clickable(
+    entry.icon(),
+    (view, event) -> tagService.select(view.viewer(), entry.id())
+);
+```
+
+## A Complete Definition
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+```java
+record TagEntry(String id, ItemStack icon) {}
+
+Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
+    .layout(layout)
+    .source(ContentSource.dynamic(player -> tagService.entriesFor(player)))
+    .renderer((entry, ctx) -> Button.clickable(
+        entry.icon(),
+        (view, event) -> tagService.select(view.viewer(), entry.id())
+    ))
+    .build();
+
+pagination.open(lotus, player);
+```
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+record TagEntry(String id, ItemStack icon) {}
+
+Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
+    .layout(layout)
+    .source(ContentSource.dynamic(player -> tagService.entriesFor(player)))
+    .renderer((entry, ctx) -> Button.clickable(
+        entry.icon(),
+        (view, event) -> tagService.select(view.viewer(), entry.id())
+    ))
+    .build();
+
+pagination.open(lotus, player);
+```
+
+  </TabItem>
+</Tabs>
+
+## Full End-to-End Example
+
+This example shows the whole flow in one place:
+
+- create the Lotus runtime
+- build one shared pagination definition
+- load player-specific entries
+- open the pagination from a command
+- refresh already-open views after data changes
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+```java
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.pagination.ContentSource;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+import studio.mevera.lotus.api.slot.SlotMask;
+import studio.mevera.lotus.paper.ItemBuilder;
+import studio.mevera.lotus.paper.PaperLotus;
+import studio.mevera.lotus.paper.api.pagination.Pagination;
+import studio.mevera.lotus.paper.api.pagination.PaperPageLayout;
+
+import java.util.List;
+
+public final class TagsPlugin extends JavaPlugin {
+
+    private Lotus<Component> lotus;
+    private TagService tagService;
+    private Pagination<TagEntry> tagPagination;
+
+    @Override
+    public void onEnable() {
+        this.lotus = PaperLotus.create(this);
+        this.tagService = new TagService();
+        this.tagPagination = createTagsPagination();
+
+        getCommand("tags").setExecutor((sender, command, label, args) -> {
+            if (!(sender instanceof Player player)) {
+                return true;
+            }
+
+            tagPagination.open(lotus, player);
+            return true;
+        });
+    }
+
+    private Pagination<TagEntry> createTagsPagination() {
+        Capacity capacity = Capacity.ofRows(6);
+
+        PaperPageLayout<TagEntry> layout = PaperPageLayout.<TagEntry>builder(capacity)
+            .title(ctx -> Component.text(
+                "Tags " + (ctx.pageIndex() + 1) + "/" + ctx.totalPages(),
+                NamedTextColor.GOLD
+            ))
+            .fillMask(SlotMask.full(capacity).excluding(
+                Slot.at(5, 3, capacity),
+                Slot.at(5, 5, capacity)
+            ))
+            .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(
+                ItemBuilder.of(Material.ARROW)
+                    .displayName(Component.text("Previous Page", NamedTextColor.YELLOW))
+                    .build()
+            ))
+            .nextButton(Slot.at(5, 5, capacity), ctx -> Button.of(
+                ItemBuilder.of(Material.ARROW)
+                    .displayName(Component.text("Next Page", NamedTextColor.YELLOW))
+                    .build()
+            ))
+            .build();
+
+        return Pagination.<TagEntry>builder("tags")
+            .layout(layout)
+            .source(ContentSource.dynamic(player -> tagService.entriesFor(player)))
+            .renderer((entry, ctx) -> Button.clickable(
+                entry.icon(),
+                (view, event) -> {
+                    tagService.select(view.viewer(), entry.id());
+                    PaperLotus.syncOpenPagination(lotus, "tags", view.viewer());
+                }
+            ))
+            .build();
+    }
+
+    public void refreshTagsForAllPlayers() {
+        PaperLotus.syncOpenPagination(lotus, "tags");
+    }
+
+    public record TagEntry(String id, ItemStack icon) {}
+
+    public static final class TagService {
+
+        public List<TagEntry> entriesFor(Player player) {
+            return List.of(
+                new TagEntry("builder", ItemBuilder.of(Material.NAME_TAG)
+                    .displayName(Component.text("Builder", NamedTextColor.AQUA))
+                    .lore(Component.text("Shown for creative players", NamedTextColor.GRAY))
+                    .build()),
+                new TagEntry("champion", ItemBuilder.of(Material.NAME_TAG)
+                    .displayName(Component.text("Champion", NamedTextColor.GOLD))
+                    .lore(Component.text("Shown for ranked players", NamedTextColor.GRAY))
+                    .build())
+            );
+        }
+
+        public void select(Player player, String tagId) {
+            player.sendMessage(Component.text("Selected tag: " + tagId, NamedTextColor.GREEN));
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.pagination.ContentSource;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.api.slot.Slot;
+import studio.mevera.lotus.api.slot.SlotMask;
+import studio.mevera.lotus.spigot.ItemBuilder;
+import studio.mevera.lotus.spigot.SpigotLotus;
+import studio.mevera.lotus.spigot.api.pagination.Pagination;
+import studio.mevera.lotus.spigot.api.pagination.SpigotPageLayout;
+
+import java.util.List;
+
+public final class TagsPlugin extends JavaPlugin {
+
+    private Lotus<String> lotus;
+    private TagService tagService;
+    private Pagination<TagEntry> tagPagination;
+
+    @Override
+    public void onEnable() {
+        this.lotus = SpigotLotus.create(this);
+        this.tagService = new TagService();
+        this.tagPagination = createTagsPagination();
+
+        getCommand("tags").setExecutor((sender, command, label, args) -> {
+            if (!(sender instanceof Player player)) {
+                return true;
+            }
+
+            tagPagination.open(lotus, player);
+            return true;
+        });
+    }
+
+    private Pagination<TagEntry> createTagsPagination() {
+        Capacity capacity = Capacity.ofRows(6);
+
+        SpigotPageLayout<TagEntry> layout = SpigotPageLayout.<TagEntry>builder(capacity)
+            .title(ctx -> "&6Tags " + (ctx.pageIndex() + 1) + "/" + ctx.totalPages())
+            .fillMask(SlotMask.full(capacity).excluding(
+                Slot.at(5, 3, capacity),
+                Slot.at(5, 5, capacity)
+            ))
+            .previousButton(Slot.at(5, 3, capacity), ctx -> Button.of(
+                ItemBuilder.of(Material.ARROW)
+                    .displayName("&ePrevious Page")
+                    .build()
+            ))
+            .nextButton(Slot.at(5, 5, capacity), ctx -> Button.of(
+                ItemBuilder.of(Material.ARROW)
+                    .displayName("&eNext Page")
+                    .build()
+            ))
+            .build();
+
+        return Pagination.<TagEntry>builder("tags")
+            .layout(layout)
+            .source(ContentSource.dynamic(player -> tagService.entriesFor(player)))
+            .renderer((entry, ctx) -> Button.clickable(
+                entry.icon(),
+                (view, event) -> {
+                    tagService.select(view.viewer(), entry.id());
+                    SpigotLotus.syncOpenPagination(lotus, "tags", view.viewer());
+                }
+            ))
+            .build();
+    }
+
+    public void refreshTagsForAllPlayers() {
+        SpigotLotus.syncOpenPagination(lotus, "tags");
+    }
+
+    public record TagEntry(String id, ItemStack icon) {}
+
+    public static final class TagService {
+
+        public List<TagEntry> entriesFor(Player player) {
+            return List.of(
+                new TagEntry("builder", ItemBuilder.of(Material.NAME_TAG)
+                    .displayName("&bBuilder")
+                    .lore("&7Shown for creative players")
+                    .build()),
+                new TagEntry("champion", ItemBuilder.of(Material.NAME_TAG)
+                    .displayName("&6Champion")
+                    .lore("&7Shown for ranked players")
+                    .build())
+            );
+        }
+
+        public void select(Player player, String tagId) {
+            player.sendMessage("Selected tag: " + tagId);
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` A multi-page tags browser opens with decorative borders, page
+navigation arrows, and clickable tag entries that change as the player navigates between pages.
+</Admonition>
+
+## The Session API
+
+When you open a pagination, Lotus returns a **session**.
+
+The session is the object that remembers things like:
+
+- which player opened the pagination
+- which page they are currently on
+- how many total pages currently exist
+
+Opening a pagination returns that live session:
+
+```java
+PaginationSession<?, ?, ?> session = pagination.open(lotus, player);
+
 session.next();
 session.previous();
-session.goTo(3);
+session.goTo(2);
+session.reload();
 session.close();
+```
 
+Useful reads:
+
+```java
 session.currentIndex();
 session.totalPages();
 session.isFirst();
@@ -107,49 +521,104 @@ session.viewer();
 session.definition();
 ```
 
-- `next()` / `previous()` are **bounded** — they're no-ops at the edges.
-- `goTo(i)` validates against `totalPages` — out of range throws `IndexOutOfBoundsException`.
-- `close()` is **idempotent**.
-- After `close()`, further `goTo` throws `IllegalStateException`.
+:::tip
+`session.goTo(0)` means "go to the first page", not "go to page one".
+If you want to show page numbers to players, usually display `currentIndex() + 1`.
+:::
 
-## `PageContext` — the read-only snapshot
+## Refreshing Already Open Pagination Views
 
-Passed to every layout and renderer hook:
+There are **two** ways to refresh pagination UIs that players already have open.
+
+### 1. If you already hold the session
+
+Call `reload()`:
 
 ```java
-public record PageContext(
-    int pageIndex,
-    int totalPages,
-    Player viewer,
-    PaginationSession<?> session
-) {
-    boolean isFirst();
-    boolean isLast();
+session.reload();
+```
+
+That rebuilds the session snapshot, recalculates page count, and reopens the current page.
+
+### 2. If you only know the pagination definition ID
+
+Each pagination definition has an ID, which is the string you pass to `Pagination.builder("...")`.
+If you want to refresh open views by that ID, use the platform helper.
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+```java
+PaperLotus.syncOpenPagination(lotus, "tags", player);
+PaperLotus.syncOpenPagination(lotus, "tags");
+```
+
+The first overload checks **one player's** currently open view.
+
+The second overload checks **all open views** managed by that `Lotus<Component>` instance.
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+SpigotLotus.syncOpenPagination(lotus, "tags", player);
+SpigotLotus.syncOpenPagination(lotus, "tags");
+```
+
+The first overload checks **one player's** currently open view.
+
+The second overload checks **all open views** managed by that `Lotus<String>` instance.
+
+  </TabItem>
+</Tabs>
+
+:::info
+These helpers only reload views whose currently displayed pagination definition ID matches the
+given value, so they are safe to call even when other menus are open.
+:::
+
+## What `PageContext` Gives You
+
+Every layout and renderer callback receives a page context with:
+
+- `pageIndex()`
+- `totalPages()`
+- `viewer()`
+- `session()`
+- `isFirst()`
+- `isLast()`
+
+That lets you:
+
+- show `Page 3/8` in the title
+- hide or change edge navigation buttons
+- reach back into the session when needed
+
+The most common one for beginners is `pageIndex()`.
+Remember: `pageIndex()` starts at `0`, so the first page is `0`.
+
+:::warning
+For pagination fill order, prefer masks like `SlotMask.full(...).excluding(...)` or
+`SlotMask.range(...).excluding(...)`. They make the item flow predictable and easy to reason about.
+:::
+
+## A Good Reuse Pattern
+
+Pagination definitions are immutable, so they are good candidates for shared constants:
+
+```java
+public final class TagPages {
+
+    public static final Pagination<TagEntry> TAGS = build();
+
+    private static Pagination<TagEntry> build() {
+        return Pagination.<TagEntry>builder("tags")
+            .layout(layout)
+            .source(source)
+            .renderer(renderer)
+            .build();
+    }
 }
 ```
 
-Use it to hide nav on edges, show `"Page 3/12"` in titles, or re-open the parent menu from a decoration button.
-
-## Reusing a definition
-
-A `Pagination<T>` is immutable — share it freely:
-
-```java
-public final class Shop {
-    public static final Pagination<ShopItem> PAGINATION = build();
-
-    private static Pagination<ShopItem> build() {
-        return Pagination.<ShopItem>builder()...build();
-    }
-
-    public static void open(Lotus lotus, Player p) {
-        PAGINATION.open(lotus, p).goTo(0);
-    }
-}
-```
-
-Each `open` spawns a fresh session with its own snapshot and page cursor. **No shared state to corrupt.**
-
-## What's next
-
-→ [Advanced](/docs/Lotus/Advanced) — options, custom openers, lifecycle details, and package layout.
+Next: [Advanced](/docs/Lotus/Advanced) for sync helpers, custom openers, and deeper extension points.

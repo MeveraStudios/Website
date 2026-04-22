@@ -6,51 +6,64 @@ order: 1
 
 # Button Variants
 
-`Button` is a **sealed interface** with exactly six implementations, each a Java `record`. You never implement `Button` yourself — you pick a variant through a static factory.
+`Button` is a **sealed interface** with six built-in variants. You do **not** implement it
+yourself. You choose the variant that matches the behavior you want.
 
-| Variant              | Purpose                                               |
-|----------------------|-------------------------------------------------------|
-| `StaticButton`       | Display-only; clicking does nothing                   |
-| `ClickableButton`    | Runs a `ClickAction` on click                         |
-| `TransformingButton` | Replaces itself in the view on click                  |
-| `SpanningButton`     | One logical button across multiple slots              |
-| `CompositeButton`    | Dispatches click to several children in order         |
-| `CycleButton`        | N-state button; each click advances to the next state |
+| Variant | Use it for |
+| --- | --- |
+| `StaticButton` | Decoration or labels |
+| `ClickableButton` | Normal clickable actions |
+| `TransformingButton` | Replace this slot after a click |
+| `SpanningButton` | One logical button across multiple slots |
+| `CompositeButton` | One click triggering several child actions |
+| `CycleButton` | Repeating state changes like toggles |
 
-All six share `item()`, `data()`, `withItem(...)`, and `dispatch(view, event)`.
+All buttons expose:
 
-:::info
-Because `Button` is sealed, the compiler can exhaustively check `switch` expressions over it — add a new variant and every consumer will refuse to compile until it handles the new case. In practice, you rarely need to switch; factories and polymorphism cover most use cases.
-:::
+- `item()`
+- `data()`
+- `withItem(...)`
+- `dispatch(...)`
 
-## Static — display only
+## 1. `StaticButton`
 
 ```java
-Button b = Button.of(new ItemStack(Material.PAPER));
+Button filler = Button.of(new ItemStack(Material.PAPER));
 ```
 
-No behaviour. Use for labels, decorations, borders, separators.
+This is the simplest option. It shows an item and does nothing on click.
 
-## Clickable — run an action
+Use it for:
+
+- borders
+- separators
+- titles
+- blank filler slots
+
+## 2. `ClickableButton`
 
 ```java
-Button b = Button.clickable(
+Button buyButton = Button.clickable(
     new ItemStack(Material.DIAMOND),
-    (view, event) -> view.viewer().sendMessage("clicked!")
+    (view, event) -> view.viewer().sendMessage("Bought!")
 );
 ```
 
-`ClickAction` is a functional interface, so it composes cleanly:
+This is the default choice for most real menu actions.
+
+`ClickAction` also composes:
 
 ```java
-ClickAction playSound = (v, e) -> v.viewer().playSound(...);
-ClickAction sendMsg   = (v, e) -> v.viewer().sendMessage("hi");
-ClickAction both      = playSound.andThen(sendMsg);
+ClickAction playSound = (view, event) -> playShopSound(view.viewer());
+ClickAction sendMessage = (view, event) -> view.viewer().sendMessage("Bought!");
+
+ClickAction action = playSound.andThen(sendMessage);
+Button buyButton = Button.clickable(new ItemStack(Material.DIAMOND), action);
 ```
 
-## Transforming — swap itself on click
+## 3. `TransformingButton`
 
-The button decides **at click time** what should replace it in the view:
+Use this when a slot should **change into a different button** after being clicked.
 
 ```java
 Button toggle = Button.transforming(
@@ -59,84 +72,109 @@ Button toggle = Button.transforming(
 );
 ```
 
-Return `null` from the transformer to leave the slot unchanged.
+Returning `null` leaves the slot unchanged.
 
 :::tip
-`TransformingButton` is right for **one-shot state flips** ("reveal the answer", "consume this action"). For repeating state cycles (OFF → WHITELIST → BLACKLIST → OFF), use `CycleButton` instead — it's purpose-built for that.
+`TransformingButton` is ideal for **one-way** or **one-step** changes.
+If the slot should keep cycling through several states, use `CycleButton` instead.
 :::
 
-## Spanning — one button, many slots
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` Clicking a lamp button swaps the slot from an "off" icon to an "on"
+icon in the same position.
+</Admonition>
 
-A single button whose visual and click target occupy **multiple slots** — banners, multi-cell icons, region selectors.
+## 4. `SpanningButton`
+
+Use this when several slots should behave like **one large button**.
 
 ```java
 SpanningButton banner = Button.spanning(
-    new ItemStack(Material.ORANGE_BANNER),
-    Set.of(Slot.of(0), Slot.of(1), Slot.of(2)),   // footprint
-    (view, event) -> view.viewer().sendMessage("banner!")
+    new ItemStack(Material.WOOL),
+    Set.of(Slot.of(10), Slot.of(11), Slot.of(12)),
+    (view, event) -> view.viewer().sendMessage("Banner clicked")
 );
 
-content.placeSpanning(banner);   // writes the same instance to every footprint slot
+content.placeSpanning(banner);
 ```
 
-The click fires **once per event**, no matter which slot inside the footprint was clicked. `event.getSlot()` still tells you where the player actually clicked.
+Every slot in the footprint points to the **same button instance**.
 
 :::caution
-Removing a spanning button requires clearing **every slot** in its footprint. Clearing only one slot leaves orphaned copies visible. Either iterate the footprint explicitly or `content.clear()` + rebuild.
+To remove a spanning button cleanly, clear **every slot in its footprint**. Removing only one slot
+leaves the rest visible.
 :::
 
-## Composite — one item, many effects
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` A single wide banner occupies several adjacent slots and clicking any
+part of it triggers the same action.
+</Admonition>
 
-Part of the GoF Composite pattern. The composite's item is the only one rendered; each child's action fires in declaration order:
+## 5. `CompositeButton`
+
+Use this when one click should run **several child buttons in order**.
 
 ```java
+ItemStack icon = new ItemStack(Material.EMERALD);
+
 Button button = Button.composite(
-    new ItemStack(Material.EMERALD),
-    Button.clickable(item, (v, e) -> playSound(v)),
-    Button.clickable(item, (v, e) -> message(v)),
-    Button.clickable(item, (v, e) -> runCommand(v))
+    icon,
+    Button.clickable(icon, (view, event) -> playShopSound(view.viewer())),
+    Button.clickable(icon, (view, event) -> view.viewer().sendMessage("Purchased")),
+    Button.clickable(icon, (view, event) -> grantReward(view.viewer()))
 );
 ```
 
-:::danger{label="READ THIS"}
-**Don't** mix `TransformingButton` or `CycleButton` children inside a composite. The first mutating child wins and the later children will dispatch against a stale button slot. Compose pure side-effects only.
+The composite's own `item()` is what gets rendered. Child items are ignored visually.
+
+:::danger{label="Do Not Mix Mutating Children"}
+Avoid putting `TransformingButton` or `CycleButton` inside a `CompositeButton`. Mutating children
+change the clicked slot while later children are still trying to run.
 :::
 
-## Cycle — multi-state
+## 6. `CycleButton`
 
-Each click advances to the next state, wrapping at the end.
+Use this for repeated state progression:
 
 ```java
-Button filter = Button.cycle(
-    Button.clickable(off(),       (v, e) -> setFilter(v, "OFF")),
-    Button.clickable(whitelist(), (v, e) -> setFilter(v, "WHITELIST")),
-    Button.clickable(blacklist(), (v, e) -> setFilter(v, "BLACKLIST"))
+Button filterButton = Button.cycle(
+    Button.clickable(offIcon(), (view, event) -> setFilter(view, "OFF")),
+    Button.clickable(whitelistIcon(), (view, event) -> setFilter(view, "WHITELIST")),
+    Button.clickable(blacklistIcon(), (view, event) -> setFilter(view, "BLACKLIST"))
 );
 ```
 
-- The displayed item always comes from the **active** state.
-- On click, the active state's own `dispatch` runs **first** (so each state can have its own side-effect), **then** the view's content is updated to an advanced copy.
-- `CycleButton` is immutable — "advancing" creates a new instance and writes it back to the slot.
+What happens on click:
 
-Use for toggles, difficulty selectors, page-size pickers.
+1. the current state's own action runs
+2. Lotus creates the next `CycleButton`
+3. Lotus writes that new button back into the slot
 
-## Attaching data to a button
+:::info
+`CycleButton` is immutable. The slot advances by replacing itself with a **new** cycle instance.
+:::
 
-Every button carries its own `DataRegistry`. Attach metadata, read it back on click:
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` Repeated clicks on one slot rotate through OFF, WHITELIST, and
+BLACKLIST visual states.
+</Admonition>
+
+## Attaching Data To A Button
+
+Each button carries its own `DataRegistry`, which is perfect for storing model IDs:
 
 ```java
 Key<UUID> TARGET = Key.of("target", UUID.class);
 
-ClickableButton b = Button.clickable(item, (view, event) -> {
+ClickableButton playerButton = Button.clickable(icon, (view, event) -> {
     view.content().get(Slot.of(event.getSlot()))
-        .flatMap(btn -> btn.data().get(TARGET))
-        .ifPresent(uuid -> inspect(uuid));
+        .flatMap(button -> button.data().get(TARGET))
+        .ifPresent(this::inspectPlayer);
 });
-b.data().put(TARGET, somePlayer.getUniqueId());
+
+playerButton.data().put(TARGET, somePlayer.getUniqueId());
 ```
 
-See [Data Registry](/docs/Lotus/Data-Registry) for the full pattern and when to use it.
+This pattern becomes especially useful in pagination.
 
-## What's next
-
-→ [Content Builder](/docs/Lotus/Content-Builder) — the DSL for placing all these buttons on a grid.
+Next: [Content Builder](/docs/Lotus/Content-Builder).

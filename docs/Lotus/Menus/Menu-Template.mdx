@@ -1,74 +1,167 @@
 ---
 title: The Menu Template
-description: How to implement the Menu interface — title, capacity, content, and optional metadata.
+description: How to implement Menu<C> — title, capacity, content, and optional metadata.
 order: 1
 ---
 
 # The Menu Template
 
-A `Menu` is a **template**: a description of what the inventory should look like. It is not tied to any specific player — Lotus resolves the template per player when the menu is opened, producing a `MenuView`.
+A `Menu<C>` is the **blueprint** of a screen. It is not the live inventory itself.
 
-## Required methods
+When you call `lotus.openMenu(...)`, Lotus resolves that template for one player and creates a
+`MenuView<C, M>`.
+
+## What `C` Means
+
+`C` is the **title type**:
+
+- **Paper** uses `Component`
+- **Spigot** uses `String`
+
+That is why most plugin authors implement one of these:
+
+- `PaperMenu` on Paper
+- `Menu<String>` on Spigot
+
+## The Three Required Methods
+
+Every menu answers the same three questions:
+
+1. **What is the title?**
+2. **How big is the inventory?**
+3. **What content should be rendered?**
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
 ```java
-public final class ProfileMenu implements Menu {
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.paper.api.menu.PaperMenu;
 
-    @Override public @NotNull Component title(MenuView<?> view) {
-        return Component.text(view.viewer().getName() + "'s profile");
+public final class ProfileMenu implements PaperMenu {
+
+    @Override
+    public Component title(MenuView<Component, ?> view) {
+        return Component.text(view.viewer().getName() + "'s Profile");
     }
 
-    @Override public @NotNull Capacity capacity(MenuView<?> view) {
+    @Override
+    public Capacity capacity(MenuView<Component, ?> view) {
         return Capacity.ofRows(3);
     }
 
-    @Override public @NotNull Content content(MenuView<?> view) {
-        return Content.builder(capacity(view))
-            .set(1, 4, Button.of(head(view.viewer())))
+    @Override
+    public Content content(MenuView<Component, ?> view) {
+        return Content.builder(view.capacity())
+            .set(1, 4, Button.of(new ItemStack(Material.PLAYER_HEAD)))
             .build();
     }
 }
 ```
 
-All three hooks receive the live `MenuView<?>`, so they can vary by player, data registry state, time of day — anything.
-
-:::tip
-Treat `title`, `capacity`, and `content` as **pure functions of the view**. If you need to cache expensive lookups, stash them in the view's [`DataRegistry`](/docs/Lotus/Data-Registry), not in plugin-global state.
-:::
-
-## Optional methods
-
-| Method   | Default              | Purpose                                              |
-|----------|----------------------|------------------------------------------------------|
-| `name()` | class simple name    | Used by `lotus.registerMenu` / `openMenu(player, name)` |
-| `type()` | `InventoryType.CHEST`| Underlying Bukkit inventory type                     |
-
-Override `name()` when you want command-driven opens:
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
 
 ```java
-@Override public @NotNull String name() { return "profile"; }
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.Menu;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+
+public final class ProfileMenu implements Menu<String> {
+
+    @Override
+    public String title(MenuView<String, ?> view) {
+        return ChatColor.GOLD + view.viewer().getName() + "'s Profile";
+    }
+
+    @Override
+    public Capacity capacity(MenuView<String, ?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public Content content(MenuView<String, ?> view) {
+        return Content.builder(view.capacity())
+            .set(1, 4, Button.of(new ItemStack(Material.SKULL_ITEM)))
+            .build();
+    }
+}
 ```
 
-Override `type()` only if you need a non-chest inventory (e.g., `HOPPER`, `DISPENSER`):
+  </TabItem>
+</Tabs>
+
+:::tip
+Treat `title(...)`, `capacity(...)`, and `content(...)` as **pure functions of the current view**.
+If data comes from elsewhere, read it from the view's `DataRegistry` or from your own service layer.
+:::
+
+## Optional Methods You Will Actually Use
+
+| Method | Default | Why override it |
+| --- | --- | --- |
+| `name()` | class simple name | Open menus by string, such as commands or config |
+| `type()` | `InventoryType.CHEST` | Use `HOPPER`, `DISPENSER`, `WORKBENCH`, and so on |
+
+### `name()`
 
 ```java
-@Override public @NotNull InventoryType type() { return InventoryType.HOPPER; }
+@Override
+public String name() {
+    return "profile";
+}
+```
+
+### `type()`
+
+```java
+@Override
+public InventoryType type() {
+    return InventoryType.HOPPER;
+}
 ```
 
 :::caution
-When using a non-chest `type()`, pair it with a matching `Capacity.of(InventoryType.X)` so the grid lines up with the underlying inventory.
+Make sure `type()` and `capacity()` agree with each other. If you return `InventoryType.HOPPER`,
+use a hopper-sized capacity such as `Capacity.of(InventoryType.HOPPER)`.
+For chest menus with 1-6 rows, keep `type()` as `CHEST` and use `Capacity.ofRows(...)`.
 :::
 
-## Opening a menu
+## Opening A Menu
 
 ```java
-lotus.openMenu(player, menu);                              // fresh DataRegistry
-lotus.openMenu(player, menu, DataRegistry.empty()
-    .put(Keys.TARGET, target.getUniqueId()));              // seeded with state
-lotus.openMenu(player, "profile");                         // requires registerMenu()
+lotus.openMenu(player, new ProfileMenu());
 ```
 
-Each call returns the `MenuView<M>` for further interaction.
+You can also seed the new view with data:
 
-## What's next
+```java
+DataRegistry seed = DataRegistry.empty()
+    .put(Keys.TARGET, target.getUniqueId());
 
-→ [The Menu View](/docs/Lotus/Menu-View) — the live, per-player side of a menu.
+lotus.openMenu(player, new ProfileMenu(), seed);
+```
+
+And if the menu was registered earlier:
+
+```java
+lotus.openMenu(player, "profile");
+```
+
+## Good Beginner Habit
+
+Keep the menu class focused on **presentation**. Let your plugin services fetch or mutate the
+real data, and let the menu turn that data into buttons.
+
+Next: [The Menu View](/docs/Lotus/Menu-View), the live object you receive everywhere else.

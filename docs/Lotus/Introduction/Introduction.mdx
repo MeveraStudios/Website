@@ -1,69 +1,286 @@
 ---
 title: Introduction
-description: What Lotus is, why it exists, and a one-minute tour of a working menu.
+description: What Lotus is, why it exists, and a quick tour for both Paper and Spigot.
 order: 1
 ---
 
-# What is Lotus?
+# Lotus At A Glance
 
-**Lotus** is a modern, type-safe **GUI framework for Paper/Spigot** servers. It lets you design chest-style inventories declaratively — you describe *what* a menu should look like, and Lotus handles the rest: rendering, click routing, repainting, pagination, and per-player state.
+**Lotus** is a **menu framework for Bukkit-based plugins**. You describe a menu in terms of
+**title**, **capacity**, **content**, and **button behavior**, then Lotus handles the boring
+runtime work for you: opening inventories, tracking live views, dispatching clicks, repainting
+buttons, and building paginated screens.
 
-## Why Lotus?
+If you are coming from raw Bukkit `Inventory` code, Lotus removes the three big pain points:
 
-Writing GUIs directly against the Bukkit `Inventory` API gets painful fast — raw slot math, listener boilerplate, mutable state scattered across your plugin, and no safety net when you forget to cancel a click.
+- **slot math everywhere**
+- **listener boilerplate everywhere**
+- **state scattered across unrelated classes**
 
-Lotus replaces all of that with a small, sealed vocabulary:
+## Which module do you use?
 
-- **`Menu`** — an immutable template (title, capacity, content) resolved per player.
-- **`MenuView`** — the live session for one viewer, carrying its own state.
-- **`Button`** — a sealed set of six variants covering everything from plain icons to multi-state cycles.
-- **`Content`** / **`ContentBuilder`** — a fluent DSL for placing buttons using slots, ranges, masks, and directional lines.
-- **`DataRegistry`** — typed per-view state to replace `Map<String, Object>`.
-- **`Pagination`** — immutable definition paired with a per-player session.
+Lotus is split into **three** modules:
 
-:::tip
-If you've used frameworks like React or Jetpack Compose, the mental model will feel familiar — you describe the UI as a function of state, and the framework repaints when state changes.
+| Module | Purpose | Use it directly? |
+| --- | --- | --- |
+| `lotus-commons` | Shared core runtime and API | **No** |
+| `lotus-paper` | Paper `1.21+` integration | **Yes**, on Paper |
+| `lotus-spigot` | Spigot `1.8.8` integration | **Yes**, on Spigot |
+
+You add **exactly one** platform module to your plugin: `lotus-paper` or `lotus-spigot`.
+`lotus-commons` comes in automatically.
+
+:::info
+These docs are written against the **current Lotus 2.x source API** from the `Lotus` repository,
+including the multi-module split and the platform-specific builders.
 :::
 
-## One-minute tour
+## The Mental Model
 
-Here's a fully working three-row chest menu with a bordered frame and a clickable diamond in the center:
+You only need a few concepts to be productive:
+
+- **`Lotus<C>`** is the runtime you create once in `onEnable()`.
+- **`Menu<C>`** is the template that describes one screen.
+- **`MenuView<C, M>`** is the live, per-player instance of that menu.
+- **`Content`** is the slot-to-button map inside a view.
+- **`Button`** is the clickable or decorative thing placed in a slot.
+- **`Pagination<T>`** is a reusable page definition that opens a fresh session per player.
+
+:::tip
+The easiest way to think about Lotus is: **a menu is a function of the current view state**.
+When the state changes, Lotus can repaint what the player sees.
+:::
+
+## Quick Tour
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+Add the repository configuration that matches your build tool:
+
+<Tabs defaultValue="maven">
+  <TabItem value="maven" label="Maven">
+
+```xml
+<repositories>
+  <repository>
+    <id>papermc-repo</id>
+    <url>https://repo.papermc.io/repository/maven-public/</url>
+  </repository>
+</repositories>
+```
+
+  </TabItem>
+  <TabItem value="gradle-groovy" label="Gradle (Groovy)">
+
+```groovy
+repositories {
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    mavenCentral()
+}
+```
+
+  </TabItem>
+  <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
+
+```kotlin
+repositories {
+    maven("https://repo.papermc.io/repository/maven-public/")
+    mavenCentral()
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Then add the Paper artifact:
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="Lotus"
+    group="studio.mevera"
+    id="lotus-paper"
+/>
+
+Minimal Paper setup:
 
 ```java
-Lotus lotus = Lotus.builder(this).debug(true).build();
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.paper.PaperLotus;
+import studio.mevera.lotus.paper.api.menu.PaperMenu;
 
-public final class ShopMenu implements Menu {
-    @Override public @NotNull Capacity capacity(MenuView<?> view) {
-        return Capacity.ofRows(3);
+public final class MyPlugin extends JavaPlugin {
+
+    private Lotus<Component> lotus;
+
+    @Override
+    public void onEnable() {
+        this.lotus = PaperLotus.create(this);
     }
 
-    @Override public @NotNull Component title(MenuView<?> view) {
-        return Component.text("Shop");
-    }
-
-    @Override public @NotNull Content content(MenuView<?> view) {
-        return Content.builder(capacity(view))
-            .fillBorder(Button.of(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)))
-            .set(1, 4, Button.clickable(
-                new ItemStack(Material.DIAMOND),
-                (v, e) -> v.viewer().sendMessage("Bought!")))
-            .build();
+    public void openWelcome(Player player) {
+        lotus.openMenu(player, new WelcomeMenu());
     }
 }
 
-lotus.openMenu(player, new ShopMenu());
+final class WelcomeMenu implements PaperMenu {
+
+    @Override
+    public Component title(MenuView<Component, ?> view) {
+        return Component.text("Welcome");
+    }
+
+    @Override
+    public Capacity capacity(MenuView<Component, ?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public Content content(MenuView<Component, ?> view) {
+        return Content.builder(view.capacity())
+            .fillBorder(Button.of(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)))
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.PAPER),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(Component.text("Hello from Lotus!"))
+            ))
+            .build();
+    }
+}
 ```
 
-That's the whole menu. No listeners, no slot arithmetic, no mutable global state.
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
 
-## Where to go next
+Add the repository configuration that matches your build tool:
 
-1. [Getting Started](/docs/Lotus/Getting-Started) — install Lotus and boot it once per plugin.
-2. [Your First Menu](/docs/Lotus/First-Menu) — a guided walkthrough of the menu above.
-3. [Core Concepts](/docs/Lotus/Capacity-and-Slots) — the vocabulary (`Slot`, `Capacity`, `SlotMask`).
-4. [Menus](/docs/Lotus/Menu-Template) — templates, views, and lifecycle hooks.
-5. [Buttons](/docs/Lotus/Button-Variants) — the six button variants and when to reach for each.
+<Tabs defaultValue="maven">
+  <TabItem value="maven" label="Maven">
 
-:::info
-These docs assume **Lotus 2.x**. The older `getTitle(DataRegistry, Player)` / `getCapacity(DataRegistry, Player)` API has been replaced by the `MenuView<?>`-based signatures shown throughout these pages.
+```xml
+<repositories>
+  <repository>
+    <id>spigotmc-repo</id>
+    <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+  </repository>
+  <repository>
+    <id>sonatype-snapshots</id>
+    <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+  </repository>
+</repositories>
+```
+
+  </TabItem>
+  <TabItem value="gradle-groovy" label="Gradle (Groovy)">
+
+```groovy
+repositories {
+    maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
+    maven { url = 'https://oss.sonatype.org/content/repositories/snapshots/' }
+    mavenCentral()
+}
+```
+
+  </TabItem>
+  <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
+
+```kotlin
+repositories {
+    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    mavenCentral()
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Then add the Spigot artifact:
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="Lotus"
+    group="studio.mevera"
+    id="lotus-spigot"
+/>
+
+Minimal Spigot setup:
+
+```java
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.Lotus;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.Menu;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.spigot.SpigotLotus;
+
+public final class MyPlugin extends JavaPlugin {
+
+    private Lotus<String> lotus;
+
+    @Override
+    public void onEnable() {
+        this.lotus = SpigotLotus.create(this);
+    }
+
+    public void openWelcome(Player player) {
+        lotus.openMenu(player, new WelcomeMenu());
+    }
+}
+
+final class WelcomeMenu implements Menu<String> {
+
+    @Override
+    public String title(MenuView<String, ?> view) {
+        return ChatColor.GOLD + "Welcome";
+    }
+
+    @Override
+    public Capacity capacity(MenuView<String, ?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public Content content(MenuView<String, ?> view) {
+        return Content.builder(view.capacity())
+            .fillBorder(Button.of(new ItemStack(Material.STAINED_GLASS_PANE)))
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.PAPER),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(ChatColor.YELLOW + "Hello from Lotus!")
+            ))
+            .build();
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+On **Paper**, menu titles are Adventure `Component`s. On **Spigot**, menu titles are plain
+`String`s, and Lotus uses that string **as-is**. If you want colors on Spigot, translate or build
+the string yourself.
 :::
+
+## Read The Docs In This Order
+
+1. [Getting Started](/docs/Lotus/Getting-Started) to install the right artifact, shade it, and boot Lotus once.
+2. [Your First Menu](/docs/Lotus/First-Menu) to build something that opens immediately.
+3. [Capacity, Slots & Slot Masks](/docs/Lotus/Capacity-and-Slots) to understand the grid model.
+4. [Menus](/docs/Lotus/Menu-Template) to learn templates, live views, and handler hooks.
+5. [Buttons](/docs/Lotus/Button-Variants) to learn the six built-in button types.
+6. [Pagination](/docs/Lotus/Pagination) once you are ready for scrollable lists.

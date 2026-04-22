@@ -1,135 +1,224 @@
 ---
 title: Advanced
-description: Options, custom openers, lifecycle edge-cases, error handling, and the public package layout.
+description: Options, custom openers, lifecycle edge-cases, error handling, and the package layout.
 order: 1
 ---
 
 # Advanced
 
-This page collects the less-common but still important knobs and corners of Lotus — things you don't need on day one, but will want when you're shipping real plugins.
+This page collects the less-common but still important knobs in Lotus: runtime options, helpers,
+custom openers, and extension boundaries.
 
 ## `Lotus.Options`
 
-Immutable runtime configuration, set once at build time:
+Runtime options are configured when you create the `Lotus` instance:
 
 ```java
-Lotus lotus = Lotus.builder(plugin)
-    .allowBottomInventoryClick(true)   // let hotbar shift-clicks pass through
-    .dynamicButtonAction(false)        // advanced: allow buttons to be picked up / moved
-    .debug(false)                      // verbose [lotus] logs
+Lotus<Component> lotus = PaperLotus.create(this, builder -> builder
+    .allowBottomInventoryClick(false)
+    .dynamicButtonAction(false)
+    .debug(true)
+);
+```
+
+| Option | Default | What it means |
+| --- | --- | --- |
+| `allowBottomInventoryClick` | `true` | Allow clicks in the player's own inventory while a Lotus menu is open |
+| `dynamicButtonAction` | `false` | Let Lotus internally move buttons during pickup/place inventory actions |
+| `debug` | `false` | Enable `[lotus]` debug logging |
+
+Read them back with `lotus.options()`.
+
+## `ItemBuilder`
+
+Both platform modules ship an `ItemBuilder` tuned to the platform's text API.
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+```java
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import studio.mevera.lotus.paper.ItemBuilder;
+
+ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
+    .displayName(Component.text("Legendary Blade").color(NamedTextColor.AQUA))
+    .lore(
+        Component.text("A very sharp blade").color(NamedTextColor.GRAY),
+        Component.text("Tier: Legendary").color(NamedTextColor.GOLD)
+    )
+    .amount(1)
+    .unbreakable(true)
     .build();
 ```
 
-| Option                      | Default | Effect                                               |
-|-----------------------------|---------|------------------------------------------------------|
-| `allowBottomInventoryClick` | `true`  | Clicks in the player inventory pass through normally |
-| `dynamicButtonAction`       | `false` | Opt-in: allows pickup/place interactions on buttons  |
-| `debug`                     | `false` | Gates `[lotus]` debug log lines                      |
-
-Read the active configuration back with `lotus.options()`.
-
-## Custom `ViewOpener`
-
-The **opener strategy** decides *how* a Bukkit `Inventory` is created and opened for a given `MenuView`. Lotus ships a sensible default that uses Adventure-native `Bukkit.createInventory(...)`.
-
-Replace the default per inventory type:
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
 
 ```java
-lotus.registerOpener(InventoryType.HOPPER, (l, view) -> {
-    Inventory inv = Bukkit.createInventory(view, InventoryType.HOPPER, view.title());
-    // custom rendering, decorations, sound, etc.
-    ((BaseMenuView<?>) view).renderInto(inv);
-    view.viewer().openInventory(inv);
-    return inv;
-});
+import studio.mevera.lotus.spigot.ItemBuilder;
+
+ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
+    .displayName("&bLegendary Blade")
+    .lore("&7A very sharp blade", "&6Tier: Legendary")
+    .amount(1)
+    .unbreakable(true)
+    .build();
 ```
 
-:::info
-`ViewOpener` lives in `studio.mevera.lotus.spi.opener` — it's an **SPI boundary**, stable to extend. Feel free to build on it.
-:::
+  </TabItem>
+</Tabs>
 
-## Menu registration & command-driven opens
+On Spigot, `ItemBuilder` translates `&` color codes for item names and lore.
+
+## Register Menus By Name
 
 ```java
 lotus.registerMenu(new ShopMenu());
-lotus.openMenu(player, "shopmenu");            // case-insensitive lookup
-lotus.registeredMenu("shopmenu");              // Optional<Menu>
+lotus.openMenu(player, "shop");
+lotus.registeredMenu("shop");
 ```
 
-Great for config-driven menus where commands like `/menu <name>` resolve by string.
+This is handy for command-driven or config-driven menus.
 
-## Tracking open views
-
-Lotus keeps a live map of `UUID → MenuView<?>`:
+## Inspect Open Views
 
 ```java
-lotus.viewOf(player);             // Optional<MenuView<?>>
-lotus.openViews();                // Collection<MenuView<?>>
+lotus.viewOf(player);
+lotus.openViews();
 ```
 
-Common idiom — broadcast a refresh when the backing data changes:
+Common pattern:
 
 ```java
-for (MenuView<?> v : lotus.openViews()) {
-    if (v.menu() instanceof ShopMenu) v.refresh();
+for (MenuView<?, ?> view : lotus.openViews()) {
+    if (view.menu() instanceof ShopMenu) {
+        view.refresh();
+    }
 }
 ```
 
-## Refresh vs. manual mutation
+## Custom `ViewOpener`
 
-| When…                                                                 | Use                                                   |
-|-----------------------------------------------------------------------|-------------------------------------------------------|
-| The underlying **model** changed                                      | `view.refresh()` — re-runs `Menu.content(view)`       |
-| You need to swap **one slot** inside a click handler                   | `view.content().set(...)` / `update(...)` / `remove`  |
-| You mutated content **outside** a click (scheduler, network callback) | `view.refresh()` yourself                             |
+If you need a special open path for a specific `InventoryType`, register a custom opener.
 
-:::tip
-Lotus auto-repaints after click dispatch, so inside a `ClickAction` you almost never need to call `refresh()` explicitly.
-:::
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
-## Spanning buttons — lifecycle gotcha
+```java
+lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
+    Inventory inventory = Bukkit.createInventory(
+        view,
+        InventoryType.HOPPER,
+        Component.text("Quick Actions")
+    );
 
-:::caution
-Removing a `SpanningButton` cleanly means clearing **every slot** in its footprint. Clearing one slot leaves orphaned copies visible in the others. Either keep a reference to the button and iterate its footprint, or call `content.clear()` and rebuild.
-:::
-
-## Repaint after button mutation
-
-`BaseMenuView.handleClick` always repaints after dispatch. This matters for:
-
-- `TransformingButton` — the new button's item appears **immediately**.
-- `CycleButton` — the advanced state's item appears **immediately**.
-
-You don't need to call anything. If you wrote a custom path that mutates `view.content()`, the same auto-repaint covers you.
-
-## Errors in click handlers
-
-If a button's dispatch throws a `RuntimeException`, Lotus catches it, logs via `lotus.logger().warn(...)`, and **keeps the menu usable**. Check plugin logs for:
-
+    view.content().forEach((slot, button) -> inventory.setItem(slot.index(), button.item()));
+    view.viewer().openInventory(inventory);
+    return inventory;
+});
 ```
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
+    Inventory inventory = Bukkit.createInventory(view, InventoryType.HOPPER, "Quick Actions");
+
+    view.content().forEach((slot, button) -> inventory.setItem(slot.index(), button.item()));
+    view.viewer().openInventory(inventory);
+    return inventory;
+});
+```
+
+  </TabItem>
+</Tabs>
+
+:::info
+`ViewOpener` is part of the public `spi` package, so extending it is a supported customization path.
+:::
+
+## Pagination Sync Helpers
+
+When a shared data source changes, you may want to refresh already-open pagination views without
+tracking every session yourself.
+
+Use the pagination definition ID, which is the string passed to `Pagination.builder("...")`.
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
+
+```java
+PaperLotus.syncOpenPagination(lotus, "shop", player);
+PaperLotus.syncOpenPagination(lotus, "shop");
+```
+
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+SpigotLotus.syncOpenPagination(lotus, "shop", player);
+SpigotLotus.syncOpenPagination(lotus, "shop");
+```
+
+  </TabItem>
+</Tabs>
+
+The one-player overload refreshes a specific player's currently open pagination if it matches the
+ID. The two-argument overload scans all open views managed by that Lotus runtime and refreshes the
+matching ones.
+
+## Error Handling
+
+If a button throws a `RuntimeException`, Lotus catches it, logs the problem, and keeps the menu
+usable:
+
+```text
 [lotus] button dispatch failed in menu <name>
 ```
 
-Nothing to handle in user code — just don't swallow exceptions silently upstream if you need to see them.
+You can also log your own messages through `lotus.logger()`.
 
-## Public package layout
+## Public Surface vs Internal Surface
 
-For plugin authors browsing the jar:
+The stable extension points live in:
 
-```
-studio.mevera.lotus
-├── Lotus, LotusBuilder          ← facade
-├── api/                         ← what you import
-│   ├── button/                  ← Button, variants, ClickAction
-│   ├── content/                 ← Content, ContentView/Editor, ContentBuilder
-│   ├── data/                    ← Key, DataRegistry
-│   ├── menu/                    ← Menu, InteractiveMenu, MenuView, MenuHandler
-│   ├── pagination/              ← Pagination, Session, Layout, Source, Renderer
-│   └── slot/                    ← Capacity, Slot, SlotMask, Direction, Iterator
-├── spi/                         ← extension points (ViewOpener, ...)
-└── internal/                    ← implementation details; do NOT import
-```
+- `studio.mevera.lotus.api.*`
+- `studio.mevera.lotus.spi.*`
 
-:::danger{label="Stability contract"}
-Import from `api.*` and `spi.*` only. Anything under `internal.*` carries **no compatibility guarantees** and can change across minor versions.
+:::danger{label="Stability Contract"}
+Avoid importing `internal.*` classes. They are implementation details and are **not** the public
+compatibility surface.
 :::
+
+## High-Level Package Map
+
+```text
+lotus-commons
+  studio.mevera.lotus
+    Lotus, LotusBuilder
+    api.button
+    api.content
+    api.data
+    api.item
+    api.menu
+    api.pagination
+    api.slot
+    spi
+
+lotus-paper
+  studio.mevera.lotus.paper
+    PaperLotus
+    ItemBuilder
+    api.menu
+    api.pagination
+
+lotus-spigot
+  studio.mevera.lotus.spigot
+    SpigotLotus
+    ItemBuilder
+    api.pagination
+```
+
+That is the practical import surface most plugin authors work with.

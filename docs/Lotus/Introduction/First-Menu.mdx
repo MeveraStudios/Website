@@ -1,133 +1,167 @@
 ---
 title: Your First Menu
-description: A guided walkthrough of writing, registering, and opening your first Lotus menu.
+description: A step-by-step walkthrough of writing, registering, and opening your first Lotus menu.
 order: 3
 ---
 
 # Your First Menu
 
-Every menu in Lotus is a **template** — an implementation of the `Menu` interface that describes three things:
+We are going to build a **3-row welcome menu** with:
 
-1. A **title** (Adventure `Component`).
-2. A **capacity** (how many rows/slots).
-3. A **content** (which buttons sit in which slots).
+- a centered paper button
+- a simple border
+- a click action that sends a message
 
-Each of these is resolved **per player** via a `MenuView<?>` parameter, so titles and layouts can depend on who's opening the menu.
+Every Lotus menu is just a class that answers **three** questions:
 
-## Step 1 — Implement `Menu`
+1. What is the **title**?
+2. How large is the **inventory**?
+3. Which **buttons** go into which slots?
+
+## Step 1 — Create The Menu Class
+
+<Tabs defaultValue="paper">
+  <TabItem value="paper" label="Paper 1.21+">
 
 ```java
-public final class WelcomeMenu implements Menu {
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+import studio.mevera.lotus.paper.api.menu.PaperMenu;
 
-    @Override public @NotNull Component title(MenuView<?> view) {
+public final class WelcomeMenu implements PaperMenu {
+
+    @Override
+    public String name() {
+        return "welcome";
+    }
+
+    @Override
+    public Component title(MenuView<Component, ?> view) {
         return Component.text("Welcome, " + view.viewer().getName());
     }
 
-    @Override public @NotNull Capacity capacity(MenuView<?> view) {
+    @Override
+    public Capacity capacity(MenuView<Component, ?> view) {
         return Capacity.ofRows(3);
     }
 
-    @Override public @NotNull Content content(MenuView<?> view) {
-        return Content.builder(capacity(view))
-            .set(1, 4, Button.of(new ItemStack(Material.PAPER)))
+    @Override
+    public Content content(MenuView<Component, ?> view) {
+        return Content.builder(view.capacity())
+            .fillBorder(Button.of(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)))
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.PAPER),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(Component.text("Hello from Lotus!"))
+            ))
             .build();
     }
 }
 ```
 
-Three methods, three responsibilities. Nothing else is required.
+  </TabItem>
+  <TabItem value="spigot" label="Spigot 1.8.8">
+
+```java
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import studio.mevera.lotus.api.button.Button;
+import studio.mevera.lotus.api.content.Content;
+import studio.mevera.lotus.api.menu.Menu;
+import studio.mevera.lotus.api.menu.MenuView;
+import studio.mevera.lotus.api.slot.Capacity;
+
+public final class WelcomeMenu implements Menu<String> {
+
+    @Override
+    public String name() {
+        return "welcome";
+    }
+
+    @Override
+    public String title(MenuView<String, ?> view) {
+        return ChatColor.GOLD + "Welcome, " + view.viewer().getName();
+    }
+
+    @Override
+    public Capacity capacity(MenuView<String, ?> view) {
+        return Capacity.ofRows(3);
+    }
+
+    @Override
+    public Content content(MenuView<String, ?> view) {
+        return Content.builder(view.capacity())
+            .fillBorder(Button.of(new ItemStack(Material.STAINED_GLASS_PANE)))
+            .set(1, 4, Button.clickable(
+                new ItemStack(Material.PAPER),
+                (menuView, event) ->
+                    menuView.viewer().sendMessage(ChatColor.YELLOW + "Hello from Lotus!")
+            ))
+            .build();
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
 
 :::note
-`view.viewer()` returns the `Player` who is about to see this menu — use it to personalise any of the three outputs.
+`view.viewer()` is the player opening the menu. That means your title, size, and content can all
+change per player if you want them to.
 :::
 
-## Step 2 — Open it
+## Step 2 — Open It
+
+Once you have a `Lotus` instance, opening the menu is a one-liner:
 
 ```java
 lotus.openMenu(player, new WelcomeMenu());
 ```
 
-That's it. Lotus builds the inventory, renders the content, tracks the view, and routes clicks for you.
+Lotus now creates the inventory, tracks the live view, routes clicks, and keeps the content tied
+to that player.
 
-## Step 3 — Add an interactive button
+## Step 3 — Register It By Name If You Need To
 
-Let's make that paper do something. Swap the `Button.of(...)` for `Button.clickable(...)`:
-
-```java
-return Content.builder(capacity(view))
-    .set(1, 4, Button.clickable(
-        new ItemStack(Material.PAPER),
-        (v, event) -> {
-            event.setCancelled(true);
-            v.viewer().sendMessage("Hello from Lotus!");
-            v.viewer().closeInventory();
-        }))
-    .build();
-```
-
-:::tip
-`event.setCancelled(true)` is the idiomatic way to prevent the player from picking the button up. If you want this applied to **every** button in a menu by default, implement `MenuHandler.onPreClick` — see [Menus → Menu Handler](/docs/Lotus/Menu-Handler).
-:::
-
-## Step 4 — Name and register it (optional)
-
-If you plan to open menus from commands or config by **name**:
-
-```java
-@Override public @NotNull String name() { return "welcome"; }
-```
-
-Then register once at boot:
+If you want to open menus from commands, config files, or string identifiers, register the menu:
 
 ```java
 lotus.registerMenu(new WelcomeMenu());
+lotus.openMenu(player, "welcome");
 ```
 
-And open by name from anywhere:
+Lookup is **case-insensitive**.
 
-```java
-lotus.openMenu(player, "welcome");   // case-insensitive
-```
-
-:::info
-`name()` defaults to the class's simple name (`WelcomeMenu`) if you don't override it.
+:::tip
+`name()` is optional. If you do not override it, Lotus uses the class name, such as
+`WelcomeMenu`.
 :::
 
-## Putting it all together
+## What This Example Teaches You
 
-```java
-public final class WelcomeMenu implements Menu {
+- `PaperMenu` is the easiest entry point on Paper.
+- `Menu<String>` is the normal entry point on Spigot.
+- `Content.builder(view.capacity())` is the standard way to lay out a menu.
+- `Button.clickable(...)` is the quickest way to add behavior.
 
-    @Override public @NotNull String name() { return "welcome"; }
+:::info
+Lotus already cancels clicks in the **top menu inventory** before button dispatch. You do **not**
+need `event.setCancelled(true)` in simple button handlers just to stop players from taking items.
+:::
 
-    @Override public @NotNull Component title(MenuView<?> view) {
-        return Component.text("Welcome, " + view.viewer().getName());
-    }
+<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
+`[LOTUS_RESULT_PLACEHOLDER]` A 3-row welcome menu opens with a dark border, a centered paper
+button, and clicking that button sends a greeting message.
+</Admonition>
 
-    @Override public @NotNull Capacity capacity(MenuView<?> view) {
-        return Capacity.ofRows(3);
-    }
+## Where To Go Next
 
-    @Override public @NotNull Content content(MenuView<?> view) {
-        return Content.builder(capacity(view))
-            .fillBorder(Button.of(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)))
-            .set(1, 4, Button.clickable(
-                new ItemStack(Material.PAPER),
-                (v, event) -> {
-                    event.setCancelled(true);
-                    v.viewer().sendMessage("Hello from Lotus!");
-                    v.viewer().closeInventory();
-                }))
-            .build();
-    }
-}
-```
-
-## What's next
-
-You've written a working menu. From here, pick the area that matches what you want to build:
-
-- Want to understand the data types you just used? → [Core Concepts](/docs/Lotus/Capacity-and-Slots)
-- Want richer click behaviour? → [Buttons](/docs/Lotus/Button-Variants)
-- Want layouts beyond `set(row, col, ...)`? → [Content Builder](/docs/Lotus/Content-Builder)
-- Building a paged list? → [Pagination](/docs/Lotus/Pagination)
+- Learn the grid vocabulary in [Capacity, Slots & Slot Masks](/docs/Lotus/Capacity-and-Slots)
+- Learn richer layouts in [Content Builder](/docs/Lotus/Content-Builder)
+- Learn lifecycle hooks in [The Menu Handler](/docs/Lotus/Menu-Handler)
