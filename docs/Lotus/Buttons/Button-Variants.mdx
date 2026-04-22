@@ -79,11 +79,6 @@ Returning `null` leaves the slot unchanged.
 If the slot should keep cycling through several states, use `CycleButton` instead.
 :::
 
-<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
-`[LOTUS_RESULT_PLACEHOLDER]` Clicking a lamp button swaps the slot from an "off" icon to an "on"
-icon in the same position.
-</Admonition>
-
 ## 4. `SpanningButton`
 
 Use this when several slots should behave like **one large button**.
@@ -104,11 +99,6 @@ Every slot in the footprint points to the **same button instance**.
 To remove a spanning button cleanly, clear **every slot in its footprint**. Removing only one slot
 leaves the rest visible.
 :::
-
-<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
-`[LOTUS_RESULT_PLACEHOLDER]` A single wide banner occupies several adjacent slots and clicking any
-part of it triggers the same action.
-</Admonition>
 
 ## 5. `CompositeButton`
 
@@ -153,11 +143,6 @@ What happens on click:
 :::info
 `CycleButton` is immutable. The slot advances by replacing itself with a **new** cycle instance.
 :::
-
-<Admonition type="custom" sideColor="#06b6d4" bgColor="#06b6d420" title="RESULT PLACEHOLDER" icon="Info">
-`[LOTUS_RESULT_PLACEHOLDER]` Repeated clicks on one slot rotate through OFF, WHITELIST, and
-BLACKLIST visual states.
-</Admonition>
 
 ## Attaching Data To A Button
 
