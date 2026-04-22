@@ -22,6 +22,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { SITE_CONFIG, PROJECTS, NAVIGATION } from '@/config/site';
 import faviconUrl from '@/assets/favicon.ico';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 /**
  * =============================================================================
@@ -126,6 +127,7 @@ export function Header() {
 
         {/* External Links */}
         <div className="hidden md:flex items-center gap-1">
+          <ThemeToggle />
           {SITE_CONFIG.discordUrl && (
             <Button variant="ghost" size="icon" asChild>
               <a
@@ -152,11 +154,14 @@ export function Header() {
 
         {/* Mobile Menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
+          <div className="md:hidden flex items-center">
+            <ThemeToggle />
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+          </div>
           <SheetContent side="right" className="w-80">
             <div className="flex flex-col gap-6 mt-8">
               {/* Mobile Logo */}

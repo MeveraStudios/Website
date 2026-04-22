@@ -112,3 +112,54 @@
     font-family: var(--font-mono, 'Courier New', monospace);
     font-size: 0.8rem;
 }
+
+/* =============================================================================
+   LIGHT THEME OVERRIDES
+   ============================================================================= */
+
+.light .tabs-container,
+[data-theme="light"] .tabs-container {
+    border: 1px solid hsl(214 20% 88%);
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.light .tabs-container .tabs-container,
+[data-theme="light"] .tabs-container .tabs-container {
+    border: 1px solid hsl(214 20% 90%);
+    background: hsl(210 33% 98%);
+}
+
+.light .tabs-list,
+[data-theme="light"] .tabs-list {
+    background: hsl(210 33% 97%);
+    border-bottom: 1px solid hsl(214 20% 90%);
+}
+
+.light .tab-trigger,
+[data-theme="light"] .tab-trigger {
+    color: hsl(215 20% 35%);
+    background: #ffffff;
+    border: 1px solid hsl(214 20% 85%);
+    font-weight: 600;
+}
+
+.light .tab-trigger:hover,
+[data-theme="light"] .tab-trigger:hover {
+    color: hsl(222 47% 11%);
+    background: hsl(210 33% 96%);
+    border-color: hsl(214 20% 72%);
+}
+
+.light .tab-trigger.active,
+[data-theme="light"] .tab-trigger.active {
+    color: hsl(221 83% 40%);
+    background: hsl(214 100% 96%);
+    border-color: hsl(221 83% 53%);
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.12);
+}
+
+.light .code-tabs .tabs-list,
+[data-theme="light"] .code-tabs .tabs-list {
+    background: hsl(210 33% 98%);
+}

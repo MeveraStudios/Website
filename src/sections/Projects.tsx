@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { ArrowRight, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,10 @@ export function Projects() {
 
 function ProjectCard({ project, index }: { project: typeof PROJECTS[number], index: number }) {
   const [isHovered, setIsHovered] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isLight = mounted && resolvedTheme === 'light';
 
   const Animator = ANIMATORS[project.hoverAnimator as string] || DefaultAnimator;
 
@@ -58,7 +63,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
       />
 
       {/* The Front Face of the card that pops out */}
-      <div className="project-card-3d relative bg-zinc-950/90 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden h-full">
+      <div className="project-card-3d relative bg-card/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl border border-border dark:border-white/10 overflow-hidden h-full">
         {/* Dynamic Animator Component */}
         <Animator
           isHovered={isHovered}
@@ -71,7 +76,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
             {/* Header */}
             <div className="flex items-start justify-between mb-8">
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl border border-white/10 bg-white/5 shadow-2xl"
+                className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl border border-border dark:border-white/10 bg-muted dark:bg-white/5 shadow-2xl"
                 style={{
                   color: project.color,
                   boxShadow: `0 0 30px -5px ${project.color}30`
@@ -85,7 +90,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
                   variant="ghost"
                   size="icon"
                   asChild
-                  className="text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full"
+                  className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full"
                 >
                   <a
                     href={project.githubRepo}
@@ -106,7 +111,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
                 style={{
                   color: isHovered
                     ? (project.titleHoverColor || undefined)
-                    : (project.titleColor || undefined)
+                    : (isLight ? undefined : (project.titleColor || undefined))
                 }}
               >
                 {project.name}
@@ -120,7 +125,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
             <div className="pt-4">
               <Link
                 to={project.docLink || '#'}
-                className="inline-flex items-center justify-center w-full px-6 py-4 bg-primary/10 border border-primary/20 rounded-xl text-primary font-bold transition-all duration-300 hover:bg-primary hover:text-black hover:border-white group/btn"
+                className="inline-flex items-center justify-center w-full px-6 py-4 bg-primary/10 border border-primary/20 rounded-xl text-primary font-bold transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:border-primary group/btn"
               >
                 Read Documentation
                 <ArrowRight className="h-5 w-5 ml-2 transition-transform group-hover/btn:translate-x-1" />

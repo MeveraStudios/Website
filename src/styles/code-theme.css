@@ -232,31 +232,40 @@
 
 .light .code-block,
 [data-theme="light"] .code-block {
-  background: #f8f8f2;
-  border: 1px solid #e8e8e8;
+  background: #ffffff;
+  border: 1px solid hsl(214 20% 88%);
+  color: #1f2328;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
 }
 
 .light .code-block-header,
 [data-theme="light"] .code-block-header {
-  background: #f0f0f0;
-  color: #272822;
-  border-bottom: 1px solid #e8e8e8;
+  background: hsl(210 33% 97%);
+  color: hsl(215 16% 40%);
+  border-bottom: 1px solid hsl(214 20% 90%);
 }
 
 .light .code-block-copy,
 [data-theme="light"] .code-block-copy {
-  color: #272822;
+  color: hsl(215 16% 40%);
 }
 
 .light .code-block-copy:hover,
 [data-theme="light"] .code-block-copy:hover {
-  background: #e0e0e0;
+  background: hsl(214 20% 92%);
+  color: hsl(222 47% 11%);
+}
+
+.light .code-block .line.highlighted,
+[data-theme="light"] .code-block .line.highlighted {
+  background: hsl(48 100% 92%);
 }
 
 .light :not(pre)>code,
 [data-theme="light"] :not(pre)>code {
-  background: #f0f0f0;
-  color: #f92672;
+  background: hsl(210 33% 96%);
+  border: 1px solid hsl(214 20% 88%);
+  color: hsl(340 75% 42%);
 }
 
 /* Syntax highlighting - Light (GitHub inspired) */
