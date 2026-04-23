@@ -10,7 +10,7 @@ framework processes and executes commands based on user input.
 This diagram illustrates the execution flow when a user inputs a command.
 
 ```mermaid
-flowchart LR
+flowchart TD
 	A[User enters input] --> B[Identify Root command]
 	B --> C[Create `CommandContext`]
 	C --> D[Pre-Processing Stage]
@@ -18,6 +18,7 @@ flowchart LR
 	E --> F[Create `ExecutionContext`]
 	F --> G[Post-Processing Stage]
 	G --> H[Execute the `CommandPathway`]
+	linkStyle default stroke:#7c3aed,stroke-width:2px
 ```
 
 In short, Imperat starts by resolving the root command and building a `CommandContext` from the raw input.

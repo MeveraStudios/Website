@@ -88,7 +88,11 @@ const mdxComponents = {
 
     const language = className?.replace('language-', '');
     if (language === 'mermaid') {
-      return <MermaidDiagram>{String(children)}</MermaidDiagram>;
+      return (
+        <div className="my-6 w-full overflow-x-auto rounded-lg border border-white/10 bg-white/[0.02] p-6 flex justify-center [&_svg]:!max-w-[480px] [&_svg]:w-full [&_svg]:h-auto">
+          <MermaidDiagram>{String(children)}</MermaidDiagram>
+        </div>
+      );
     }
 
     return <CodeBlock className={className}>{String(children)}</CodeBlock>;
