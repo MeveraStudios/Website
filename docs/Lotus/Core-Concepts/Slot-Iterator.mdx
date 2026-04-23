@@ -1,0 +1,169 @@
+---
+title: Slot Iterator
+description: Walk slots in a direction when you need to place many buttons from a collection.
+order: 3
+---
+
+# Slot Iterator
+
+`SlotIterator` is a small, stateful helper that gives you the **next `Slot`** each time you call
+`next()`.
+
+Use it when:
+
+- you have multiple objects to show
+- each object should become one button
+- the buttons should be placed in a predictable direction
+
+This is the low-level Lotus tool for "take my data and lay it out across slots".
+
+## The Mental Model
+
+In real menus, you often iterate **two things at once**:
+
+- your data source, such as spells, relics, friends, or rewards
+- the menu slots where those objects should appear
+
+`SlotIterator` handles the second part.
+
+```java
+SlotIterator slots = SlotIterator.of(size, Slot.first(), Direction.RIGHT);
+Iterator<SpellScroll> scrolls = spellbook.unlockedScrolls().iterator();
+
+while (slots.hasNext() && scrolls.hasNext()) {
+    Slot slot = slots.next();
+    SpellScroll scroll = scrolls.next();
+
+    content.set(slot, scrollButton(scroll));
+}
+```
+
+That pattern is perfect for menus that show **one button per object**.
+
+## Create An Iterator
+
+Use `of(...)` when you want to keep moving until the iterator reaches the edge of the menu:
+
+```java
+SlotIterator row = SlotIterator.of(size, Slot.first(), Direction.RIGHT);
+SlotIterator column = SlotIterator.of(size, Slot.at(0, 4, size), Direction.DOWN);
+SlotIterator diagonal = SlotIterator.of(size, Slot.at(0, 0, size), Direction.DOWN_RIGHT);
+```
+
+Use `bounded(...)` when you want an inclusive start and end:
+
+```java
+SlotIterator middleRow = SlotIterator.bounded(
+    size,
+    Slot.at(1, 1, size),
+    Slot.at(1, 7, size),
+    Direction.RIGHT
+);
+```
+
+## A Simple Content Example
+
+```java
+public Content content(MenuView<?, ?> view) {
+    Capacity size = view.capacity();
+    Content content = Content.builder(size)
+        .fillBorder(Button.of(bookshelfPane()))
+        .build();
+
+    SlotIterator slots = SlotIterator.bounded(
+        size,
+        Slot.at(1, 1, size),
+        Slot.at(1, 7, size),
+        Direction.RIGHT
+    );
+
+    Iterator<SpellScroll> scrolls = spellbook.unlockedScrolls(view.viewer()).iterator();
+    while (slots.hasNext() && scrolls.hasNext()) {
+        SpellScroll scroll = scrolls.next();
+        content.set(slots.next(), scrollButton(scroll));
+    }
+
+    return content;
+}
+```
+
+This could be a **spellbook menu** where the center row behaves like a shelf of magical scrolls.
+Each unlocked scroll becomes one button, and `SlotIterator` walks left-to-right across that shelf.
+
+Read it like this:
+
+1. define where the run starts
+2. define which direction it moves
+3. pair each `next()` slot with the next object
+4. stop when either side runs out
+
+That keeps slot traversal separate from your business logic.
+
+## `of(...)` vs `bounded(...)`
+
+| Factory | Stops when |
+| --- | --- |
+| `of(capacity, start, direction)` | the next step would leave the menu bounds |
+| `bounded(capacity, start, end, direction)` | the iterator has returned `end` |
+
+Both forms include the `start` slot.
+`bounded(...)` also includes the `end` slot.
+
+:::caution
+`bounded(...)` is still directional. Lotus does **not** calculate a path for you.
+Your `direction` must actually lead from `start` toward `end`.
+:::
+
+## Important Behavior
+
+### 1. It does not wrap
+
+`SlotIterator` does **not** jump from the end of one row into the next row.
+
+For example, on a 3-row chest:
+
+```java
+SlotIterator.of(size, Slot.first(), Direction.RIGHT)
+```
+
+walks across the top row, then stops.
+If you need a full multi-row fill order, use pagination, a mask-driven layout, or nested loops.
+
+### 2. It is stateful
+
+A `SlotIterator` is a one-use object. Once it is exhausted, create a new one.
+
+That is why menus usually create it **inside** `content(...)` or another render path.
+
+### 3. Always check `hasNext()`
+
+Calling `next()` after exhaustion throws `NoSuchElementException`.
+
+The safe pattern is:
+
+```java
+while (slots.hasNext() && data.hasNext()) {
+    content.set(slots.next(), renderer(data.next()));
+}
+```
+
+## When To Use It vs Other APIs
+
+| Tool | Best for |
+| --- | --- |
+| `ContentBuilder.set(...)` | Fixed slots you already know ahead of time |
+| `SlotMask` | Reusable regions or bulk fill operations |
+| `SlotIterator` | One-by-one placement in a direction |
+| `Pagination` | More items than one menu should show at once |
+
+## Good Fits
+
+- spellbooks
+- relic galleries
+- pet stables
+- reward previews
+- any menu where "start here and place items one after another" is the rule
+
+If that sounds like your layout, `SlotIterator` is usually the simplest low-level tool.
+
+Next: [The Menu Template](/docs/Lotus/Menu-Template).
