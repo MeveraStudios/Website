@@ -12,7 +12,9 @@ import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
 import rehypeRaw from 'rehype-raw';
 import remarkAdmonitions from './remark-admonitions';
+import remarkCodeMeta from './remark-code-meta';
 import { CodeBlock } from './CodeBlock';
+import { parseCodeMeta } from './parseCodeMeta';
 import { Admonition } from './Admonition';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
@@ -74,7 +76,12 @@ const components = {
         </div>
       );
     }
-    return <CodeBlock className={className}>{String(children)}</CodeBlock>;
+    const meta = parseCodeMeta(props['data-meta']);
+    return (
+      <CodeBlock className={className} {...meta}>
+        {String(children)}
+      </CodeBlock>
+    );
   },
 
   h1: ({ id, children }: any) => <Heading level={1} id={id}>{children}</Heading>,
@@ -152,7 +159,10 @@ const components = {
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
 export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererProps) => {
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkDirective, remarkAdmonitions], []);
+  const remarkPlugins = useMemo(
+    () => [remarkGfm, remarkDirective, remarkAdmonitions, remarkCodeMeta],
+    []
+  );
   const rehypePlugins = useMemo(() => [rehypeRaw, rehypeHeadingIds], []);
 
   return (

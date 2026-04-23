@@ -17,10 +17,14 @@ import {
   Routes,
   Route,
   useLocation,
-  Navigate
+  Navigate,
+  Link
 } from 'react-router-dom';
 import { SITE_CONFIG } from '@/config/site';
 import { preloadDocs } from '@/lib/docs';
+import { Helmet } from 'react-helmet-async';
+import { Seo } from '@/components/Seo';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Lazy loading the main route pages to split bundles
 const Home = lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
@@ -31,12 +35,27 @@ import './App.css';
 preloadDocs();
 
 // Scroll to top on normal navigation, or to the requested hash target once it exists.
+// Also moves focus to <main id="main-content"> so screen readers and keyboard users
+// land on the new page instead of being stuck on a stale element.
 function ScrollManager() {
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
+
+    const focusMain = () => {
+      const main = document.getElementById('main-content');
+      if (main) {
+        // tabIndex=-1 is set on the element so programmatic focus works
+        // without making it part of the tab order.
+        main.focus({ preventScroll: true });
+      }
+    };
+
     if (!hash) {
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, left: 0, behavior });
+      focusMain();
       return;
     }
 
@@ -48,7 +67,7 @@ function ScrollManager() {
     const scrollToHash = () => {
       const element = document.getElementById(targetId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        element.scrollIntoView({ behavior, block: 'start' });
         return;
       }
 
@@ -70,51 +89,45 @@ function ScrollManager() {
   return null;
 }
 
-// Update page title based on route
-function PageTitle() {
-  const location = useLocation();
-
-  useEffect(() => {
-    const path = location.pathname;
-    let title: string = SITE_CONFIG.siteTitle;
-
-    if (path.startsWith('/docs/')) {
-      // Extract project and doc from URL
-      const parts = path.split('/').filter(Boolean);
-      if (parts.length >= 2) {
-        const projectId = parts[1];
-        const docSlug = parts[2];
-        // Capitalize project name
-        const projectName = projectId.charAt(0).toUpperCase() + projectId.slice(1);
-        // Format doc slug
-        const docName = docSlug
-          ? docSlug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-          : 'Documentation';
-        title = `${docName} | ${projectName} - ${SITE_CONFIG.brandName}`.replace("%20", " ");
-      }
-    }
-
-    document.title = title;
-  }, [location]);
-
-  return null;
-}
-
-// 404 Page
+// 404 Page — no indexing, clear recovery paths
 function NotFound() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <h1 className="text-6xl font-bold mb-4">404</h1>
-      <p className="text-xl text-muted-foreground mb-8">
-        Page not found
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
+      <Seo
+        title="Page not found"
+        description="The page you were looking for does not exist."
+        type="website"
+      />
+      {/* noindex via Helmet */}
+      <NoIndex />
+      <p className="text-sm tracking-widest uppercase text-muted-foreground mb-2">404</p>
+      <h1 className="text-5xl md:text-6xl font-bold mb-4">Page not found</h1>
+      <p className="text-lg text-muted-foreground mb-8 max-w-md">
+        The page you&apos;re looking for doesn&apos;t exist or has been moved.
       </p>
-      <a
-        href="/"
-        className="text-primary hover:underline"
-      >
-        Go back home
-      </a>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link
+          to="/"
+          className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Go home
+        </Link>
+        <Link
+          to={SITE_CONFIG.getStartedUrl}
+          className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Browse docs
+        </Link>
+      </div>
     </div>
+  );
+}
+
+function NoIndex() {
+  return (
+    <Helmet>
+      <meta name="robots" content="noindex,nofollow" />
+    </Helmet>
   );
 }
 
@@ -122,20 +135,21 @@ function AppRoutes() {
   return (
     <>
       <ScrollManager />
-      <PageTitle />
-      <Suspense fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      }>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/docs/:projectId/:slug" element={<Docs />} />
-          <Route path="/docs/:projectId" element={<Docs />} />
-          <Route path="/docs" element={<Navigate to={SITE_CONFIG.getStartedUrl} replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/docs/:projectId/:slug" element={<Docs />} />
+            <Route path="/docs/:projectId" element={<Docs />} />
+            <Route path="/docs" element={<Navigate to={SITE_CONFIG.getStartedUrl} replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </>
   );
 }

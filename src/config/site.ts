@@ -37,6 +37,18 @@ export const SITE_CONFIG = {
   // Description for SEO meta tags
   description: 'Documentation for Mevera Studio development libraries and tools',
 
+  // Canonical public URL of the site (no trailing slash). Used for SEO, OG, sitemap.
+  siteUrl: 'https://docs.mevera.studio',
+
+  // Default social share image (relative to siteUrl or absolute)
+  ogImage: '/icon-1024.png',
+
+  // Twitter / X handle (without @). null to omit.
+  twitterHandle: null as string | null,
+
+  // Locale used in OG tags
+  locale: 'en_US',
+
   // URL for the "Get Started" button on homepage
   getStartedUrl: '/docs/Imperat/getting-started',
 

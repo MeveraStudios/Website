@@ -13,10 +13,12 @@ import { Hero } from '@/sections/Hero';
 import { Projects } from '@/sections/Projects';
 import { Team } from '@/sections/Team';
 import LightRays from '@/components/LightRays';
+import { Seo } from '@/components/Seo';
 
 export function Home() {
   return (
     <div className="min-h-screen flex flex-col relative bg-background overflow-x-hidden">
+      <Seo path="/" type="website" />
       {/* Background Effect */}
       <div className="absolute inset-0 h-full pointer-events-none z-0">
         <LightRays
@@ -38,7 +40,7 @@ export function Home() {
 
       <Header />
 
-      <main className="flex-1 relative z-10">
+      <main id="main-content" tabIndex={-1} className="flex-1 relative z-10">
         <Hero />
         <Projects />
         <Team />

@@ -3,7 +3,12 @@
     "allow": [
       "Bash(rm \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started/Introduction.mdx\" \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started/Menu-Capacity.mdx\" \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started/Menu-Content.mdx\" \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started/Menu-Titles.mdx\" \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started/_category_.yml\")",
       "Bash(rmdir \"D:/Projects 2025/MeveraDocs/docs/Lotus/Getting-Started\")",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "mcp__lean-ctx__ctx_tree",
+      "mcp__lean-ctx__ctx_read",
+      "mcp__lean-ctx__ctx_outline",
+      "mcp__lean-ctx__ctx_expand",
+      "Bash(npx eslint *)"
     ]
   }
 }

@@ -17,11 +17,13 @@ import { MarkdownRenderer } from '@/components/docs/MarkdownRenderer';
 import { MDXRenderer } from '@/components/docs/MDXRenderer';
 import { TableOfContents } from '@/components/docs/TableOfContents';
 import { DocNavigation } from '@/components/docs/DocNavigation';
+import { DocFeedback } from '@/components/docs/DocFeedback';
 import { SearchDialog } from '@/components/docs/SearchDialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES } from '@/config/site';
+import { Seo, type Breadcrumb } from '@/components/Seo';
 
 export function Docs() {
   const { projectId, slug } = useParams<{ projectId: string; slug: string }>();
@@ -79,8 +81,34 @@ export function Docs() {
     ? `${SITE_CONFIG.githubUrl}/edit/main${doc.path}`
     : null;
 
+  const breadcrumbs: Breadcrumb[] | undefined = doc
+    ? [
+        { name: 'Home', url: '/' },
+        { name: project.name, url: `/docs/${project.id}` },
+        ...(doc.category ? [{ name: doc.category, url: `/docs/${project.id}` }] : []),
+        { name: doc.frontmatter.title, url: `/docs/${project.id}/${doc.slug}` },
+      ]
+    : undefined;
+
   return (
     <div className="min-h-screen flex flex-col bg-docs">
+      {doc ? (
+        <Seo
+          title={`${doc.frontmatter.title} – ${project.name}`}
+          description={doc.frontmatter.description || project.description}
+          path={`/docs/${project.id}/${doc.slug}`}
+          type="article"
+          isArticle
+          lastUpdated={doc.lastUpdatedAt}
+          breadcrumbs={breadcrumbs}
+        />
+      ) : (
+        <Seo
+          title={project.name}
+          description={project.description}
+          path={`/docs/${project.id}`}
+        />
+      )}
       <Header />
 
       <div className="flex-1 container mx-auto px-4">
@@ -89,7 +117,7 @@ export function Docs() {
           <Sidebar project={project} />
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0">
+          <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center justify-between mb-6">
               <MobileSidebar project={project} />
@@ -158,6 +186,15 @@ export function Docs() {
                 ) : (
                   <MarkdownRenderer content={doc.content || ''} />
                 )}
+
+                {/* Feedback */}
+                <DocFeedback
+                  key={`${project.id}/${doc.slug}`}
+                  projectId={project.id}
+                  slug={doc.slug}
+                  docTitle={doc.frontmatter.title}
+                  docPath={doc.path}
+                />
 
                 {/* Document Navigation */}
                 <DocNavigation

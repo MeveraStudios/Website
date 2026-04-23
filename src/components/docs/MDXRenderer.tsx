@@ -12,7 +12,9 @@ import * as runtime from 'react/jsx-runtime';
 import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
 import remarkAdmonitions from './remark-admonitions';
+import remarkCodeMeta from './remark-code-meta';
 import { CodeBlock } from './CodeBlock';
+import { parseCodeMeta } from './parseCodeMeta';
 import { Admonition } from './Admonition';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs, TabItem } from './Tabs';
@@ -95,7 +97,12 @@ const mdxComponents = {
       );
     }
 
-    return <CodeBlock className={className}>{String(children)}</CodeBlock>;
+    const meta = parseCodeMeta(props['data-meta']);
+    return (
+      <CodeBlock className={className} {...meta}>
+        {String(children)}
+      </CodeBlock>
+    );
   },
 
   img: ({ src, alt, ...props }: any) => (
@@ -186,7 +193,7 @@ export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
         const compiled = await compile(content, {
           outputFormat: 'function-body',
           development: false,
-          remarkPlugins: [remarkGfm, remarkDirective, remarkAdmonitions],
+          remarkPlugins: [remarkGfm, remarkDirective, remarkAdmonitions, remarkCodeMeta],
           rehypePlugins: [rehypeHeadingIds],
         });
 

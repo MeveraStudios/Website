@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { SITE_CONFIG, PROJECTS, NAVIGATION } from '@/config/site';
 import faviconUrl from '@/assets/favicon.ico';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { CodeThemeToggle } from '@/components/CodeThemeToggle';
 
 /**
  * =============================================================================
@@ -70,6 +71,9 @@ export function Header() {
     if (path.startsWith('/#')) return false;
     return location.pathname.startsWith(path);
   };
+
+  // Code-theme picker only makes sense on doc routes.
+  const onDocs = location.pathname.startsWith('/docs');
 
   return (
     <header className="sticky top-0 z-50 w-full glass">
@@ -128,6 +132,7 @@ export function Header() {
         {/* External Links */}
         <div className="hidden md:flex items-center gap-1">
           <ThemeToggle />
+          {onDocs && <CodeThemeToggle />}
           {SITE_CONFIG.discordUrl && (
             <Button variant="ghost" size="icon" asChild>
               <a
@@ -156,6 +161,7 @@ export function Header() {
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <div className="md:hidden flex items-center">
             <ThemeToggle />
+            {onDocs && <CodeThemeToggle />}
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />

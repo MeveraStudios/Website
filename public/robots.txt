@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /docs-content/
+
+Sitemap: https://docs.mevera.studio/sitemap.xml

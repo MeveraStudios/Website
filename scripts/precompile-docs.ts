@@ -22,6 +22,9 @@ const DOCS_DIR = join(ROOT_DIR, 'docs');
 const PUBLIC_DIR = join(ROOT_DIR, 'public');
 const CONFIG_PATH = join(ROOT_DIR, 'src', 'data', 'projects.json');
 
+// Canonical public URL (override via SITE_URL env var for staging builds).
+const SITE_URL = (process.env.SITE_URL || 'https://docs.mevera.studio').replace(/\/$/, '');
+
 type YamlValue = string | number | boolean;
 
 interface ProjectConfig {
@@ -560,10 +563,72 @@ function precompileDocs() {
         });
     });
 
+    // 3. Generate sitemap.xml
+    const nowIso = new Date().toISOString();
+    const urlEntries: { loc: string; lastmod?: string; priority: string; changefreq: string }[] = [];
+
+    const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
+
+    urlEntries.push({ loc: `${SITE_URL}/`, lastmod: nowIso, priority: '1.0', changefreq: 'weekly' });
+
+    projectsMap.forEach(project => {
+        const firstDoc = project.categories[0]?.docs[0];
+        if (firstDoc) {
+            urlEntries.push({
+                loc: `${SITE_URL}${encodePath(`/docs/${project.id}`)}`,
+                lastmod: firstDoc.lastUpdatedAt || nowIso,
+                priority: '0.9',
+                changefreq: 'weekly',
+            });
+        }
+        project.allDocs.forEach(doc => {
+            urlEntries.push({
+                loc: `${SITE_URL}${encodePath(`/docs/${project.id}/${doc.slug}`)}`,
+                lastmod: doc.lastUpdatedAt || nowIso,
+                priority: '0.8',
+                changefreq: 'weekly',
+            });
+        });
+    });
+
+    const xmlEscape = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+    const sitemapXml =
+        `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+        urlEntries
+            .map(
+                e =>
+                    `  <url>\n` +
+                    `    <loc>${xmlEscape(e.loc)}</loc>\n` +
+                    (e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>\n` : '') +
+                    `    <changefreq>${e.changefreq}</changefreq>\n` +
+                    `    <priority>${e.priority}</priority>\n` +
+                    `  </url>`
+            )
+            .join('\n') +
+        `\n</urlset>\n`;
+
+    const sitemapPath = join(PUBLIC_DIR, 'sitemap.xml');
+    writeFileSync(sitemapPath, sitemapXml, 'utf-8');
+
+    // 4. Generate robots.txt
+    const robotsTxt =
+        `User-agent: *\n` +
+        `Allow: /\n` +
+        `Disallow: /docs-content/\n` +
+        `\n` +
+        `Sitemap: ${SITE_URL}/sitemap.xml\n`;
+    const robotsPath = join(PUBLIC_DIR, 'robots.txt');
+    writeFileSync(robotsPath, robotsTxt, 'utf-8');
+
     console.log('\n✅ Precompilation complete!');
     console.log(`   📄 Generated: ${docsNavPath} (Navigation only)`);
     console.log(`   🔍 Generated: ${searchIndexPath}`);
     console.log(`   📂 Generated: ${contentFilesWritten} individual document files in public/docs-content/`);
+    console.log(`   🗺️  Generated: ${sitemapPath} (${urlEntries.length} URLs)`);
+    console.log(`   🤖 Generated: ${robotsPath}`);
     console.log(`   📊 Total projects: ${projectsMap.size}`);
     console.log(`   📚 Total documents: ${searchIndex.length}`);
 }

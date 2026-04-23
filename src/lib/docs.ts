@@ -260,58 +260,105 @@ export function getProjectNav(project: DocProject): { label: string; href: strin
 }
 
 /**
- * Search through all documentation using the search index directly
+ * Full-text search powered by FlexSearch.
+ *
+ * The static `search-index.json` is the source documents. We build a
+ * Document index client-side (title is weighted higher than content) and
+ * query it for ranked results with a highlighted excerpt.
  */
-let searchIndexCache: { title: string; content: string; href: string; project: string }[] | null = null;
-let isSearchIndexLoading = false;
+import * as FlexSearch from 'flexsearch';
 
-export async function fetchSearchIndex() {
+interface SearchDoc {
+  id: number;
+  title: string;
+  content: string;
+  href: string;
+  project: string;
+}
+
+type EnrichedHit = { field: string; result: Array<{ id: number; doc: SearchDoc }> };
+
+let searchIndexCache: SearchDoc[] | null = null;
+let isSearchIndexLoading = false;
+let flexIndex: FlexSearch.Document<SearchDoc, string[]> | null = null;
+
+function buildFlexIndex(docs: SearchDoc[]) {
+  const idx = new FlexSearch.Document<SearchDoc, string[]>({
+    tokenize: 'forward',
+    cache: 100,
+    document: {
+      id: 'id',
+      index: ['title', 'content'],
+      store: ['title', 'content', 'href', 'project'],
+    },
+  });
+  docs.forEach(d => idx.add(d));
+  return idx;
+}
+
+export async function fetchSearchIndex(): Promise<SearchDoc[]> {
   if (searchIndexCache) return searchIndexCache;
-  if (isSearchIndexLoading) return []; // Avoid parallel disjoint fetched, or return empty temp
+  if (isSearchIndexLoading) return [];
 
   isSearchIndexLoading = true;
   try {
     const res = await fetch('/search-index.json');
     if (res.ok) {
-      searchIndexCache = await res.json();
+      const raw = (await res.json()) as Omit<SearchDoc, 'id'>[];
+      searchIndexCache = raw.map((d, i) => ({ ...d, id: i }));
+      flexIndex = buildFlexIndex(searchIndexCache);
     }
   } catch (e) {
-    console.error("Failed to load search index", e);
+    console.error('Failed to load search index', e);
   } finally {
     isSearchIndexLoading = false;
   }
   return searchIndexCache || [];
 }
 
-export async function searchDocs(query: string) {
-  const indexCache = await fetchSearchIndex();
-
-  if (!indexCache || indexCache.length === 0) {
-    return [];
+function buildExcerpt(content: string, query: string, radius = 80): string {
+  const lower = content.toLowerCase();
+  const q = query.toLowerCase();
+  let idx = lower.indexOf(q);
+  if (idx === -1) {
+    // Fall back to first term that matches
+    const firstTerm = q.split(/\s+/).find(t => t && lower.includes(t));
+    idx = firstTerm ? lower.indexOf(firstTerm) : 0;
   }
+  const start = Math.max(0, idx - radius);
+  const end = Math.min(content.length, idx + query.length + radius * 2);
+  const prefix = start > 0 ? '… ' : '';
+  const suffix = end < content.length ? ' …' : '';
+  return (prefix + content.slice(start, end).replace(/[#*`]/g, '').trim() + suffix);
+}
 
+export async function searchDocs(query: string) {
+  const docs = await fetchSearchIndex();
+  if (!docs.length || !flexIndex || !query.trim()) return [];
+
+  const limit = 20;
+  const hits = flexIndex.search(query, limit, { enrich: true, suggest: true }) as unknown as EnrichedHit[];
+
+  // Merge + dedupe by id while preserving field-priority ordering
+  // (flexsearch returns one bucket per indexed field — title first).
+  const seen = new Set<number>();
   const results: { title: string; excerpt: string; href: string; project: string }[] = [];
-  const lowerQuery = query.toLowerCase();
 
-  indexCache.forEach(doc => {
-    const content = doc.content.toLowerCase();
-    const title = doc.title.toLowerCase();
-
-    if (title.includes(lowerQuery) || content.includes(lowerQuery)) {
-      const index = content.indexOf(lowerQuery);
-      const safeIndex = index !== -1 ? index : 0;
-      const start = Math.max(0, safeIndex - 50);
-      const end = Math.min(content.length, safeIndex + query.length + 100);
-      const excerpt = doc.content.slice(start, end).replace(/[#*`]/g, '');
-
+  for (const bucket of hits) {
+    for (const item of bucket.result) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      const doc = item.doc;
       results.push({
         title: doc.title,
-        excerpt: `...${excerpt}...`,
+        excerpt: buildExcerpt(doc.content, query),
         href: doc.href,
-        project: doc.project
+        project: doc.project,
       });
+      if (results.length >= limit) break;
     }
-  });
+    if (results.length >= limit) break;
+  }
 
   return results;
 }

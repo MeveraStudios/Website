@@ -133,9 +133,104 @@
 
 /* Highlighted lines */
 .code-block .line.highlighted {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(99, 102, 241, 0.15);
+  box-shadow: inset 3px 0 0 rgba(99, 102, 241, 0.8) !important;
   margin: 0 -1rem;
   padding: 0 1rem;
+}
+
+/* =============================================================================
+   LINE FOCUS (blur non-focused lines)
+   ============================================================================= */
+
+.code-block.has-focus .line {
+  transition: filter 0.25s ease, opacity 0.25s ease;
+  filter: blur(0);
+  opacity: 1;
+}
+
+.code-block.has-focus .line.dimmed {
+  filter: blur(2px);
+  opacity: 0.4;
+}
+
+.code-block.has-focus .line.focused {
+  filter: none;
+  opacity: 1;
+}
+
+/* Lift the blur on hover so the full snippet is still readable */
+.code-block.has-focus:hover .line.dimmed,
+.code-block.has-focus:focus-within .line.dimmed {
+  filter: blur(0);
+  opacity: 0.85;
+}
+
+/* Wrap toggle */
+.code-block.wrap-lines .line,
+.code-block.wrap-lines pre,
+.code-block.wrap-lines code {
+  white-space: pre-wrap !important;
+  word-break: break-word;
+}
+
+/* Diff tinting */
+.code-block.is-diff .token.inserted,
+.code-block.is-diff .line:has(.token.inserted) {
+  background: rgba(46, 160, 67, 0.12);
+}
+.code-block.is-diff .token.deleted,
+.code-block.is-diff .line:has(.token.deleted) {
+  background: rgba(248, 81, 73, 0.12);
+}
+
+/* Header actions + title */
+.code-block-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.code-block-title {
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+.code-block-wrap {
+  color: #a1a1aa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.code-block-wrap:hover {
+  background: #1a1a1a;
+  color: #e6edf3;
+}
+.code-block-wrap[aria-pressed='true'] {
+  color: hsl(var(--primary));
+}
+
+.light .code-block-wrap,
+[data-theme='light'] .code-block-wrap {
+  color: hsl(215 16% 40%);
+}
+.light .code-block-wrap:hover,
+[data-theme='light'] .code-block-wrap:hover {
+  background: hsl(214 20% 92%);
+  color: hsl(222 47% 11%);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .code-block.has-focus .line {
+    transition: none;
+  }
 }
 
 /* Inline code */
