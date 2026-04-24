@@ -21,7 +21,7 @@ import {
 import { useCodeTheme, type CodeThemeId } from '@/components/CodeThemeProvider';
 
 export function CodeThemeToggle({ className }: { className?: string }) {
-  const { themeId, setThemeId, themes } = useCodeTheme();
+  const { themeId, setThemeId, themes, mode } = useCodeTheme();
 
   return (
     <DropdownMenu modal={false}>
@@ -37,7 +37,12 @@ export function CodeThemeToggle({ className }: { className?: string }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Code block theme</DropdownMenuLabel>
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Code block theme</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {mode}
+          </span>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
           value={themeId}

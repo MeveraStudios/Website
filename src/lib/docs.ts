@@ -266,7 +266,15 @@ export function getProjectNav(project: DocProject): { label: string; href: strin
  * Document index client-side (title is weighted higher than content) and
  * query it for ranked results with a highlighted excerpt.
  */
-import * as FlexSearch from 'flexsearch';
+import * as FlexSearchNS from 'flexsearch';
+
+// FlexSearch's bundle.module build ships `export default { Document, Index, ... }`,
+// while @types/flexsearch declares named exports. Resolve the runtime class from
+// both shapes so `new Document(...)` works regardless of bundler interop.
+const FlexSearchRuntime = ((FlexSearchNS as unknown) as { default?: typeof FlexSearchNS } & typeof FlexSearchNS);
+const DocumentCtor =
+  (FlexSearchRuntime.default && (FlexSearchRuntime.default as typeof FlexSearchNS).Document) ||
+  FlexSearchRuntime.Document;
 
 interface SearchDoc {
   id: number;
@@ -280,10 +288,10 @@ type EnrichedHit = { field: string; result: Array<{ id: number; doc: SearchDoc }
 
 let searchIndexCache: SearchDoc[] | null = null;
 let isSearchIndexLoading = false;
-let flexIndex: FlexSearch.Document<SearchDoc, string[]> | null = null;
+let flexIndex: FlexSearchNS.Document<SearchDoc, string[]> | null = null;
 
 function buildFlexIndex(docs: SearchDoc[]) {
-  const idx = new FlexSearch.Document<SearchDoc, string[]>({
+  const idx = new DocumentCtor<SearchDoc, string[]>({
     tokenize: 'forward',
     cache: 100,
     document: {
