@@ -125,7 +125,10 @@ export function SearchDialog() {
           <DialogHeader className="p-4 pb-0">
             <DialogTitle className="sr-only">Search Documentation</DialogTitle>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 placeholder="Search documentation..."
                 className="pl-10 h-12 text-lg"
@@ -133,47 +136,76 @@ export function SearchDialog() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 autoFocus
+                role="combobox"
+                aria-label="Search documentation"
+                aria-expanded={results.length > 0}
+                aria-controls="search-results-listbox"
+                aria-activedescendant={
+                  results[selectedIndex]
+                    ? `search-result-${selectedIndex}`
+                    : undefined
+                }
               />
             </div>
           </DialogHeader>
 
           <div className="p-4 pt-2">
             {query.trim() && results.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div
+                className="text-center py-8 text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
                 <p>No results found for &quot;{query}&quot;</p>
                 <p className="text-sm mt-1">Try a different search term</p>
               </div>
             ) : (
               <ScrollArea className="max-h-[60vh]">
-                <div className="space-y-1">
-                  {results.map((result, index) => (
-                    <button
-                      key={result.href}
-                      onClick={() => handleSelect(result)}
-                      className={cn(
-                        'w-full text-left p-3 rounded-lg transition-colors',
-                        index === selectedIndex
-                          ? 'bg-primary/10'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground">
-                            {result.title}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {result.excerpt}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            in {result.project}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <ul
+                  id="search-results-listbox"
+                  role="listbox"
+                  aria-label="Search results"
+                  className="space-y-1 list-none m-0 p-0"
+                >
+                  {results.map((result, index) => {
+                    const isSelected = index === selectedIndex;
+                    return (
+                      <li
+                        key={result.href}
+                        id={`search-result-${index}`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelect(result)}
+                          className={cn(
+                            'w-full text-left p-3 rounded-lg transition-colors',
+                            isSelected ? 'bg-primary/10' : 'hover:bg-muted'
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <FileText
+                              className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground">
+                                {result.title}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {result.excerpt}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                in {result.project}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </ScrollArea>
             )}
 

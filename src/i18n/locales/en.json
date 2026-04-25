@@ -1,0 +1,37 @@
+{
+  "common": {
+    "search": "Search",
+    "searchDocs": "Search documentation",
+    "lastUpdated": "Last updated",
+    "editPage": "Edit this page",
+    "reportIssue": "Report issue",
+    "onThisPage": "On this page",
+    "contributors": "Contributors",
+    "previous": "Previous",
+    "next": "Next",
+    "toggleTheme": "Toggle theme",
+    "codeTheme": "Code block theme",
+    "language": "Language",
+    "skipToContent": "Skip to content",
+    "offline": "You're offline. Showing cached docs.",
+    "notFound": "Page not found",
+    "goHome": "Go home",
+    "browseDocs": "Browse docs",
+    "tryAgain": "Try again",
+    "version": "Version"
+  },
+  "search": {
+    "placeholder": "Search documentation…",
+    "noResults": "No results found for \"{{query}}\"",
+    "tryDifferent": "Try a different search term",
+    "toNavigate": "to navigate",
+    "toSelect": "to select",
+    "toClose": "to close"
+  },
+  "feedback": {
+    "prompt": "Was this page helpful?",
+    "yes": "Yes",
+    "no": "No",
+    "thanks": "Thanks for the feedback!"
+  }
+}

@@ -22,6 +22,16 @@ export interface DocFile {
   toc?: TocItem[];
   /** Last updated datestring from git */
   lastUpdatedAt?: string;
+  /** Distinct git contributors, most-recent first (capped). */
+  contributors?: DocContributor[];
+}
+
+/** Git author metadata gathered at build time. */
+export interface DocContributor {
+  name: string;
+  email: string;
+  /** Avatar URL (GitHub noreply emails are derived to github.com/<user>.png). */
+  avatar?: string;
 }
 
 // Frontmatter metadata from markdown files
@@ -68,6 +78,15 @@ export interface DocProject {
     color: string;
     githubRepo?: string;
   };
+  /** Detected version folders. Empty array = unversioned. */
+  versions?: DocVersion[];
+}
+
+/** A detected documentation version (`v1`, `v2`, `latest`). */
+export interface DocVersion {
+  id: string;
+  label: string;
+  latest: boolean;
 }
 
 // Navigation item for sidebar

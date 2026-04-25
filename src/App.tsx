@@ -25,6 +25,7 @@ import { preloadDocs } from '@/lib/docs';
 import { Helmet } from 'react-helmet-async';
 import { Seo } from '@/components/Seo';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { lookupRedirect } from '@/lib/redirects';
 
 // Lazy loading the main route pages to split bundles
 const Home = lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
@@ -89,8 +90,16 @@ function ScrollManager() {
   return null;
 }
 
-// 404 Page — no indexing, clear recovery paths
+// 404 Page — checks the client-side redirects map first; if the current path
+// was renamed, issue a replace-navigation to the new URL. Otherwise render
+// the not-found UI with a noindex tag.
 function NotFound() {
+  const { pathname, search, hash } = useLocation();
+  const target = lookupRedirect(pathname);
+  if (target) {
+    return <Navigate to={`${target}${search}${hash}`} replace />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
       <Seo

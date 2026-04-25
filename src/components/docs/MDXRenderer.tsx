@@ -16,6 +16,7 @@ import remarkCodeMeta from './remark-code-meta';
 import { CodeBlock } from './CodeBlock';
 import { parseCodeMeta } from './parseCodeMeta';
 import { Admonition } from './Admonition';
+import { SmartImg } from './SmartImg';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs, TabItem } from './Tabs';
 import LatestVersionBlock from '@/components/LatestVersionBlock';
@@ -106,10 +107,9 @@ const mdxComponents = {
   },
 
   img: ({ src, alt, ...props }: any) => (
-    <img
+    <SmartImg
       src={src}
       alt={alt}
-      loading="lazy"
       className="rounded-lg max-w-full h-auto"
       {...props}
     />

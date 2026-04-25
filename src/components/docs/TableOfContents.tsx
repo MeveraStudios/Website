@@ -176,7 +176,11 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     if (element) {
       const offset = 100;
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: 'smooth' });
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+      // Move keyboard focus to the target so subsequent Tab starts there.
+      element.setAttribute('tabindex', '-1');
+      element.focus({ preventScroll: true });
     }
   };
 
@@ -188,12 +192,12 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
   return (
     <div className={cn('hidden xl:block w-64 shrink-0', className)}>
       <div className="sticky top-24 pl-4">
-        <div className="flex items-center gap-2 mb-4 text-foreground/80">
-          <List className="w-4 h-4" />
+        <div className="flex items-center gap-2 mb-4 text-foreground/80" id="toc-heading">
+          <List className="w-4 h-4" aria-hidden="true" />
           <p className="text-sm font-medium">On this page</p>
         </div>
 
-        <nav className="relative">
+        <nav className="relative" aria-labelledby="toc-heading">
           {/* The Stepped Masked Track */}
           <div
             className="absolute left-0 top-0 bottom-0 w-6 bg-border/40 pointer-events-none transition-all duration-300"
@@ -222,6 +226,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
                   ref={el => { itemsRef.current[item.id] = el; }}
                   href={`#${item.id}`}
                   onClick={(e) => handleClick(e, item.id)}
+                  aria-current={activeIds.includes(item.id) ? 'location' : undefined}
                   className={cn(
                     'block py-1.5 text-sm transition-colors duration-200',
                     item.level === 2 ? 'pl-6' : 'pl-9',

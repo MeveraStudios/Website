@@ -1,0 +1,3 @@
+{
+  "_comment": "Map old → new paths here when renaming / moving docs so bookmarks and search-engine links don't 404. Keys and values are both absolute paths beginning with '/'. Keys match against decoded URL pathname. Values may end in a hash. Example: \"/docs/Imperat/old-slug\": \"/docs/Imperat/Introduction/new-slug\"."
+}

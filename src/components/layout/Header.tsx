@@ -24,6 +24,7 @@ import { SITE_CONFIG, PROJECTS, NAVIGATION } from '@/config/site';
 import faviconUrl from '@/assets/favicon.ico';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CodeThemeToggle } from '@/components/CodeThemeToggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 /**
  * =============================================================================
@@ -131,6 +132,7 @@ export function Header() {
 
         {/* External Links */}
         <div className="hidden md:flex items-center gap-1">
+          <LanguageToggle />
           <ThemeToggle />
           {onDocs && <CodeThemeToggle />}
           {SITE_CONFIG.discordUrl && (

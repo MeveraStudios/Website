@@ -1,0 +1,39 @@
+{
+  "/assets/bukkit.png": {
+    "bytes": 2808,
+    "width": 400,
+    "height": 400
+  },
+  "/assets/bungeecord.png": {
+    "bytes": 31049,
+    "width": 428,
+    "height": 222
+  },
+  "/assets/hytale.png": {
+    "bytes": 14482,
+    "width": 100,
+    "height": 100
+  },
+  "/assets/scofi-custom.gif": {
+    "bytes": 168005
+  },
+  "/assets/scofi-highlight.gif": {
+    "bytes": 70053
+  },
+  "/assets/scofi-scroll.gif": {
+    "bytes": 60692
+  },
+  "/assets/Tutorial-Menu-Example.gif": {
+    "bytes": 862502
+  },
+  "/assets/velocity_logo.svg": {
+    "bytes": 1180,
+    "width": 34,
+    "height": 34
+  },
+  "/assets/voxy-thread.png": {
+    "bytes": 3340738,
+    "width": 1920,
+    "height": 7077
+  }
+}

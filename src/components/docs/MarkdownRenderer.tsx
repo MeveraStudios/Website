@@ -16,6 +16,7 @@ import remarkCodeMeta from './remark-code-meta';
 import { CodeBlock } from './CodeBlock';
 import { parseCodeMeta } from './parseCodeMeta';
 import { Admonition } from './Admonition';
+import { SmartImg } from './SmartImg';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
 import { Tabs as TabsComponent, TabItem as TabItemComponent } from './Tabs.tsx';
 import LatestVersionBlockComponent from '@/components/LatestVersionBlock';
@@ -140,7 +141,7 @@ const components = {
   },
 
   img: ({ src, alt, ...props }: any) => (
-    <img src={src} alt={alt} loading="lazy" className="rounded-lg max-w-full h-auto" {...props} />
+    <SmartImg src={src} alt={alt} className="rounded-lg max-w-full h-auto" {...props} />
   ),
 
   blockquote: ({ children, ...props }: any) => (

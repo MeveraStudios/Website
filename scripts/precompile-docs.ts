@@ -60,6 +60,13 @@ interface DocFrontmatter {
     sidebarLabel?: string;
 }
 
+interface DocContributor {
+    name: string;
+    email: string;
+    /** Gravatar / GitHub-derived avatar URL, best-effort. */
+    avatar?: string;
+}
+
 interface DocFile {
     slug: string;
     path: string;
@@ -69,12 +76,22 @@ interface DocFile {
     category: string;
     extension: string;
     lastUpdatedAt?: string;
+    contributors?: DocContributor[];
 }
 
 interface DocCategory {
     name: string;
     docs: DocFile[];
     order: number;
+}
+
+interface DocVersion {
+    /** Folder name — e.g. `v1`, `v2`, `latest`. */
+    id: string;
+    /** Human label — same as id unless overridden. */
+    label: string;
+    /** If true, this is the default / latest version for the project. */
+    latest: boolean;
 }
 
 interface DocProject {
@@ -88,6 +105,8 @@ interface DocProject {
         color: string;
         githubRepo?: string;
     };
+    /** Empty array means the project is unversioned. */
+    versions: DocVersion[];
 }
 
 // Omit content and frontmatter from the navigation data to keep it small
@@ -118,6 +137,7 @@ interface NavDocProject {
         color: string;
         githubRepo?: string;
     };
+    versions: DocVersion[];
 }
 
 interface TocItem {
@@ -248,6 +268,48 @@ function getCategoryMetadata(projectId: string, categoryPath: string): { label?:
 }
 
 /**
+ * Detect version subfolders directly beneath `docs/<project>/`.
+ *
+ * A version is any immediate child folder whose name matches `v<digits>` or
+ * is literally `latest`. The highest-numbered `vN` folder is marked as
+ * `latest: true` unless a `latest/` folder exists (in which case that wins).
+ *
+ * Returns `[]` when no such folders are present → the project is
+ * unversioned and the UI hides the version switcher.
+ */
+function detectVersions(projectDir: string): DocVersion[] {
+    if (!existsSync(projectDir)) return [];
+    const entries = readdirSync(projectDir);
+    const versions: DocVersion[] = [];
+    let hasExplicitLatest = false;
+
+    for (const entry of entries) {
+        const fullPath = join(projectDir, entry);
+        if (!statSync(fullPath).isDirectory()) continue;
+
+        if (/^v\d+$/i.test(entry)) {
+            versions.push({ id: entry, label: entry, latest: false });
+        } else if (entry === 'latest') {
+            hasExplicitLatest = true;
+            versions.push({ id: 'latest', label: 'Latest', latest: true });
+        }
+    }
+
+    if (versions.length === 0) return [];
+
+    if (!hasExplicitLatest) {
+        // Find highest vN and mark as latest.
+        versions.sort((a, b) => {
+            const an = parseInt(a.id.slice(1), 10) || 0;
+            const bn = parseInt(b.id.slice(1), 10) || 0;
+            return an - bn;
+        });
+        versions[versions.length - 1].latest = true;
+    }
+    return versions;
+}
+
+/**
  * Recursively find all markdown files in a directory
  */
 function findMarkdownFiles(dir: string, baseDir: string = dir): string[] {
@@ -337,7 +399,8 @@ function precompileDocs() {
                 emoji: project.logoPath,
                 color: project.color,
                 githubRepo: project.githubRepo,
-            }
+            },
+            versions: detectVersions(join(DOCS_DIR, project.id)),
         });
     });
 
@@ -419,16 +482,52 @@ function precompileDocs() {
             let lastUpdatedAt = undefined;
             try {
                 // Get the timestamp of the last commit that modified this file
-                const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, { 
+                const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, {
                     encoding: 'utf-8',
-                    stdio: ['pipe', 'pipe', 'ignore'] 
+                    stdio: ['pipe', 'pipe', 'ignore']
                 }).trim();
-                
+
                 if (stdout) {
                     lastUpdatedAt = stdout;
                 }
             } catch {
                 // Ignore errors (e.g., file not tracked by git yet)
+            }
+
+            // Collect unique contributors from git log. Every commit touching this
+            // file contributes. GitHub-style `username@users.noreply.github.com`
+            // emails become a clickable avatar via https://github.com/<username>.png.
+            let contributors: DocContributor[] = [];
+            try {
+                const log = execSync(`git log --format="%an|%ae" -- "${fullPath}"`, {
+                    encoding: 'utf-8',
+                    stdio: ['pipe', 'pipe', 'ignore']
+                }).trim();
+
+                const seen = new Set<string>();
+                for (const line of log.split('\n')) {
+                    if (!line) continue;
+                    const pipeIdx = line.indexOf('|');
+                    if (pipeIdx < 0) continue;
+                    const name = line.slice(0, pipeIdx).trim();
+                    const email = line.slice(pipeIdx + 1).trim();
+                    const key = `${name}|${email}`.toLowerCase();
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    // Derive avatar when possible.
+                    // "12345+handle@users.noreply.github.com" or "handle@users.noreply.github.com"
+                    let avatar: string | undefined;
+                    const ghMatch = email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
+                    if (ghMatch) {
+                        avatar = `https://github.com/${ghMatch[1]}.png?size=64`;
+                    }
+                    contributors.push({ name, email, avatar });
+                }
+                // Cap to keep the JSON slim.
+                contributors = contributors.slice(0, 10);
+            } catch {
+                // ignore
             }
 
             const docFile: DocFile = {
@@ -439,7 +538,8 @@ function precompileDocs() {
                 project: projectId,
                 category: categoryName,
                 extension,
-                lastUpdatedAt
+                lastUpdatedAt,
+                contributors: contributors.length > 0 ? contributors : undefined,
             };
 
             project.allDocs.push(docFile);
@@ -511,6 +611,7 @@ function precompileDocs() {
             name: project.name,
             description: project.description,
             meta: project.meta,
+            versions: project.versions,
             categories: project.categories.map(category => ({
                 name: category.name,
                 order: category.order,

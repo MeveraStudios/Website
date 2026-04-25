@@ -9,7 +9,7 @@
  */
 
 import { useParams, Navigate } from 'react-router-dom';
-import { Edit, Calendar } from 'lucide-react';
+import { Edit, Calendar, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
@@ -18,11 +18,13 @@ import { MDXRenderer } from '@/components/docs/MDXRenderer';
 import { TableOfContents } from '@/components/docs/TableOfContents';
 import { DocNavigation } from '@/components/docs/DocNavigation';
 import { DocFeedback } from '@/components/docs/DocFeedback';
+import { Contributors } from '@/components/docs/Contributors';
+import { Breadcrumbs } from '@/components/docs/Breadcrumbs';
 import { SearchDialog } from '@/components/docs/SearchDialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation } from '@/lib/docs';
-import { SITE_CONFIG, FEATURES } from '@/config/site';
+import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
 
 export function Docs() {
@@ -77,8 +79,17 @@ export function Docs() {
   // Get prev/next navigation
   const { prev, next } = getDocNavigation(project, slug);
 
+  // Docs live in the MeveraDocs/Website repo, so "Edit this page" always
+  // targets that repo (not the per-project source repo).
   const editUrl = doc
     ? `${SITE_CONFIG.githubUrl}/edit/main${doc.path}`
+    : null;
+
+  // "Report issue" links to the *project's* source repo, so bug reports about
+  // a library's behavior land where maintainers will see them.
+  const projectMeta = PROJECTS.find(p => p.id === project.id);
+  const reportIssueUrl = projectMeta?.githubRepo
+    ? `${projectMeta.githubRepo.replace(/\/$/, '')}/issues/new`
     : null;
 
   const breadcrumbs: Breadcrumb[] | undefined = doc
@@ -143,6 +154,7 @@ export function Docs() {
               <div key={slug} className="animate-fadein">
                 {/* Document Header */}
                 <div className="mb-8">
+                  {breadcrumbs && <Breadcrumbs items={breadcrumbs} className="mb-4" />}
                   <h1 className="text-4xl font-bold tracking-tight mb-4">
                     {doc.frontmatter.title}
                   </h1>
@@ -175,6 +187,21 @@ export function Docs() {
                         </a>
                       </Button>
                     )}
+
+                    {reportIssueUrl && (
+                      <Button variant="link" size="sm" asChild className="h-auto p-0">
+                        <a
+                          href={reportIssueUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                          aria-label={`Report an issue on ${project.name}'s repository`}
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                          Report issue
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -195,6 +222,9 @@ export function Docs() {
                   docTitle={doc.frontmatter.title}
                   docPath={doc.path}
                 />
+
+                {/* Contributors */}
+                <Contributors contributors={doc.contributors} />
 
                 {/* Document Navigation */}
                 <DocNavigation
