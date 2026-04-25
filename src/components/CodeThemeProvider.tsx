@@ -22,11 +22,111 @@ import { useTheme } from 'next-themes';
 import {
   materialOceanic,
   vscDarkPlus,
-  dracula,
   materialLight,
   oneLight,
   prism as prismDefault,
 } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+/**
+ * IntelliJ "Dracula" Java palette.
+ *
+ * Matches the official JetBrains Dracula plugin colour scheme — the prism
+ * `dracula` style ships a generic web variant that doesn't line up with how
+ * IntelliJ paints Java tokens (keywords pink, classes green-italic,
+ * annotations yellow, numbers purple, strings yellow, comments grey-italic).
+ *
+ * Reference colours (Dracula spec):
+ *   bg #282A36 · fg #F8F8F2 · selection #44475A · comment #6272A4
+ *   cyan #8BE9FD · green #50FA7B · orange #FFB86C · pink #FF79C6
+ *   purple #BD93F9 · red #FF5555 · yellow #F1FA8C
+ */
+const draculaIntellij: { [key: string]: React.CSSProperties } = {
+  'code[class*="language-"]': {
+    color: '#F8F8F2',
+    background: 'none',
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    fontSize: '0.875rem',
+    textAlign: 'left',
+    whiteSpace: 'pre',
+    wordSpacing: 'normal',
+    wordBreak: 'normal',
+    lineHeight: 1.5,
+    tabSize: 4,
+    hyphens: 'none',
+  },
+  'pre[class*="language-"]': {
+    color: '#F8F8F2',
+    background: '#282A36',
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    fontSize: '0.875rem',
+    textAlign: 'left',
+    whiteSpace: 'pre',
+    wordSpacing: 'normal',
+    wordBreak: 'normal',
+    lineHeight: 1.5,
+    tabSize: 4,
+    hyphens: 'none',
+    padding: '1em',
+    margin: 0,
+    overflow: 'auto',
+    borderRadius: '0.5em',
+  },
+  ':not(pre) > code[class*="language-"]': {
+    background: '#282A36',
+    padding: '0.1em 0.3em',
+    borderRadius: '0.3em',
+    whiteSpace: 'normal',
+  },
+
+  comment: { color: '#6272A4', fontStyle: 'italic' },
+  prolog: { color: '#6272A4', fontStyle: 'italic' },
+  doctype: { color: '#6272A4', fontStyle: 'italic' },
+  cdata: { color: '#6272A4', fontStyle: 'italic' },
+
+  punctuation: { color: '#F8F8F2' },
+  '.namespace': { opacity: 0.7 },
+
+  property: { color: '#FF79C6' },
+  tag: { color: '#FF79C6' },
+  constant: { color: '#BD93F9' },
+  symbol: { color: '#BD93F9' },
+  boolean: { color: '#BD93F9' },
+  number: { color: '#BD93F9' },
+  deleted: { color: '#FF5555' },
+
+  selector: { color: '#50FA7B' },
+  'attr-name': { color: '#50FA7B' },
+  string: { color: '#F1FA8C' },
+  char: { color: '#F1FA8C' },
+  builtin: { color: '#8BE9FD', fontStyle: 'italic' },
+  inserted: { color: '#50FA7B' },
+
+  operator: { color: '#FF79C6' },
+  entity: { color: '#F8F8F2', cursor: 'help' },
+  url: { color: '#8BE9FD' },
+  '.language-css .token.string': { color: '#F1FA8C' },
+  '.style .token.string': { color: '#F1FA8C' },
+  variable: { color: '#F8F8F2' },
+
+  atrule: { color: '#F1FA8C' },
+  'attr-value': { color: '#F1FA8C' },
+  keyword: { color: '#FF79C6', fontWeight: 'bold' },
+
+  // Java method calls + function definitions: bright green.
+  function: { color: '#50FA7B' },
+  // Java class names: cyan italic (IntelliJ Dracula signature look).
+  'class-name': { color: '#8BE9FD', fontStyle: 'italic' },
+  // Annotations (`@Override`, `@Inject`): yellow, bold.
+  annotation: { color: '#F1FA8C', fontWeight: 'bold' },
+
+  regex: { color: '#FF5555' },
+  important: { color: '#FFB86C', fontWeight: 'bold' },
+
+  bold: { fontWeight: 'bold' },
+  italic: { fontStyle: 'italic' },
+};
 
 export type CodeThemeMode = 'dark' | 'light';
 
@@ -63,9 +163,9 @@ export const CODE_THEMES: CodeThemeDef[] = [
   },
   {
     id: 'dracula',
-    label: 'Dracula',
+    label: 'Dracula (IntelliJ)',
     mode: 'dark',
-    style: dracula as { [key: string]: React.CSSProperties },
+    style: draculaIntellij,
   },
 
   // ─── Light ───────────────────────────────────────────────────────────────

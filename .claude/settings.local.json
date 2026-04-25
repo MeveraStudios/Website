@@ -9,7 +9,8 @@
       "mcp__lean-ctx__ctx_outline",
       "mcp__lean-ctx__ctx_expand",
       "Bash(npx eslint *)",
-      "Bash(grep -iE 'light|coy|github|solarized|prism\\\\.js$|one-light')"
+      "Bash(grep -iE 'light|coy|github|solarized|prism\\\\.js$|one-light')",
+      "Bash(npx vite *)"
     ]
   }
 }
