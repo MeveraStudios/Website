@@ -1,0 +1,181 @@
+---
+title: Creating Subcommands
+description: Build subcommands for your commands and learn how to create complex command hierarchies with Imperat.
+order: 3
+---
+
+# Subcommands
+
+Subcommands organize commands into hierarchies. A Subcommand is nested within a parent Command and can have its own arguments and execution logic.
+
+## How Imperat Reads Subcommands
+`@SubCommand` annotation on classes and/or methods → creates a true subcommand
+The annotation has two parameters:
+- `value` — the subcommand's name(s) (e.g. "set", "help")
+- `attachTo` — the parent pathway to attach the subcommand to.
+
+The `attachTo` parameter specifies which parent pathway to attach the subcommand to. 
+If not specified, it attaches to the parent's **default pathway** (no required arguments).
+
+:::tip
+The `value` parameter is an array of strings representing names possible for the subcommand.
+The first name is the primary name, and the rest are aliases. 
+For example, `@SubCommand({"set", "s"})` creates a subcommand with primary name "set" and alias "s".
+:::
+
+:::info
+An `@Execute` method in a subcommand class is called a `subcommand-execution-method`.
+:::
+
+## @SubCommand on Methods
+`@SubCommand` can be used on methods to create subcommands without needing separate classes.
+
+```java
+@RootCommand("rank")
+public class RankCommand {
+    
+    @Execute
+    public void mainPathway(PLATFORMSOURCE source, String rank) {
+        // syntax: /rank <rank>
+    }
+
+    @SubCommand(value = "set", attachTo="<rank>")
+    public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
+        // syntax: /rank <rank> set <player>
+    }
+
+    @SubCommand(value = "help")
+    public void help(PLATFORMSOURCE source, @Optional Integer page) {
+        // syntax: /rank help [page]
+    }
+}
+```
+
+- `setRank` attaches to the `<rank>` argument — it inherits that argument
+- `help` attaches to the default pathway (no arguments required)
+
+
+:::danger{label="IMPORTANT"}
+If you use `attachTo` to attach a subcommand to a parent pathway.
+It's obligatory for the defined attachTo target/argument to be **present in the parent pathway**.
+:::
+
+:::danger
+Parameters from the parent's pathway **MUST** use `@InheritedArg`.
+:::
+
+**attachTo format:**
+- Required: `<argumentName>`
+- Optional: `[argumentName]`
+- Literal: `argumentName`
+
+## @SubCommand on Classes
+
+For subcommands with multiple pathways, use classes:
+
+```java
+@RootCommand("rank")
+public class RankCommand {
+    @Execute
+    public void mainPathway(PLATFORMSOURCE source, String rank) {
+        // syntax: /rank <rank>
+    }
+
+    @SubCommand(value = "set", attachTo="<rank>")
+    public class SetSubCommand {
+        
+        @Execute
+        public void defaultPathway(PLATFORMSOURCE source, @InheritedArg String rank) {
+            // syntax: /rank <rank> set
+        }
+
+        @Execute 
+        public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
+            // syntax: /rank <rank> set <player>
+        }
+    }
+
+    @SubCommand(value = "help")
+    public class HelpSubCommand {
+        @Execute
+        public void help(PLATFORMSOURCE source, @Optional Integer page) {
+            // syntax: /rank help [page]
+        }
+    }
+}
+```
+
+## External Subcommands
+
+Define subcommands in separate classes for cleaner code:
+
+```java
+@RootCommand("rank")
+@ExternalSubCommand({SetSubCommand.class, HelpSubCommand.class})
+public class RankCommand {
+    @Execute
+    public void mainPathway(PLATFORMSOURCE source, String rank) {
+        // syntax: /rank <rank>
+    }
+}
+
+@SubCommand(value = "set", attachTo="<rank>")
+public class SetSubCommand {
+    @Execute
+    public void setRank(PLATFORMSOURCE source, @InheritedArg String rank, String player) {
+        // syntax: /rank <rank> set <player>
+    }
+}
+
+@SubCommand(value = "help")
+public class HelpSubCommand {
+    @Execute
+    public void help(PLATFORMSOURCE source, @Optional Integer page) {
+        // syntax: /rank help [page]
+    }
+}
+```
+
+## Nested Subcommands
+
+Subcommands can be nested inside other subcommands:
+
+```java
+@RootCommand("example")
+public class ExampleCommand {
+    @Execute
+    public void exec(PLATFORMSOURCE source, int num) {
+        // syntax: /example <num>
+    }
+
+    @SubCommand(value = "sub")
+    public class Sub1 {
+        @Execute
+        public void execute(PLATFORMSOURCE source, @InheritedArg int num, String a, String b, String c) {
+            // syntax: /example <num> sub <a> <b> <c>
+        }
+
+        @SubCommand(value = "sub2")
+        public class Sub2 {
+            @Execute
+            public void execute(
+                PLATFORMSOURCE source,
+                @InheritedArg int num,
+                @InheritedArg String a,
+                @InheritedArg String b, 
+                @InheritedArg String c, 
+                float x, float y, float z
+            ) {
+                // syntax: /example <num> sub <a> <b> <c> sub2 <x> <y> <z>
+            }
+        }
+    }
+}
+```
+
+## Summary
+
+- `@SubCommand` creates subcommands (on methods or classes)
+- `@InheritedArg` marks inherited parent arguments
+- `@ExternalSubCommand` connects external subcommand classes
+- Nested subcommands work by using `@SubCommand` on classes inside subcommand classes

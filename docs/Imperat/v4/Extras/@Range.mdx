@@ -1,0 +1,75 @@
+---
+title: "@Range"
+description: Constrain numeric argument values to an allowed minimum and maximum range.
+order: 2
+---
+# @Range
+`@Range` constrains a **numeric parameter** to a minimum and/or maximum value. If the user enters a number outside the allowed range, the command is rejected with an error message.
+
+## Where to Place
+
+On a **parameter** of a numeric type (`int`, `long`, `double`, `float`, `Integer`, `Long`, `Double`, `Float`).
+
+```java
+@Target({ElementType.TYPE, ElementType.PARAMETER})
+```
+
+## Properties
+
+| Property | Type     | Default            | Description                        |
+|----------|----------|--------------------|------------------------------------|
+| `min`    | `double` | `Double.MIN_VALUE` | The minimum allowed value.         |
+| `max`    | `double` | `Double.MAX_VALUE` | The maximum allowed value.         |
+
+You can set **only min**, **only max**, or **both**.
+
+## Example
+
+```java
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+import studio.mevera.imperat.annotations.types.Named;
+import studio.mevera.imperat.annotations.types.Range;
+
+@RootCommand("setlevel")
+public class SetLevelCommand {
+
+    @Execute
+    public void setLevel(
+            PLATFORMSOURCE source,
+            @Named("level") @Range(min = 1, max = 100) int level
+    ) {
+        source.reply("Level set to " + level);
+    }
+}
+```
+
+### What happens
+
+| Input             | Result                                                        |
+|-------------------|---------------------------------------------------------------|
+| `/setlevel 50`    | ✅ Accepted — 50 is between 1 and 100.                        |
+| `/setlevel 0`     | ❌ Rejected — 0 is below the minimum of 1.                    |
+| `/setlevel 150`   | ❌ Rejected — 150 is above the maximum of 100.                |
+
+### Min-only example (from the Imperat codebase)
+
+```java
+@RootCommand("printnum")
+public void printNum(PLATFORMSOURCE source, @Named("num") @Range(min = 1.0) int num) {
+    source.reply("NUM= " + num);
+}
+```
+
+Here, `num` must be **at least 1**. There is no upper limit.
+
+## Error Message
+
+When validation fails, Imperat throws a `ResponseException` with the key `NUMBER_OUT_OF_RANGE`. The following placeholders are available in the error 
+message:
+
+- `%value%` — the value the user entered
+- `%parameter%` — the formatted parameter name
+- `%range%` — a human-readable range description (e.g., "within 1.0-100.0")
+- `%range_min%` / `%range_max%` — the individual bounds
+

@@ -1,0 +1,123 @@
+---
+title: Compound Arguments
+description: Learn how to combine multiple input arguments into a single compound argument for more complex command structures.
+order: 3
+---
+
+# Compound Arguments
+Compound arguments allow you to combine multiple input raw-arguments into a single argument, enabling more complex command structures and input parsing.
+This is particularly useful when you want to group related inputs together or when the input format is more complex than simple individual arguments.
+
+Defining a compound argument involves defining a compound-based `ArgumentType` that can parse multiple raw-arguments and
+ convert them into a single object that your command can use.
+
+
+## Example: Compound Argument for Coordinates
+Suppose you want to create a command that accepts a pair of coordinates (x, y) as input. 
+Instead of defining two separate arguments for x and y, you can use a compound argument to capture both values together.
+
+Let's create our type `Point3D` for the coordinates:
+```java
+public final class Point3D {
+    public final double x; //ik that having public fields is a bad practice, it's just for space-saving purposes
+    public final double y;
+    public final double z;
+
+    public Point2D(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+}
+```
+
+Next, we can create a compound argument type that parses the input into a `Point3D` object.
+Here we have a fixed-arity scenario: we always consume exactly three raw tokens (`x`, `y`, `z`).
+Extend `SimpleArgumentType` and pass the token count to its constructor — the framework collects the three tokens, joins them with a single space, and hands them to your `parse` method as one `String`.
+
+```java
+public class Point3DArgumentType extends SimpleArgumentType<PLATFORMSOURCE, Point3D> {
+
+    public Point3DArgumentType() {
+        super(3); // consume exactly 3 raw tokens: <x> <y> <z>
+    }
+
+    @Override
+    public Point3D parse(
+        CommandContext<PLATFORMSOURCE> context,
+        Argument<PLATFORMSOURCE> argument,
+        String correspondingInput
+    ) throws CommandException {
+        // 'correspondingInput' is the three tokens joined with a single space.
+        // example input: '/teleport 10 20 30'  →  correspondingInput = "10 20 30"
+        String[] coords = correspondingInput.split(" ");
+        if (coords.length != 3) {
+            throw new CommandException("Invalid coordinates, expected format: <x> <y> <z>");
+        }
+        try {
+            double x = Double.parseDouble(coords[0]);
+            double y = Double.parseDouble(coords[1]);
+            double z = Double.parseDouble(coords[2]);
+            return new Point3D(x, y, z);
+        } catch (NumberFormatException e) {
+            throw new CommandException("Invalid coordinates, expected numerical coordinates for <x> <y> <z>");
+        }
+    }
+}
+```
+
+:::danger{label="READ THIS"}
+What defines a compound argument-type is the number of raw tokens it consumes.
+Pass that count to `SimpleArgumentType`'s constructor (`super(N)`); the framework wires `getNumberOfParametersToConsume` for you and pre-joins the tokens before invoking `parse`.
+:::
+
+:::tip
+Need fully variable arity (a token count that depends on input shape)?
+Extend `ArgumentType<S, T>` directly — that variant gives you a `Cursor<S>` parameter and full peek/consume control, instead of a pre-joined `String`.
+:::
+
+Now you can use this `Point3DArgumentType` in your command to accept coordinates as a single compound argument:
+```java
+@RootCommand("teleport")
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(Player source, Point3D coordinates) {
+        // In a real implementation, you would teleport the player to the specified coordinates here.
+        Location location = new Location(source.getWorld(), coordinates.x, coordinates.y, coordinates.z);
+        source.teleport(location);
+    }
+    
+}
+```
+
+In this example, the `Point3DArgumentType` is designed to parse three separate inputs (x, y, and z) into a single `Point3D` object.
+
+:::danger{label="READ THIS"}
+The fixed token count must match what the user types — overshooting steals tokens from downstream arguments, undershooting strands them.
+With `SimpleArgumentType(N)`, that count lives in one place (the constructor) and the framework enforces it for you.
+:::
+
+## Formatting Compound Arguments
+When defining the input format for a compound argument, it's important to clearly specify how the inputs should be structured.
+Imperat internally automatically generates the format for the argument based on its name ONLY, meaning that if your argument is named `coordinates`,
+ the expected format will be `<coordinates>`(or `[coordinates]` if its **optional**), this might not affect the parsing logic of your argument, 
+ but it can lead to confusion for users when they see the command usage message.
+
+To provide a clear and accurate format for your compound argument, you can use the `@Format` annotation to specify the expected input format.
+### @Format
+The `@Format` annotation allows you to define a custom format for your argument, which will be displayed in the command usage message.
+For example, you can specify the format for the `coordinates` argument as follows:
+```java
+@RootCommand("teleport")
+public class TeleportCommand {
+
+    @Execute
+    public void teleport(PLATFORMSOURCE source, @Format("<x> <y> <z>") Point3D coordinates) {
+        // In a real implementation, you would teleport the player to the specified coordinates here.
+        Location location = new Location(source.getWorld(), coordinates.x, coordinates.y, coordinates.z);
+        source.teleport(location);
+    }
+    
+}
+```

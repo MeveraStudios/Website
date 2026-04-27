@@ -1,0 +1,60 @@
+---
+title: Getting Started
+description: Learn how to get started with Imperat
+order: 1
+---
+
+# Getting Started with Imperat
+
+Imperat is a powerful general-purpose command framework designed for modern application development.
+It provides a modern API and annotations to create command hierarchies.
+
+## Installation
+
+Imperat is a multi-modular project, you must install the core module as a starter.
+
+<LatestVersionBlock 
+    owner="MeveraStudios" 
+    repo="imperat"
+    group="studio.mevera" 
+    id="imperat-core" 
+/>
+
+## Platforms
+
+Choose your platform to get started, each platform has its own set of features and limitations. You can find detailed information for each supported environment in the [Platforms](./Platforms) section.
+
+### Dependency
+Add your chosen platform as a dependency.
+
+<LatestVersionBlock 
+    owner="MeveraStudios" 
+    repo="imperat"
+    group="studio.mevera" 
+    id="{platform}" 
+/>
+
+:::danger{label="READ THIS"}
+REPLACE `{platform}` with the platform's name.
+:::
+
+:::caution
+Ensure you use the **same version** 
+for both `imperat-core` and the platform-specific module (e.g., `imperat-bukkit`) to avoid compatibility issues.
+:::
+
+### Shading Imperat into your project.
+
+To avoid classpath conflicts, shade and relocate Imperat packages in your final artifact.
+
+<ShadingBlock/>
+
+### Snapshots
+If you would like to use/test the latest features on the experimental builds(per commit),
+Then use the snapshot version of the NEXT current version.
+
+For **example**:
+If current latest official version is `3.4.0`, then the **LATEST** snapshot version would be `3.5.0-SNAPSHOT`
+
+You must have the snapshots repo added:
+<SnapshotRepoBlock/>

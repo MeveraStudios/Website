@@ -3,7 +3,7 @@
  * 
  * Configures React Router with routes for:
  * - Home page (/)
- * - Documentation pages (/docs/:projectId/:slug)
+ * - Documentation pages (/docs/:projectId/:version/:slug)
  * 
  * Also handles:
  * - Scroll to top on navigation
@@ -152,7 +152,8 @@ function AppRoutes() {
         }>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/docs/:projectId/:slug" element={<Docs />} />
+            <Route path="/docs/:projectId/:version/:slug" element={<Docs />} />
+            <Route path="/docs/:projectId/:version" element={<Docs />} />
             <Route path="/docs/:projectId" element={<Docs />} />
             <Route path="/docs" element={<Navigate to={SITE_CONFIG.getStartedUrl} replace />} />
             <Route path="*" element={<NotFound />} />

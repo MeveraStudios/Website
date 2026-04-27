@@ -1,0 +1,97 @@
+---
+title: Instance Factory
+description: Learn how to use the Instance Factory system in Imperat to handle instantiation of your classes.
+order: 1
+---
+# Instance Factory
+The Instance Factory system tells Imperat how to create class instances.
+You usually use it to provide dependencies for command classes.
+
+For most projects, the built-in instance factory is enough, it's built with a simple registration system that covers most use cases.
+However, if you need more control, you can implement your own `InstanceFactory` and register it with `ConfigBuilder#instanceFactory`.
+
+:::info{label="Before You Start"}
+`PLATFORMIMPERAT`, `PLATFORMSOURCE`, and `YourClass` are placeholders in these examples.
+Replace them with the types from your platform and project.
+:::
+
+## Quick Start (Recommended)
+Use the built-in dependency-resolver through `ConfigBuilder#dependencyResolver`.
+
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .dependencyResolver(YourClass.class, () -> new YourClass(/*parameters*/))
+    .build();
+```
+
+In this example, Imperat now knows how to create `YourClass`.
+Whenever it needs an instance of `YourClass`, it uses the provider you registered.
+
+## Injecting Dependencies Into Fields
+After registering dependencies, you can inject them into command fields using `@Dependency`.
+
+```java
+@RootCommand("example")
+public class ExampleCommand {
+    @Dependency
+    private YourClass yourClass;
+
+    @Execute
+    public void execute(PLATFORMSOURCE source) {
+        yourClass.doSomething();
+    }
+}
+```
+
+:::danger{label="Important Rule"}
+Injected fields must be annotated with `@Dependency` and must not be `final`.
+:::
+
+## Custom Instance Factory (Advanced)
+Implement `InstanceFactory` only if the built-in resolver is not enough for your use case.
+
+Examples:
+- You want to delegate creation to another DI framework.
+- You need custom lifecycle logic.
+- You need more complex per-class creation behavior.
+
+### Example
+
+```java
+import org.jetbrains.annotations.NotNull;
+import studio.mevera.imperat.ImperatConfig;
+import studio.mevera.imperat.annotations.base.InstanceFactory;
+import studio.mevera.imperat.exception.UnknownDependencyException;
+
+public class ExampleInstanceFactory implements InstanceFactory<PLATFORMSOURCE> {
+
+    @Override 
+    public @NotNull <T> T createInstance(
+            ImperatConfig<PLATFORMSOURCE> config, 
+            Class<T> cls
+    ) throws UnknownDependencyException {
+        if(cls.equals(YourClass.class)) {
+            return (T) new YourClass(/*parameters*/);
+        }
+        throw new UnknownDependencyException("No instance available for class: " + cls.getName());
+    }
+}
+```
+
+### Registering a Custom Factory
+
+```java
+PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
+    .instanceFactory(new ExampleInstanceFactory())
+    .build();
+```
+
+## Other Uses
+The Instance Factory system is not limited to command classes.
+It can provide instances for any class Imperat needs.
+
+Internally, it is also used for:
+- Instantiating command classes, subcommand classes and also external subcommand classes.
+- Instantiating processor classes from the `@Processor` annotation.
+- Instantiating a specified class when using the `@ArgType` annotation.
+- Instantiating argument validators from the `@Validators` annotation.

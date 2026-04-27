@@ -6,13 +6,15 @@ import { SITE_CONFIG } from '@/config/site';
 import { fetchDocContent } from '@/lib/docs';
 import { FadeInUp } from '@/components/animators/FadeInUp';
 
-// Expose a way to preload the Docs chunk and initial data
+// Expose a way to preload the Docs chunk and initial data.
+// SITE_CONFIG.getStartedUrl is now `/docs/<projectId>/<version>/<slug>` so we
+// peel off three trailing segments to feed the version-aware fetcher.
 const preloadDocsRoute = () => {
   import('@/pages/Docs').then(m => m.Docs);
-  // Prefetch the initial 'Get Started' payload
   const parts = SITE_CONFIG.getStartedUrl.split('/').filter(Boolean);
-  if (parts.length >= 3 && parts[1] && parts[2]) {
-    fetchDocContent(parts[1], parts[2]);
+  // ['docs', projectId, version, slug]
+  if (parts.length >= 4 && parts[1] && parts[2] && parts[3]) {
+    fetchDocContent(parts[1], parts[2], parts[3]);
   }
 };
 

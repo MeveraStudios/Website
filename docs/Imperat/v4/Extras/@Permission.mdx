@@ -1,0 +1,190 @@
+---
+title: "@Permission"
+description: Restrict command execution to sources with the required permission node.
+order: 6
+---
+# @Permission
+
+## Purpose
+
+`@Permission` declares a permission node required to access a command, a specific command pathway (usage), or an individual parameter. If the source (user) does not have the required permission, the command is denied.
+
+It is **repeatable** — you can stack multiple `@Permission` annotations on the same target, and they are combined with AND logic (all must be satisfied).
+
+## Where to Place
+
+On a **class** (command-level), a **method** (pathway-level), or a **parameter** (argument-level).
+
+```java
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER})
+@Repeatable(Permissions.class)
+```
+
+## Properties
+
+| Property | Type     | Description                                                  |
+|----------|----------|--------------------------------------------------------------|
+| `value`  | `String` | **(Required)** The permission expression (see syntax below). |
+
+## Basic Example
+
+### On a command class
+
+```java
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+import studio.mevera.imperat.annotations.types.Permission;
+
+@RootCommand("testperm")
+@Permission("testperm.use")
+public class TestPerm {
+
+    @Execute
+    public void def(PLATFORMSOURCE source) {
+        source.reply("You have permission!");
+    }
+}
+```
+
+The user must have `testperm.use` to run **any** usage of `/testperm`.
+
+### On a method (pathway-level)
+
+```java
+@Execute
+@Permission("ranks.grant")
+public void execute(
+        PLATFORMSOURCE source,
+        @Named("target") String target,
+        @Named("rank") String rank
+) {
+    source.reply("Rank set!");
+}
+```
+
+Only users with `ranks.grant` can run this specific pathway.
+
+### On a parameter
+
+```java
+@Execute
+public void mainUsage(
+        PLATFORMSOURCE source,
+        @Permission("testperm.a.use") String a,
+        String b,
+        @Default("1") Integer c
+) {
+    source.reply("a=" + a + ", b=" + b + ", c=" + c);
+}
+```
+
+The parameter `a` requires the user to have `testperm.a.use`.
+
+## Permission Expression Syntax
+
+The `value` string is not just a plain permission node — it supports **logical expressions** using `&` (AND), `|` (OR), and `!` (NOT), with parentheses for grouping.
+
+| Symbol | Meaning | Example                          |
+|--------|---------|----------------------------------|
+| `&`    | AND     | `"admin.ban&admin.kick"` — needs both |
+| `\|`   | OR      | `"mod.ban\|admin.ban"` — needs either  |
+| `!`    | NOT     | `"!guest"` — must NOT have `guest`    |
+| `()`   | Group   | `"(admin.ban\|mod.ban)&!banned"` — complex logic |
+
+### Precedence (lowest → highest)
+
+1. `|` (OR)
+2. `&` (AND)
+3. `!` (NOT)
+
+### Examples
+
+**Simple — single permission:**
+```java
+@Permission("server.admin")
+```
+User must have `server.admin`.
+
+**AND — multiple permissions required:**
+```java
+@Permission("server.ban&server.kick")
+```
+User must have **both** `server.ban` AND `server.kick`.
+
+**OR — any one is enough:**
+```java
+@Permission("mod.ban|admin.ban")
+```
+User must have **either** `mod.ban` OR `admin.ban`.
+
+**NOT — must not have a permission:**
+```java
+@Permission("!banned")
+```
+User must **not** have `banned`.
+
+**Complex — grouped logic:**
+```java
+@Permission("(admin.ban|mod.ban)&!banned")
+```
+User must have either `admin.ban` or `mod.ban`, AND must **not** have `banned`.
+
+## Stacking Multiple @Permission
+
+Because `@Permission` is `@Repeatable`, you can place **multiple** `@Permission` annotations on the same method or parameter. Each annotation's expression is parsed independently, then they are all combined together with **AND** logic.
+
+### On a method
+
+```java
+@Execute
+@Permission("server.manage")
+@Permission("server.admin")
+public void adminAction(PLATFORMSOURCE source) {
+    source.reply("Admin action performed!");
+}
+```
+
+The user must have **both** `server.manage` **AND** `server.admin` to run this pathway.
+
+### On a parameter
+
+```java
+@Execute
+public void mainUsage(
+        PLATFORMSOURCE source,
+        @Permission("items.view") @Permission("items.give") @Named("item") String item
+) {
+    source.reply("Giving item: " + item);
+}
+```
+
+The user must have **both** `items.view` **AND** `items.give` to use the `item` parameter.
+
+### Combining stacking with expressions
+
+Each stacked `@Permission` is its own expression, so you can mix simple nodes with complex logic:
+
+```java
+@Execute
+@Permission("mod.ban|admin.ban")
+@Permission("!banned")
+public void ban(PLATFORMSOURCE source, @Named("target") String target) {
+    source.reply("Banned " + target);
+}
+```
+
+This means: the user must satisfy `(mod.ban OR admin.ban)` **AND** must NOT have `banned`.
+
+This is equivalent to a single annotation:
+```java
+@Permission("(mod.ban|admin.ban)&!banned")
+```
+
+Both styles work — use whichever is more readable for your use case.
+
+## How It Works Internally
+
+1. All `@Permission` annotations on the target are collected via `getAnnotationsByType(Permission.class)`.
+2. Each annotation's `value` string is passed through `PermissionsData.fromText(...)`, which delegates to `CommandPermissionCondition.fromText(...)` to parse the expression into a tree of AND / OR / NOT conditions.
+3. The resulting `PermissionsData` objects are appended together with AND logic (`data.append(...)`).
+4. At runtime, the combined condition tree is evaluated against the source using a `PermissionChecker`, which checks whether the source has each leaf permission node.

@@ -19,13 +19,14 @@ The dev/build scripts already chain `precompile`; only run it standalone when re
 ## Architecture
 
 ### Build-time doc pipeline
-`scripts/precompile-docs.ts` walks `docs/<Project>/<Category>/<Doc>.(md|mdx)`, parses frontmatter with `gray-matter`, reads each folder's `_category_.yml`, and emits static JSON into `public/` for runtime fetch. Projects are declared in `src/data/projects.json`; the script respects that order.
+`scripts/precompile-docs.ts` walks `docs/<Project>/<Version>/<Category>/<Doc>.(md|mdx)` (every project must have at least one `vN` version subfolder), parses frontmatter, reads each folder's `_category_.yml`, and emits static JSON into `public/` for runtime fetch. Projects are declared in `src/data/projects.json`; the script respects that order. The highest-numbered `vN` is the project's default ("latest") version. Per-doc content lands at `public/docs-content/<project>/<version>/<slug>.json`. The search index includes only the latest version of each project to avoid duplicate hits when versions share content.
 
 ### Runtime
 - `src/main.tsx` → `src/App.tsx` sets up `BrowserRouter` with routes:
   - `/` → `pages/Home.tsx` (Hero, Projects, Team sections)
-  - `/docs/:projectId/:slug` → `pages/Docs.tsx`
-  - `/docs/:projectId` and `/docs` redirect via `SITE_CONFIG.getStartedUrl`
+  - `/docs/:projectId/:version/:slug` → `pages/Docs.tsx`
+  - `/docs/:projectId/:version` and `/docs/:projectId` redirect to the latest version's first doc
+  - `/docs` redirects via `SITE_CONFIG.getStartedUrl`
 - `ScrollManager` + `PageTitle` live in `App.tsx` and handle hash scrolling and per-route titles.
 - Docs pages are lazy-loaded via `React.lazy`; `preloadDocs()` warms the JSON fetch.
 
@@ -48,10 +49,11 @@ The dev/build scripts already chain `precompile`; only run it standalone when re
 
 ## Authoring docs
 
-- Path: `docs/<Project>/<Category-Folder>/<Doc>.mdx`. URL is `/docs/<Project>/<filename>` — the category folder name is **not** in the URL.
+- Path: `docs/<Project>/<vN>/<Category-Folder>/<Doc>.mdx`. URL is `/docs/<Project>/<vN>/<filename>` — the category folder name is **not** in the URL.
+- Each project has at least one `vN` folder (e.g. `v1`, `v4`). Imperat carries `v3` and `v4`; other projects currently have `v1`. Highest `vN` is the latest.
 - Every category folder needs a `_category_.yml` (`label`, `order`, `collapsed`).
 - Every doc needs frontmatter: `title`, `description`, `order`.
-- **Cross-doc links must be absolute** (`/docs/<Project>/<File>`), not relative — relative paths do not resolve after flattening.
+- **Cross-doc links** can be written as `/docs/<Project>/<File>` (the renderer auto-injects the active version) or fully versioned as `/docs/<Project>/<vN>/<File>`. Relative paths do not resolve after flattening.
 - Prefer admonitions over bold-text warnings.
 - Lotus authoritative source lives at `D:\Projects 2025\Lotus\docs\*.md` — mirror from there when updating Lotus docs.
 

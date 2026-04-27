@@ -1,0 +1,76 @@
+---
+title: "@ParseOrder"
+description: Control the order in which pathway-methods are parsed.
+order: 9
+---
+
+# @ParseOrder
+`@ParseOrder` controls the order in which pathway-methods are parsed.
+By default, Imperat parses pathway-methods in the order they are declared in the class. 
+With `@ParseOrder`, you can specify a custom parsing order using an integer value. 
+Pathway-methods with lower `@ParseOrder` values are parsed before those with higher values.
+
+## Natural Order of Method Parsing
+When Imperat parses methods in a class, it follows this order:
+`@Processor` methods & `@ExceptionHandler` methods -> `@Execute` methods -> `@SubCommand` methods -> `@RootCommand` methods.
+This means that all `@Execute` methods are parsed before any `@SubCommand` methods.
+
+:::note
+`@ParseOrder` only affects the order of parsing, it does not affect the order of execution.
+:::
+
+### How does `@ParseOrder` affect the natural order?
+The `@ParseOrder` doesn't conflict with the natural order, it works within it.
+
+:::tip{label="Conclusion"}
+Among methods with the same annotation (e.g., multiple `@Execute` methods), `@ParseOrder` determines their parsing order.
+:::
+
+## Where to Place
+On any relevant method (e.g., `@Execute`, `@SubCommand`, etc.).
+
+```java
+@Target(ElementType.METHOD)
+```
+
+## Properties
+| Property | Type     | Description                                                                                     |
+|----------|----------|-------------------------------------------------------------------------------------------------|
+| `value`  | `int`    |The parsing order value. Lower values are parsed first. Pathway-methods with the same value are parsed in declaration order. |
+
+## Example
+```java
+@RootCommand("testparseorder")
+public class TestParseOrderCommand {
+
+    @Execute
+    @ParseOrder(1)
+    public void firstExec(PLATFORMSOURCE source, String arg) {
+        System.out.println("Second to be parsed, it has @Execute but lower @ParseOrder than secondExec");
+    }
+
+    @Execute
+    @ParseOrder(2)
+    public void secondExec(PLATFORMSOURCE source) {
+        System.out.println("First to be parsed, it has @Execute");
+    }
+
+    @SubCommand("first")
+    @ParseOrder(1)
+    public void firstSub(PLATFORMSOURCE source) {
+        System.out.println("Third to be parsed of all methods, it has @SubCommand and same @ParseOrder as firstExec but @Execute takes priority");
+    }
+
+    @SubCommand("second")
+    @ParseOrder(2)
+    public void secondSub(PLATFORMSOURCE source) {
+        System.out.println("Last to be parsed, it has @SubCommand and highest @ParseOrder");
+    }
+}
+```
+
+In this example, the parsing order of the methods will be:
+1. `firstExec` (because it has `@Execute` and the lowest `@ParseOrder` value)
+2. `secondExec` (because it has `@Execute` and a higher `@ParseOrder` value than `firstExec`)
+3. `firstSub` (because it has `@SubCommand` and the same `@ParseOrder` value as `firstExec`, but `@Execute` takes priority over `@SubCommand`)
+4. `secondSub` (because it has `@SubCommand` and the highest `@ParseOrder` value)

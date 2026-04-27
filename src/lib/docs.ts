@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { DocFile, DocProject, TocItem, Header } from '@/types/docs';
+import type { DocFile, DocProject, DocVersion, TocItem, Header } from '@/types/docs';
 import { buildHeaderTree, flattenHeaderTree } from './utils';
 
 // Type for cached documentation navigation data
@@ -78,16 +78,16 @@ async function loadDocsNavData(): Promise<CachedDocsNavData> {
 }
 
 /**
- * Fetch a specific document's detailed content
+ * Fetch a specific document's detailed content for a given project version.
  */
-export async function fetchDocContent(projectId: string, slug: string): Promise<DocFile | null> {
-  const cacheKey = `${projectId}/${slug}`;
+export async function fetchDocContent(projectId: string, version: string, slug: string): Promise<DocFile | null> {
+  const cacheKey = `${projectId}/${version}/${slug}`;
   if (docContentCache.has(cacheKey)) {
     return docContentCache.get(cacheKey)!;
   }
 
   try {
-    const response = await fetch(`/docs-content/${projectId}/${slug}.json`);
+    const response = await fetch(`/docs-content/${projectId}/${version}/${slug}.json`);
     if (!response.ok) {
       throw new Error(`Failed to load document content for ${slug}`);
     }
@@ -95,7 +95,7 @@ export async function fetchDocContent(projectId: string, slug: string): Promise<
     docContentCache.set(cacheKey, docData);
     return docData;
   } catch (error) {
-    console.error(`Error fetching document ${slug}:`, error);
+    console.error(`Error fetching document ${projectId}/${version}/${slug}:`, error);
     return null;
   }
 }
@@ -134,18 +134,18 @@ export function useDocs() {
 /**
  * React hook to fetch and provide a specific document's content
  */
-export function useDocContent(projectId: string, slug: string) {
-  const cacheKey = `${projectId}/${slug}`;
+export function useDocContent(projectId: string, version: string, slug: string) {
+  const cacheKey = `${projectId}/${version}/${slug}`;
   const cached = docContentCache.get(cacheKey) ?? null;
 
   const [doc, setDoc] = useState<DocFile | null>(cached);
   const [isLoading, setIsLoading] = useState(cached === null);
 
   useEffect(() => {
-    if (!projectId || !slug) return;
+    if (!projectId || !version || !slug) return;
 
     // Already in cache — nothing to do
-    const cacheKey = `${projectId}/${slug}`;
+    const cacheKey = `${projectId}/${version}/${slug}`;
     if (docContentCache.has(cacheKey)) {
       setDoc(docContentCache.get(cacheKey)!);
       setIsLoading(false);
@@ -155,7 +155,7 @@ export function useDocContent(projectId: string, slug: string) {
     setIsLoading(true);
     let isMounted = true;
 
-    fetchDocContent(projectId, slug).then((content) => {
+    fetchDocContent(projectId, version, slug).then((content) => {
       if (isMounted) {
         setDoc(content);
         setIsLoading(false);
@@ -165,7 +165,7 @@ export function useDocContent(projectId: string, slug: string) {
     return () => {
       isMounted = false;
     };
-  }, [projectId, slug]);
+  }, [projectId, version, slug]);
 
   return { doc, isLoading };
 }
@@ -220,8 +220,8 @@ export function parseDocs(): DocProject[] {
 /**
  * Get a specific document from the loaded docContentCache OR basic nav info
  */
-export function getDoc(projectId: string, slug: string): DocFile | undefined {
-  const cacheKey = `${projectId}/${slug}`;
+export function getDoc(projectId: string, version: string, slug: string): DocFile | undefined {
+  const cacheKey = `${projectId}/${version}/${slug}`;
   if (docContentCache.has(cacheKey)) {
     return docContentCache.get(cacheKey);
   }
@@ -232,7 +232,10 @@ export function getDoc(projectId: string, slug: string): DocFile | undefined {
   const project = cachedDocsNavData.projects.find(p => p.id === projectId);
   if (!project) return undefined;
 
-  for (const cat of project.categories) {
+  const versionEntry = project.versions.find(v => v.id === version);
+  if (!versionEntry) return undefined;
+
+  for (const cat of versionEntry.categories) {
     const doc = cat.docs.find(d => d.slug === slug);
     if (doc) return doc;
   }
@@ -241,16 +244,23 @@ export function getDoc(projectId: string, slug: string): DocFile | undefined {
 }
 
 /**
- * Get all navigation items for a project
+ * Resolve the latest (default) version of a project.
  */
-export function getProjectNav(project: DocProject): { label: string; href: string; category: string }[] {
+export function getLatestVersion(project: DocProject): DocVersion | undefined {
+  return project.versions.find(v => v.latest) || project.versions[0];
+}
+
+/**
+ * Get all navigation items for a project version.
+ */
+export function getProjectNav(project: DocProject, version: DocVersion): { label: string; href: string; category: string }[] {
   const nav: { label: string; href: string; category: string }[] = [];
 
-  project.categories.forEach(category => {
+  version.categories.forEach(category => {
     category.docs.forEach(doc => {
       nav.push({
         label: doc.frontmatter.sidebarLabel || doc.frontmatter.title,
-        href: `/docs/${project.id}/${doc.slug}`,
+        href: `/docs/${project.id}/${version.id}/${doc.slug}`,
         category: category.name
       });
     });
@@ -372,10 +382,10 @@ export async function searchDocs(query: string) {
 }
 
 /**
- * Get next and previous navigation for a doc
+ * Get next and previous navigation for a doc within a specific version.
  */
-export function getDocNavigation(project: DocProject, currentSlug: string): { prev?: DocFile; next?: DocFile } {
-  const allDocs = project.categories.flatMap(c => c.docs);
+export function getDocNavigation(version: DocVersion, currentSlug: string): { prev?: DocFile; next?: DocFile } {
+  const allDocs = version.categories.flatMap(c => c.docs);
   const currentIndex = allDocs.findIndex(d => d.slug === currentSlug);
 
   return {

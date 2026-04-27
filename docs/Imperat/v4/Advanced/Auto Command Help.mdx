@@ -1,0 +1,307 @@
+---
+title: Auto Command Help
+description: Learn the new Imperat help API using CommandHelp, HelpQuery, HelpRenderer, and HelpSender.
+order: 3
+---
+# Auto Command Help
+
+Imperat can build help for a command automatically from its command tree.
+
+The new help API is simple:
+
+- `CommandHelp` gets the help data
+- `HelpQuery` controls what to include
+- `HelpRenderer` controls how it looks
+- `HelpSender` controls how it is sent
+
+That means you are fully in control of the output.
+
+---
+
+## Example Command
+
+We'll use this command in the examples:
+
+```java
+@RootCommand("group")
+public final class GroupCommand {
+
+    @Execute
+    public void defaultUsage(
+            PLATFORMSOURCE source,
+            @Context CommandHelp<PLATFORMSOURCE> help
+    ) {
+        // Runs when user types: /group
+    }
+
+    @Execute
+    @Description("Shows sub-commands.")
+    public void mainUsage(
+            PLATFORMSOURCE source,
+            @Named("group") Group group
+    ) {
+        source.reply("entered group name= " + group.name());
+    }
+
+    @SubCommand(value = "setperm", attachTo = "<group>")
+    @Description("Sets permission for a group.")
+    public void setGroupPermission(
+            PLATFORMSOURCE source,
+            @InheritedArg @Named("group") Group group,
+            @Named("permission") String permission
+    ) {
+    }
+
+    @SubCommand(value = "setprefix", attachTo = "<group>")
+    @Description("Sets prefix for a group.")
+    public void setPrefix(
+            PLATFORMSOURCE source,
+            @InheritedArg @Named("group") Group group,
+            @Named("prefix") String prefix
+    ) {
+    }
+}
+```
+
+---
+
+## Step 1: Inject `CommandHelp`
+
+Get `CommandHelp` through `@Context`:
+
+```java
+@Execute
+public void defaultUsage(
+        PLATFORMSOURCE source,
+        @Context CommandHelp<PLATFORMSOURCE> help
+) {
+}
+```
+
+You do not create it manually. Imperat provides it for you.
+
+---
+
+## Step 2: Show Default Help
+
+The simplest usage is:
+
+```java
+help.show();
+```
+
+This uses Imperat's built-in text renderer and sends the result with `reply(...)`.
+
+Important: help is permission-aware by default. Commands the source cannot use are filtered out automatically.
+
+---
+
+## Step 3: Control What Gets Included With `HelpQuery`
+
+Use `HelpQuery` when you want to limit or filter the result.
+
+```java
+HelpQuery<PLATFORMSOURCE> query = HelpQuery.<PLATFORMSOURCE>builder()
+        .build();
+```
+
+Useful options:
+
+| Method | Purpose |
+|---|---|
+| `.limit(int)` | Maximum number of help entries |
+| `.maxDepth(int)` | Maximum tree depth to scan |
+| `.filter(HelpFilter)` | Include only matching pathways |
+| `.conditionalRootUsage(...)` | Decide whether the root usage should be included |
+
+Example:
+
+```java
+HelpQuery<PLATFORMSOURCE> query = HelpQuery.<PLATFORMSOURCE>builder()
+        .filter(pathway -> !pathway.getLastArgument().isCommand())
+        .build();
+```
+
+Then show it:
+
+```java
+help.show(query);
+```
+
+---
+
+## Step 4: Fully Control Rendering
+
+If you want custom output, provide your own `HelpRenderer`.
+
+```java
+help.show(
+        HelpQuery.<PLATFORMSOURCE>builder()
+                .filter(pathway -> !pathway.getLastArgument().isCommand())
+                .build(),
+        (context, result) -> {
+            List<String> lines = new ArrayList<>();
+            lines.add("======== Command Help ========");
+
+            for (HelpEntry<PLATFORMSOURCE> entry : result) {
+                lines.add(context.command().getName() + " " + entry.getUsage());
+            }
+
+            lines.add("=============================");
+            return lines;
+        }
+);
+```
+
+This gives you full control over:
+
+- headers
+- footers
+- line format
+- descriptions
+- grouping
+- paging logic
+- anything else you want
+
+You are not limited to strings. Your renderer can return any output type.
+
+---
+
+## Step 5: Fully Control Delivery
+
+If you also want to control how help is sent, provide a custom `HelpSender`.
+
+```java
+help.show(
+        query,
+        myRenderer,
+        (source, message) -> {
+            source.reply(message);
+        }
+);
+```
+
+This is useful when:
+
+- you want to send Adventure components
+- you want to send embeds or rich platform messages
+- you want paginated or buffered output
+- you want to route help somewhere other than normal replies
+
+---
+
+## Step 6: Query Without Sending Anything
+
+Sometimes you only want the data.
+
+```java
+HelpResult<PLATFORMSOURCE> result = help.query(
+        HelpQuery.<PLATFORMSOURCE>builder().build()
+);
+```
+
+Or render without sending:
+
+```java
+List<String> lines = help.render(
+        HelpQuery.<PLATFORMSOURCE>builder().build(),
+        new MyHelpRenderer()
+);
+```
+
+This is useful for:
+
+- custom pagination systems
+- GUIs
+- web panels
+- testing
+- storing pre-rendered help output
+
+---
+
+## Built-in Filters
+
+Imperat ships with reusable filters in `HelpFilters`.
+
+Examples:
+
+```java
+HelpFilters.childrenOnly();
+HelpFilters.nameContains("perm");
+HelpFilters.depth(1, 3);
+HelpFilters.hasOptionalParam();
+HelpFilters.withPermission("group.admin");
+HelpFilters.noPermission();
+```
+
+You can chain filters:
+
+```java
+HelpQuery.<PLATFORMSOURCE>builder()
+        .filter(HelpFilters.childrenOnly())
+        .filter(HelpFilters.nameContains("perm"))
+        .build();
+```
+
+You can also combine them with `and(...)`, `or(...)`, and `negate()`.
+
+---
+
+## Full Example
+
+```java
+@Execute
+public void defaultUsage(
+        PLATFORMSOURCE source,
+        @Context CommandHelp<PLATFORMSOURCE> help
+) {
+    help.show(
+            HelpQuery.<PLATFORMSOURCE>builder()
+                    .filter(pathway -> !pathway.getLastArgument().isCommand())
+                    .build(),
+            (context, result) -> {
+                List<String> lines = new ArrayList<>();
+                lines.add("======== Command Help ========");
+
+                for (HelpEntry<PLATFORMSOURCE> entry : result) {
+                    lines.add(context.command().getName() + " " + entry.getUsage());
+                }
+
+                lines.add("=============================");
+                return lines;
+            }
+    );
+}
+```
+
+Example output:
+
+```text
+======== Command Help ========
+group <group>
+group <group> setperm <permission>
+group <group> setprefix <prefix>
+=============================
+```
+
+---
+
+## Summary
+
+| Type | Role |
+|---|---|
+| `CommandHelp` | Main entry point |
+| `HelpQuery` | Controls what help entries are collected |
+| `HelpResult` | Immutable result of the help query |
+| `HelpFilter` | Decides whether a pathway should be included |
+| `HelpFilters` | Common ready-made filters |
+| `HelpRenderer` | Turns `HelpResult` into output |
+| `HelpSender` | Sends the rendered output |
+
+The key idea is simple:
+
+- query the help data
+- render it however you want
+- send it however you want
+
+

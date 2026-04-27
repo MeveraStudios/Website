@@ -1,0 +1,76 @@
+---
+title: "@Format"
+description: Validate argument input against a required textual format or pattern.
+order: 4
+---
+# @Format
+`@Format` overrides the **display text** of a parameter in help/usage messages. 
+By default, a parameter's display name in usage strings is its internal name (e.g., `<player>` or `[count]`). With `@Format`, you can set a custom label that appears instead.
+This is purely a **display** change — it does not affect how the parameter is parsed or resolved.
+
+## Where to Place
+
+On a **parameter**.
+
+```java
+@Target(ElementType.PARAMETER)
+```
+
+## Properties
+
+| Property | Type     | Description                                    |
+|----------|----------|------------------------------------------------|
+| `value`  | `String` | **(Required)** The custom format/display text. |
+
+## How It Works
+
+Every parameter has a `format()` method that returns what's shown in usage messages.  
+- **Without `@Format`:** The parameter displays its name, wrapped in `<>` (required) or `[]` (optional).  
+  Example: `<player>`, `[count]`
+- **With `@Format`:** The parameter displays exactly what you set.  
+  Example: `@Format("player_name")` → displays as `<player_name>` in usage text.
+
+## Example
+
+```java
+import studio.mevera.imperat.annotations.types.RootCommand;
+import studio.mevera.imperat.annotations.types.Execute;
+import studio.mevera.imperat.annotations.types.Named;
+import studio.mevera.imperat.annotations.types.Format;
+
+@RootCommand("give")
+public class GiveCommand {
+
+    @Execute
+    public void give(
+            PLATFORMSOURCE source,
+            @Named("target") @Format("player_name") String target,
+            @Named("item") @Format("item_id") String item,
+            @Named("amount") @Format("count") int amount
+    ) {
+        source.reply("Gave " + amount + "x " + item + " to " + target);
+    }
+}
+```
+
+### Without `@Format`
+
+The help/usage message would show:
+
+```
+/give <target> <item> <amount>
+```
+
+### With `@Format`
+
+The help/usage message now shows:
+
+```
+/give <player_name> <item_id> <count>
+```
+
+The parameter names used internally (`target`, `item`, `amount`) stay the same for code access — only the display changes.
+
+## Note
+
+The format value also supports **placeholders** defined in your `ImperatConfig`. If you use a placeholder string like `%some_placeholder%`, it will be replaced via `config.replacePlaceholders(...)` at parse time.

@@ -1,11 +1,20 @@
 /**
  * Precompile Documentation Script
- * 
+ *
  * This script runs at build time to:
  * 1. Read all markdown files from the docs folder
  * 2. Parse frontmatter and category metadata
- * 3. Organize docs into projects/categories
+ * 3. Organize docs into projects → versions → categories
  * 4. Generate static JSON files for runtime consumption
+ *
+ * Versioning model
+ * ----------------
+ * Every project under `docs/<project>/` MUST contain at least one version
+ * subfolder named `v<digits>` (e.g. `v1`, `v3`, `v4`). The highest-numbered
+ * `vN` is treated as the project's default ("latest") version.
+ *
+ * Output URLs are `/docs/<project>/<version>/<slug>` and content lands in
+ * `public/docs-content/<project>/<version>/<slug>.json`.
  */
 
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync } from 'fs';
@@ -73,6 +82,7 @@ interface DocFile {
     content: string;
     frontmatter: DocFrontmatter;
     project: string;
+    version: string;
     category: string;
     extension: string;
     lastUpdatedAt?: string;
@@ -85,31 +95,31 @@ interface DocCategory {
     order: number;
 }
 
+/** A discovered version folder under `docs/<project>/`. */
 interface DocVersion {
-    /** Folder name — e.g. `v1`, `v2`, `latest`. */
+    /** Folder name — e.g. `v1`, `v3`, `v4`. */
     id: string;
     /** Human label — same as id unless overridden. */
     label: string;
-    /** If true, this is the default / latest version for the project. */
+    /** True for the project's default / latest version. */
     latest: boolean;
+    categories: DocCategory[];
+    allDocs: DocFile[];
 }
 
 interface DocProject {
     id: string;
     name: string;
     description: string;
-    categories: DocCategory[];
-    allDocs: DocFile[];
     meta: {
         emoji: string;
         color: string;
         githubRepo?: string;
     };
-    /** Empty array means the project is unversioned. */
     versions: DocVersion[];
 }
 
-// Omit content and frontmatter from the navigation data to keep it small
+// Lightweight versions of the above for the navigation JSON (no body content).
 interface NavDocFile {
     slug: string;
     path: string;
@@ -127,17 +137,23 @@ interface NavDocCategory {
     order: number;
 }
 
+interface NavDocVersion {
+    id: string;
+    label: string;
+    latest: boolean;
+    categories: NavDocCategory[];
+}
+
 interface NavDocProject {
     id: string;
     name: string;
     description: string;
-    categories: NavDocCategory[];
     meta: {
         emoji: string;
         color: string;
         githubRepo?: string;
     };
-    versions: DocVersion[];
+    versions: NavDocVersion[];
 }
 
 interface TocItem {
@@ -152,6 +168,7 @@ interface SearchIndexItem {
     href: string;
     project: string;
     projectId: string;
+    version: string;
     category: string;
 }
 
@@ -249,10 +266,10 @@ function parseFrontmatter(content: string): { frontmatter: DocFrontmatter; body:
 }
 
 /**
- * Get category metadata from _category_.yml file
+ * Get category metadata from a `_category_.yml` file inside a version folder.
  */
-function getCategoryMetadata(projectId: string, categoryPath: string): { label?: string; position?: number } | null {
-    const categoryFilePath = join(DOCS_DIR, projectId, categoryPath, '_category_.yml');
+function getCategoryMetadata(versionDir: string, categoryPath: string): { label?: string; position?: number } | null {
+    const categoryFilePath = join(versionDir, categoryPath, '_category_.yml');
 
     if (!existsSync(categoryFilePath)) {
         return null;
@@ -270,47 +287,36 @@ function getCategoryMetadata(projectId: string, categoryPath: string): { label?:
 /**
  * Detect version subfolders directly beneath `docs/<project>/`.
  *
- * A version is any immediate child folder whose name matches `v<digits>` or
- * is literally `latest`. The highest-numbered `vN` folder is marked as
- * `latest: true` unless a `latest/` folder exists (in which case that wins).
- *
- * Returns `[]` when no such folders are present → the project is
- * unversioned and the UI hides the version switcher.
+ * A version is any immediate child folder whose name matches `v<digits>`.
+ * The highest-numbered `vN` is marked as `latest: true`. Returns `[]` if
+ * no version folders exist (the project will be skipped with a warning).
  */
-function detectVersions(projectDir: string): DocVersion[] {
+function detectVersionIds(projectDir: string): { id: string; label: string; latest: boolean }[] {
     if (!existsSync(projectDir)) return [];
     const entries = readdirSync(projectDir);
-    const versions: DocVersion[] = [];
-    let hasExplicitLatest = false;
+    const versions: { id: string; label: string; latest: boolean }[] = [];
 
     for (const entry of entries) {
         const fullPath = join(projectDir, entry);
         if (!statSync(fullPath).isDirectory()) continue;
-
         if (/^v\d+$/i.test(entry)) {
             versions.push({ id: entry, label: entry, latest: false });
-        } else if (entry === 'latest') {
-            hasExplicitLatest = true;
-            versions.push({ id: 'latest', label: 'Latest', latest: true });
         }
     }
 
     if (versions.length === 0) return [];
 
-    if (!hasExplicitLatest) {
-        // Find highest vN and mark as latest.
-        versions.sort((a, b) => {
-            const an = parseInt(a.id.slice(1), 10) || 0;
-            const bn = parseInt(b.id.slice(1), 10) || 0;
-            return an - bn;
-        });
-        versions[versions.length - 1].latest = true;
-    }
+    versions.sort((a, b) => {
+        const an = parseInt(a.id.slice(1), 10) || 0;
+        const bn = parseInt(b.id.slice(1), 10) || 0;
+        return an - bn;
+    });
+    versions[versions.length - 1].latest = true;
     return versions;
 }
 
 /**
- * Recursively find all markdown files in a directory
+ * Recursively find all markdown files in a directory.
  */
 function findMarkdownFiles(dir: string, baseDir: string = dir): string[] {
     const files: string[] = [];
@@ -378,6 +384,203 @@ function extractToc(content: string): TocItem[] {
 }
 
 /**
+ * Build a single version's worth of categories + docs by walking the version
+ * directory. Returns the in-memory DocVersion plus the side-channels the
+ * caller needs (tocMap, search index entries).
+ */
+function buildVersion(
+    projectId: string,
+    projectName: string,
+    versionDir: string,
+    versionMeta: { id: string; label: string; latest: boolean },
+    tocMap: Record<string, TocItem[]>,
+    searchIndex: SearchIndexItem[],
+    indexLatestOnlyForSearch: boolean
+): DocVersion {
+    const allDocs: DocFile[] = [];
+    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string }>();
+
+    // Top-level _category_.yml inside the version folder, e.g. docs/Imperat/v4/_category_.yml.
+    const rootCategoryMetadata = getCategoryMetadata(versionDir, '');
+    const rootCategoryName = rootCategoryMetadata?.label || 'General';
+
+    const markdownFiles = findMarkdownFiles(versionDir);
+
+    // First pass: collect category metadata for nested folders.
+    markdownFiles.forEach(relPath => {
+        const parts = relPath.split('/').filter(Boolean);
+
+        if (parts.length > 1) {
+            const categoryPath = parts.slice(0, -1).join('/');
+            const categoryKey = `${projectId}/${versionMeta.id}/${categoryPath}`;
+
+            if (!categoryMetadataMap.has(categoryKey)) {
+                const metadata = getCategoryMetadata(versionDir, categoryPath);
+                const categoryName = parts[parts.length - 2] || 'General';
+
+                categoryMetadataMap.set(categoryKey, {
+                    label: metadata?.label || categoryName,
+                    position: metadata?.position ?? 999,
+                    path: categoryPath
+                });
+            }
+        }
+    });
+
+    // Second pass: parse markdown files.
+    markdownFiles.forEach(relPath => {
+        const fullPath = join(versionDir, relPath.substring(1)); // Remove leading /
+        const content = readFileSync(fullPath, 'utf-8');
+
+        const parts = relPath.split('/').filter(Boolean);
+        const fileName = parts[parts.length - 1];
+        const extensionMatch = fileName.match(/\.(mdx?)$/);
+        const extension = extensionMatch ? extensionMatch[0] : '.md';
+        const fileSlug = fileName.replace(/\.mdx?$/, '');
+
+        const { frontmatter, body } = parseFrontmatter(content);
+        const slug = frontmatter.slug || fileSlug;
+
+        // Determine category
+        let categoryName = frontmatter.category || rootCategoryName;
+
+        if (parts.length > 1) {
+            const categoryPath = parts.slice(0, -1).join('/');
+            const categoryKey = `${projectId}/${versionMeta.id}/${categoryPath}`;
+            const metadata = categoryMetadataMap.get(categoryKey);
+
+            if (metadata) {
+                categoryName = metadata.label;
+            }
+        } else if (frontmatter.category) {
+            categoryName = frontmatter.category;
+        }
+
+        // Get last updated date from git
+        let lastUpdatedAt: string | undefined = undefined;
+        try {
+            const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, {
+                encoding: 'utf-8',
+                stdio: ['pipe', 'pipe', 'ignore']
+            }).trim();
+
+            if (stdout) {
+                lastUpdatedAt = stdout;
+            }
+        } catch {
+            // Ignore errors (e.g., file not tracked by git yet)
+        }
+
+        // Collect unique contributors from git log.
+        let contributors: DocContributor[] = [];
+        try {
+            const log = execSync(`git log --format="%an|%ae" -- "${fullPath}"`, {
+                encoding: 'utf-8',
+                stdio: ['pipe', 'pipe', 'ignore']
+            }).trim();
+
+            const seen = new Set<string>();
+            for (const line of log.split('\n')) {
+                if (!line) continue;
+                const pipeIdx = line.indexOf('|');
+                if (pipeIdx < 0) continue;
+                const name = line.slice(0, pipeIdx).trim();
+                const email = line.slice(pipeIdx + 1).trim();
+                const key = `${name}|${email}`.toLowerCase();
+                if (seen.has(key)) continue;
+                seen.add(key);
+
+                let avatar: string | undefined;
+                const ghMatch = email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
+                if (ghMatch) {
+                    avatar = `https://github.com/${ghMatch[1]}.png?size=64`;
+                }
+                contributors.push({ name, email, avatar });
+            }
+            contributors = contributors.slice(0, 10);
+        } catch {
+            // ignore
+        }
+
+        const docFile: DocFile = {
+            slug,
+            path: `/docs/${projectId}/${versionMeta.id}${relPath}`,
+            content: body,
+            frontmatter,
+            project: projectId,
+            version: versionMeta.id,
+            category: categoryName,
+            extension,
+            lastUpdatedAt,
+            contributors: contributors.length > 0 ? contributors : undefined,
+        };
+
+        allDocs.push(docFile);
+
+        // Extract TOC keyed by project/version/slug.
+        const toc = extractToc(body);
+        tocMap[`${projectId}/${versionMeta.id}/${slug}`] = toc;
+
+        // Search index — include only the latest version per project to keep
+        // results free of duplicates while content is mirrored across versions.
+        if (!indexLatestOnlyForSearch || versionMeta.latest) {
+            searchIndex.push({
+                title: frontmatter.title,
+                content: body.replace(/[#*`]/g, '').substring(0, 500),
+                href: `/docs/${projectId}/${versionMeta.id}/${slug}`,
+                project: projectName,
+                projectId,
+                version: versionMeta.id,
+                category: categoryName,
+            });
+        }
+
+        console.log(`  ✓ ${versionMeta.id}/${slug}${extension}`);
+    });
+
+    // Group docs into categories.
+    const categoriesMap = new Map<string, DocCategory>();
+
+    allDocs.forEach(doc => {
+        const categoryName = doc.category;
+
+        if (!categoriesMap.has(categoryName)) {
+            let categoryOrder = 999;
+            for (const [key, metadata] of categoryMetadataMap) {
+                if (key.startsWith(`${projectId}/${versionMeta.id}/`) && metadata.label === categoryName) {
+                    categoryOrder = metadata.position;
+                    break;
+                }
+            }
+
+            categoriesMap.set(categoryName, {
+                name: categoryName,
+                docs: [],
+                order: categoryOrder,
+            });
+        }
+
+        categoriesMap.get(categoryName)!.docs.push(doc);
+    });
+
+    categoriesMap.forEach(category => {
+        category.docs.sort((a, b) =>
+            (a.frontmatter.order || 999) - (b.frontmatter.order || 999)
+        );
+    });
+
+    const categories = Array.from(categoriesMap.values()).sort((a, b) => a.order - b.order);
+
+    return {
+        id: versionMeta.id,
+        label: versionMeta.label,
+        latest: versionMeta.latest,
+        categories,
+        allDocs,
+    };
+}
+
+/**
  * Main precompilation function
  */
 function precompileDocs() {
@@ -387,232 +590,61 @@ function precompileDocs() {
     const searchIndex: SearchIndexItem[] = [];
     const tocMap: Record<string, TocItem[]> = {};
 
-    // Initialize projects from config
-    projectsConfig.forEach((project) => {
-        projectsMap.set(project.id, {
-            id: project.id,
-            name: project.title,
-            description: project.description,
-            categories: [],
-            allDocs: [],
-            meta: {
-                emoji: project.logoPath,
-                color: project.color,
-                githubRepo: project.githubRepo,
-            },
-            versions: detectVersions(join(DOCS_DIR, project.id)),
-        });
-    });
-
-    // Collect category metadata
-    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string }>();
-
-    // Process each project directory
-    for (const [projectId, project] of projectsMap) {
-        const projectDir = join(DOCS_DIR, projectId);
+    // Process each declared project.
+    projectsConfig.forEach((projectCfg) => {
+        const projectDir = join(DOCS_DIR, projectCfg.id);
 
         if (!existsSync(projectDir)) {
-            console.log(`⚠️  Warning: Project directory not found: ${projectId}`);
-            continue;
+            console.log(`⚠️  Warning: Project directory not found: ${projectCfg.id}`);
+            return;
         }
 
-        console.log(`📁 Processing project: ${projectId}`);
+        const detectedVersions = detectVersionIds(projectDir);
+        if (detectedVersions.length === 0) {
+            console.log(`⚠️  Warning: ${projectCfg.id} has no version subfolders (expected docs/${projectCfg.id}/v1/...). Skipping.`);
+            return;
+        }
 
-        // Check for root-level _category_.yml for files directly in the project folder
-        const rootCategoryMetadata = getCategoryMetadata(projectId, '');
-        const rootCategoryName = rootCategoryMetadata?.label || 'General';
+        console.log(`📁 Processing project: ${projectCfg.id}`);
 
-        // Find all markdown files
-        const markdownFiles = findMarkdownFiles(projectDir);
+        const versions: DocVersion[] = detectedVersions.map(v =>
+            buildVersion(
+                projectCfg.id,
+                projectCfg.title,
+                join(projectDir, v.id),
+                v,
+                tocMap,
+                searchIndex,
+                /* indexLatestOnlyForSearch = */ true,
+            )
+        );
 
-        // First pass: collect category metadata
-        markdownFiles.forEach(relPath => {
-            const parts = relPath.split('/').filter(Boolean);
-
-            if (parts.length > 1) {
-                const categoryPath = parts.slice(0, -1).join('/');
-                const categoryKey = `${projectId}/${categoryPath}`;
-
-                if (!categoryMetadataMap.has(categoryKey)) {
-                    const metadata = getCategoryMetadata(projectId, categoryPath);
-                    const categoryName = parts[parts.length - 2] || 'General';
-
-                    categoryMetadataMap.set(categoryKey, {
-                        label: metadata?.label || categoryName,
-                        position: metadata?.position ?? 999,
-                        path: categoryPath
-                    });
-                }
-            }
+        projectsMap.set(projectCfg.id, {
+            id: projectCfg.id,
+            name: projectCfg.title,
+            description: projectCfg.description,
+            meta: {
+                emoji: projectCfg.logoPath,
+                color: projectCfg.color,
+                githubRepo: projectCfg.githubRepo,
+            },
+            versions,
         });
-
-        // Second pass: parse markdown files
-        markdownFiles.forEach(relPath => {
-            const fullPath = join(projectDir, relPath.substring(1)); // Remove leading /
-            const content = readFileSync(fullPath, 'utf-8');
-
-            const parts = relPath.split('/').filter(Boolean);
-            const fileName = parts[parts.length - 1];
-            const extensionMatch = fileName.match(/\.(mdx?)$/);
-            const extension = extensionMatch ? extensionMatch[0] : '.md';
-            const fileSlug = fileName.replace(/\.mdx?$/, '');
-
-            const { frontmatter, body } = parseFrontmatter(content);
-            const slug = frontmatter.slug || fileSlug;
-
-
-            // Determine category
-            let categoryName = frontmatter.category || rootCategoryName;
-
-            if (parts.length > 1) {
-                const categoryPath = parts.slice(0, -1).join('/');
-                const categoryKey = `${projectId}/${categoryPath}`;
-                const metadata = categoryMetadataMap.get(categoryKey);
-
-                if (metadata) {
-                    categoryName = metadata.label;
-                }
-            } else if (frontmatter.category) {
-                // If frontmatter has explicit category, use it
-                categoryName = frontmatter.category;
-            }
-            // Otherwise, use rootCategoryName from _category_.yml in project root
-
-            // Get last updated date from git
-            let lastUpdatedAt = undefined;
-            try {
-                // Get the timestamp of the last commit that modified this file
-                const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, {
-                    encoding: 'utf-8',
-                    stdio: ['pipe', 'pipe', 'ignore']
-                }).trim();
-
-                if (stdout) {
-                    lastUpdatedAt = stdout;
-                }
-            } catch {
-                // Ignore errors (e.g., file not tracked by git yet)
-            }
-
-            // Collect unique contributors from git log. Every commit touching this
-            // file contributes. GitHub-style `username@users.noreply.github.com`
-            // emails become a clickable avatar via https://github.com/<username>.png.
-            let contributors: DocContributor[] = [];
-            try {
-                const log = execSync(`git log --format="%an|%ae" -- "${fullPath}"`, {
-                    encoding: 'utf-8',
-                    stdio: ['pipe', 'pipe', 'ignore']
-                }).trim();
-
-                const seen = new Set<string>();
-                for (const line of log.split('\n')) {
-                    if (!line) continue;
-                    const pipeIdx = line.indexOf('|');
-                    if (pipeIdx < 0) continue;
-                    const name = line.slice(0, pipeIdx).trim();
-                    const email = line.slice(pipeIdx + 1).trim();
-                    const key = `${name}|${email}`.toLowerCase();
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-
-                    // Derive avatar when possible.
-                    // "12345+handle@users.noreply.github.com" or "handle@users.noreply.github.com"
-                    let avatar: string | undefined;
-                    const ghMatch = email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
-                    if (ghMatch) {
-                        avatar = `https://github.com/${ghMatch[1]}.png?size=64`;
-                    }
-                    contributors.push({ name, email, avatar });
-                }
-                // Cap to keep the JSON slim.
-                contributors = contributors.slice(0, 10);
-            } catch {
-                // ignore
-            }
-
-            const docFile: DocFile = {
-                slug,
-                path: `/docs/${projectId}${relPath}`,
-                content: body,
-                frontmatter,
-                project: projectId,
-                category: categoryName,
-                extension,
-                lastUpdatedAt,
-                contributors: contributors.length > 0 ? contributors : undefined,
-            };
-
-            project.allDocs.push(docFile);
-
-            // Extract TOC
-            const toc = extractToc(body);
-            tocMap[`${projectId}/${slug}`] = toc;
-
-            // Add to search index
-            searchIndex.push({
-                title: frontmatter.title,
-                content: body.replace(/[#*`]/g, '').substring(0, 500), // Clean and limit content
-                href: `/docs/${projectId}/${slug}`,
-                project: project.name,
-                projectId: projectId,
-                category: categoryName
-            });
-
-            console.log(`  ✓ ${slug}${extension}`);
-        });
-    }
-
-    // Organize docs into categories
-    projectsMap.forEach(project => {
-        const categoriesMap = new Map<string, DocCategory>();
-
-        project.allDocs.forEach(doc => {
-            const categoryName = doc.category;
-
-            if (!categoriesMap.has(categoryName)) {
-                // Find the category metadata by searching for matching label
-                let categoryOrder = 999;
-                
-                for (const [key, metadata] of categoryMetadataMap) {
-                    if (key.startsWith(`${project.id}/`) && metadata.label === categoryName) {
-                        categoryOrder = metadata.position;
-                        break;
-                    }
-                }
-
-                categoriesMap.set(categoryName, {
-                    name: categoryName,
-                    docs: [],
-                    order: categoryOrder
-                });
-            }
-
-            categoriesMap.get(categoryName)!.docs.push(doc);
-        });
-
-        // Sort docs within categories
-        categoriesMap.forEach(category => {
-            category.docs.sort((a, b) =>
-                (a.frontmatter.order || 999) - (b.frontmatter.order || 999)
-            );
-        });
-
-        // Sort categories
-        project.categories = Array.from(categoriesMap.values())
-            .sort((a, b) => a.order - b.order);
     });
 
     // Write output files
-    
+
     // 1. Generate Navigation Data (lightweight)
-    const navProjects: NavDocProject[] = Array.from(projectsMap.values()).map(project => {
-        return {
-            id: project.id,
-            name: project.name,
-            description: project.description,
-            meta: project.meta,
-            versions: project.versions,
-            categories: project.categories.map(category => ({
+    const navProjects: NavDocProject[] = Array.from(projectsMap.values()).map(project => ({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        meta: project.meta,
+        versions: project.versions.map(version => ({
+            id: version.id,
+            label: version.label,
+            latest: version.latest,
+            categories: version.categories.map(category => ({
                 name: category.name,
                 order: category.order,
                 docs: category.docs.map(doc => ({
@@ -622,12 +654,12 @@ function precompileDocs() {
                     frontmatter: {
                         title: doc.frontmatter.title,
                         sidebarLabel: doc.frontmatter.sidebarLabel,
-                        order: doc.frontmatter.order
-                    }
-                }))
-            }))
-        };
-    });
+                        order: doc.frontmatter.order,
+                    },
+                })),
+            })),
+        })),
+    }));
 
     const docsNavData = {
         projects: navProjects,
@@ -645,7 +677,7 @@ function precompileDocs() {
     writeFileSync(docsNavPath, JSON.stringify(docsNavData), 'utf-8');
     writeFileSync(searchIndexPath, JSON.stringify(searchIndex), 'utf-8');
 
-    // 2. Generate Individual Doc Content Files
+    // 2. Generate Individual Doc Content Files — one per (project, version, slug).
     let contentFilesWritten = 0;
     projectsMap.forEach(project => {
         const projectContentDir = join(docsContentDir, project.id);
@@ -653,18 +685,25 @@ function precompileDocs() {
             mkdirSync(projectContentDir, { recursive: true });
         }
 
-        project.allDocs.forEach(doc => {
-            const docContentData = {
-                ...doc,
-                toc: tocMap[`${project.id}/${doc.slug}`] || []
-            };
-            const docPath = join(projectContentDir, `${doc.slug}.json`);
-            writeFileSync(docPath, JSON.stringify(docContentData), 'utf-8');
-            contentFilesWritten++;
+        project.versions.forEach(version => {
+            const versionContentDir = join(projectContentDir, version.id);
+            if (!existsSync(versionContentDir)) {
+                mkdirSync(versionContentDir, { recursive: true });
+            }
+
+            version.allDocs.forEach(doc => {
+                const docContentData = {
+                    ...doc,
+                    toc: tocMap[`${project.id}/${version.id}/${doc.slug}`] || [],
+                };
+                const docPath = join(versionContentDir, `${doc.slug}.json`);
+                writeFileSync(docPath, JSON.stringify(docContentData), 'utf-8');
+                contentFilesWritten++;
+            });
         });
     });
 
-    // 3. Generate sitemap.xml
+    // 3. Generate sitemap.xml — every (project, version, doc) URL is canonical.
     const nowIso = new Date().toISOString();
     const urlEntries: { loc: string; lastmod?: string; priority: string; changefreq: string }[] = [];
 
@@ -673,7 +712,8 @@ function precompileDocs() {
     urlEntries.push({ loc: `${SITE_URL}/`, lastmod: nowIso, priority: '1.0', changefreq: 'weekly' });
 
     projectsMap.forEach(project => {
-        const firstDoc = project.categories[0]?.docs[0];
+        const latest = project.versions.find(v => v.latest) || project.versions[0];
+        const firstDoc = latest?.categories[0]?.docs[0];
         if (firstDoc) {
             urlEntries.push({
                 loc: `${SITE_URL}${encodePath(`/docs/${project.id}`)}`,
@@ -682,12 +722,14 @@ function precompileDocs() {
                 changefreq: 'weekly',
             });
         }
-        project.allDocs.forEach(doc => {
-            urlEntries.push({
-                loc: `${SITE_URL}${encodePath(`/docs/${project.id}/${doc.slug}`)}`,
-                lastmod: doc.lastUpdatedAt || nowIso,
-                priority: '0.8',
-                changefreq: 'weekly',
+        project.versions.forEach(version => {
+            version.allDocs.forEach(doc => {
+                urlEntries.push({
+                    loc: `${SITE_URL}${encodePath(`/docs/${project.id}/${version.id}/${doc.slug}`)}`,
+                    lastmod: doc.lastUpdatedAt || nowIso,
+                    priority: version.latest ? '0.8' : '0.5',
+                    changefreq: 'weekly',
+                });
             });
         });
     });
@@ -724,14 +766,18 @@ function precompileDocs() {
     const robotsPath = join(PUBLIC_DIR, 'robots.txt');
     writeFileSync(robotsPath, robotsTxt, 'utf-8');
 
+    const totalDocs = Array.from(projectsMap.values())
+        .flatMap(p => p.versions)
+        .reduce((sum, v) => sum + v.allDocs.length, 0);
+
     console.log('\n✅ Precompilation complete!');
     console.log(`   📄 Generated: ${docsNavPath} (Navigation only)`);
-    console.log(`   🔍 Generated: ${searchIndexPath}`);
+    console.log(`   🔍 Generated: ${searchIndexPath} (latest-version-only entries)`);
     console.log(`   📂 Generated: ${contentFilesWritten} individual document files in public/docs-content/`);
     console.log(`   🗺️  Generated: ${sitemapPath} (${urlEntries.length} URLs)`);
     console.log(`   🤖 Generated: ${robotsPath}`);
     console.log(`   📊 Total projects: ${projectsMap.size}`);
-    console.log(`   📚 Total documents: ${searchIndex.length}`);
+    console.log(`   📚 Total documents (across all versions): ${totalDocs}`);
 }
 
 // Run precompilation

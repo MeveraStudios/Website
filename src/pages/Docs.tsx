@@ -23,18 +23,33 @@ import { Breadcrumbs } from '@/components/docs/Breadcrumbs';
 import { SearchDialog } from '@/components/docs/SearchDialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useDocs, useDocContent, getDocNavigation } from '@/lib/docs';
+import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
 
 export function Docs() {
-  const { projectId, slug } = useParams<{ projectId: string; slug: string }>();
+  const { projectId, version, slug } = useParams<{
+    projectId: string;
+    version: string;
+    slug: string;
+  }>();
 
   // Use the hook to get documentation data
   const { projects, isLoaded } = useDocs();
 
+  // Resolve the active project + version up front so we can hand the right
+  // version id to the content fetcher (and avoid a second render cycle).
+  const projectForFetch = projects.find(p => p.id === projectId);
+  const resolvedVersionId = (() => {
+    if (!projectForFetch) return version || '';
+    if (version && projectForFetch.versions.some(v => v.id === version)) {
+      return version;
+    }
+    return getLatestVersion(projectForFetch)?.id || '';
+  })();
+
   // Fetch the current document content (unconditionally call hooks)
-  const { doc, isLoading } = useDocContent(projectId || '', slug || '');
+  const { doc, isLoading } = useDocContent(projectId || '', resolvedVersionId, slug || '');
 
   // Show loading state while data is being fetched
   if (!isLoaded) {
@@ -59,25 +74,46 @@ export function Docs() {
   if (!project) {
     const firstProject = projects[0];
     if (firstProject) {
-      const firstDoc = firstProject.categories[0]?.docs[0];
-      if (firstDoc) {
-        return <Navigate to={`/docs/${firstProject.id}/${firstDoc.slug}`} replace />;
+      const latest = getLatestVersion(firstProject);
+      const firstDoc = latest?.categories[0]?.docs[0];
+      if (latest && firstDoc) {
+        return <Navigate to={`/docs/${firstProject.id}/${latest.id}/${firstDoc.slug}`} replace />;
       }
     }
     return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found</div><Footer /></div>;
   }
 
-  // Redirect to first doc in project if no slug provided
-  if (!slug) {
-    const firstDoc = project.categories[0]?.docs[0];
-    if (firstDoc) {
-      return <Navigate to={`/docs/${project.id}/${firstDoc.slug}`} replace />;
+  // Resolve the active version: use the URL segment when valid, otherwise
+  // fall back to the project's latest. Unknown / missing versions trigger
+  // a replace-navigation so the URL bar reflects the canonical version.
+  const latestVersion = getLatestVersion(project);
+  const activeVersion =
+    (version && project.versions.find(v => v.id === version)) || latestVersion;
+
+  if (!activeVersion) {
+    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
+  }
+
+  if (!version || version !== activeVersion.id) {
+    const firstDoc = activeVersion.categories[0]?.docs[0];
+    const targetSlug = slug || firstDoc?.slug;
+    if (targetSlug) {
+      return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${targetSlug}`} replace />;
     }
     return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
   }
 
-  // Get prev/next navigation
-  const { prev, next } = getDocNavigation(project, slug);
+  // Redirect to first doc in version if no slug provided.
+  if (!slug) {
+    const firstDoc = activeVersion.categories[0]?.docs[0];
+    if (firstDoc) {
+      return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${firstDoc.slug}`} replace />;
+    }
+    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
+  }
+
+  // Get prev/next navigation within the active version.
+  const { prev, next } = getDocNavigation(activeVersion, slug);
 
   // Docs live in the MeveraDocs/Website repo, so "Edit this page" always
   // targets that repo (not the per-project source repo).
@@ -92,12 +128,13 @@ export function Docs() {
     ? `${projectMeta.githubRepo.replace(/\/$/, '')}/issues/new`
     : null;
 
+  const versionedBase = `/docs/${project.id}/${activeVersion.id}`;
   const breadcrumbs: Breadcrumb[] | undefined = doc
     ? [
         { name: 'Home', url: '/' },
-        { name: project.name, url: `/docs/${project.id}` },
-        ...(doc.category ? [{ name: doc.category, url: `/docs/${project.id}` }] : []),
-        { name: doc.frontmatter.title, url: `/docs/${project.id}/${doc.slug}` },
+        { name: project.name, url: versionedBase },
+        ...(doc.category ? [{ name: doc.category, url: versionedBase }] : []),
+        { name: doc.frontmatter.title, url: `${versionedBase}/${doc.slug}` },
       ]
     : undefined;
 
@@ -107,7 +144,7 @@ export function Docs() {
         <Seo
           title={`${doc.frontmatter.title} – ${project.name}`}
           description={doc.frontmatter.description || project.description}
-          path={`/docs/${project.id}/${doc.slug}`}
+          path={`${versionedBase}/${doc.slug}`}
           type="article"
           isArticle
           lastUpdated={doc.lastUpdatedAt}
@@ -117,7 +154,7 @@ export function Docs() {
         <Seo
           title={project.name}
           description={project.description}
-          path={`/docs/${project.id}`}
+          path={versionedBase}
         />
       )}
       <Header />
@@ -125,13 +162,13 @@ export function Docs() {
       <div className="flex-1 container mx-auto px-4">
         <div className="flex gap-8 py-8">
           {/* Sidebar Navigation */}
-          <Sidebar project={project} />
+          <Sidebar project={project} version={activeVersion} />
 
           {/* Main Content */}
           <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center justify-between mb-6">
-              <MobileSidebar project={project} />
+              <MobileSidebar project={project} version={activeVersion} />
               <SearchDialog />
             </div>
 
@@ -209,15 +246,24 @@ export function Docs() {
 
                 {/* Document Content */}
                 {doc.extension === '.mdx' ? (
-                  <MDXRenderer content={doc.content || ''} />
+                  <MDXRenderer
+                    content={doc.content || ''}
+                    projectId={project.id}
+                    version={activeVersion.id}
+                  />
                 ) : (
-                  <MarkdownRenderer content={doc.content || ''} />
+                  <MarkdownRenderer
+                    content={doc.content || ''}
+                    projectId={project.id}
+                    version={activeVersion.id}
+                  />
                 )}
 
                 {/* Feedback */}
                 <DocFeedback
-                  key={`${project.id}/${doc.slug}`}
+                  key={`${project.id}/${activeVersion.id}/${doc.slug}`}
                   projectId={project.id}
+                  version={activeVersion.id}
                   slug={doc.slug}
                   docTitle={doc.frontmatter.title}
                   docPath={doc.path}
@@ -231,6 +277,7 @@ export function Docs() {
                   prev={prev}
                   next={next}
                   projectId={project.id}
+                  version={activeVersion.id}
                 />
               </div>
             )}

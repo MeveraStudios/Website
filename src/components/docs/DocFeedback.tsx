@@ -17,6 +17,7 @@ type Vote = 'up' | 'down' | null;
 
 interface DocFeedbackProps {
   projectId: string;
+  version: string;
   slug: string;
   docTitle: string;
   /** Absolute or root-relative path to the current doc, used in the issue body. */
@@ -35,8 +36,8 @@ function readStoredVote(key: string): Vote {
   return null;
 }
 
-export function DocFeedback({ projectId, slug, docTitle, docPath }: DocFeedbackProps) {
-  const key = `${STORAGE_PREFIX}${projectId}/${slug}`;
+export function DocFeedback({ projectId, version, slug, docTitle, docPath }: DocFeedbackProps) {
+  const key = `${STORAGE_PREFIX}${projectId}/${version}/${slug}`;
   // The parent passes `key={slug}` so a navigation remounts this component
   // and we can simply seed state from localStorage — no effect/sync needed.
   const [vote, setVote] = useState<Vote>(() => readStoredVote(key));

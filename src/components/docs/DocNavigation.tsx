@@ -13,17 +13,18 @@ interface DocNavigationProps {
   prev?: DocFile;
   next?: DocFile;
   projectId: string;
+  version: string;
   className?: string;
 }
 
-export function DocNavigation({ prev, next, projectId, className }: DocNavigationProps) {
+export function DocNavigation({ prev, next, projectId, version, className }: DocNavigationProps) {
   return (
     <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 pt-8 border-t border-border', className)}>
       {/* Previous Link */}
       <div className="w-full">
         {prev && (
           <Link
-            to={`/docs/${projectId}/${prev.slug}`}
+            to={`/docs/${projectId}/${version}/${prev.slug}`}
             className="group flex flex-col items-start w-full h-full p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all"
           >
             <span className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
@@ -41,7 +42,7 @@ export function DocNavigation({ prev, next, projectId, className }: DocNavigatio
       <div className="w-full">
         {next && (
           <Link
-            to={`/docs/${projectId}/${next.slug}`}
+            to={`/docs/${projectId}/${version}/${next.slug}`}
             className="group flex flex-col items-end w-full h-full p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all text-right"
           >
             <span className="flex items-center gap-1 text-sm text-muted-foreground mb-1">

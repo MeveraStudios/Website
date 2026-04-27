@@ -6,7 +6,7 @@
  * counter or ref needed, so StrictMode double-rendering is a non-issue.
  */
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { compile, run } from '@mdx-js/mdx';
 import * as runtime from 'react/jsx-runtime';
 import remarkGfm from 'remark-gfm';
@@ -30,6 +30,35 @@ import '@/styles/tabs.css';
 interface MDXRendererProps {
   content: string;
   className?: string;
+  /** Active project — used to rewrite version-less /docs/<project>/... links. */
+  projectId?: string;
+  /** Active version — injected into rewritten cross-doc links. */
+  version?: string;
+}
+
+/**
+ * If `href` points at the same project's docs without a version segment,
+ * inject the active version. Authors keep writing `/docs/Imperat/foo` and
+ * we make sure they land on `/docs/Imperat/v4/foo`.
+ */
+function rewriteDocHref(href: string | undefined, projectId?: string, version?: string): string | undefined {
+  if (!href || !projectId || !version) return href;
+  if (!href.startsWith('/docs/')) return href;
+
+  const parts = href.split('#');
+  const pathPart = parts[0];
+  const hashPart = parts[1] !== undefined ? `#${parts[1]}` : '';
+
+  const segments = pathPart.split('/').filter(Boolean);
+  if (segments.length < 2) return href;
+  if (segments[1] !== projectId) return href;
+
+  if (segments.length >= 3 && /^v\d+$/i.test(segments[2])) return href;
+
+  const rest = segments.slice(2).join('/');
+  return rest
+    ? `/docs/${projectId}/${version}/${rest}${hashPart}`
+    : `/docs/${projectId}/${version}${hashPart}`;
 }
 
 // ─── Heading (pure presentational — reads `id` prop from rehype plugin) ───────
@@ -55,9 +84,10 @@ function Heading({ level, id, children }: { level: 1|2|3|4|5|6; id?: string; chi
   );
 }
 
-// ─── Static component map (no dynamic state — safe at module level) ───────────
+// ─── Component map factory — needs projectId/version for link rewriting. ─────
 
-const mdxComponents = {
+function buildMdxComponents(projectId?: string, version?: string) {
+  return {
   // Custom MDX components
   Tabs,
   TabItem,
@@ -117,9 +147,10 @@ const mdxComponents = {
 
   a: ({ href, children, ...props }: any) => {
     const isExternal = href?.startsWith('http');
+    const finalHref = isExternal ? href : rewriteDocHref(href, projectId, version);
     return (
       <a
-        href={href}
+        href={finalHref}
         target={isExternal ? '_blank' : undefined}
         rel={isExternal ? 'noopener noreferrer' : undefined}
         {...props}
@@ -167,7 +198,8 @@ const mdxComponents = {
     }
     return <div className={className} {...props}>{children}</div>;
   },
-};
+  };
+}
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
@@ -177,9 +209,10 @@ const mdxComponents = {
  * Compiles and renders MDX content with full JSX support.
  * Heading IDs are assigned during compilation by rehypeHeadingIds.
  */
-export const MDXRenderer = memo(({ content, className }: MDXRendererProps) => {
+export const MDXRenderer = memo(({ content, className, projectId, version }: MDXRendererProps) => {
   const [MDXContent, setMDXContent] = useState<any>(null);
   const [error, setError] = useState<Error | null>(null);
+  const mdxComponents = useMemo(() => buildMdxComponents(projectId, version), [projectId, version]);
 
   useEffect(() => {
     let cancelled = false;

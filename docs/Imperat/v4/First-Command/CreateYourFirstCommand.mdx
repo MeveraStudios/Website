@@ -1,0 +1,136 @@
+---
+title: Creating your first command
+description: Create your first command using Imperat's annotation-based API
+order: 2
+---
+
+Imperat transforms annotated classes into command hierarchies, letting you build complex commands with ease.
+
+# How it works
+
+Imperat uses annotations to define commands. The framework processes these at runtime to build an executable command hierarchy.
+
+## @RootCommand
+
+A class annotated with `@RootCommand` defines a [Root Command](/docs/Imperat/BasicDefinitions#root-command).
+
+- **Nested classes** with `@RootCommand` are independent Root Commands, NOT subcommands
+- **Methods** with `@RootCommand` inside a command class are also independent Root Commands (not subcommands of that class)
+
+This allows flexible command organization without enforced hierarchy.
+
+:::tip
+Commands can have metadata like permissions and cooldowns via additional annotations.
+:::
+
+## @Execute
+
+A method annotated with `@Execute` defines a [Command Pathway](/docs/Imperat/BasicDefinitions#pathway) — the behavior that runs when the command is invoked.
+
+**Rules for a valid `@Execute` method:**
+1. Must be `public`
+2. Must be annotated with `@Execute`
+3. Must be in a class annotated with `@RootCommand` or `@SubCommand`
+4. First parameter must be `PLATFORMSOURCE` (the command sender: player, console, etc.)
+
+The method can have additional parameters representing command arguments, annotated with `@Required`, `@Optional`, etc.
+
+:::note
+`@Execute` methods are also called "pathway-methods" or "executable-methods".
+:::
+
+## Naming Arguments
+
+Use `@Named` to give arguments custom names. Without it, the framework assigns defaults like `arg0`, `arg1`.
+
+To use method parameter names directly, enable the `-parameters` compiler flag:
+
+<Tabs defaultValue="maven">
+    <TabItem value="maven" label="Maven">
+        <CodeBlock className="language-xml">{`
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+        
+        `}</CodeBlock>
+    </TabItem>
+    <TabItem value="gradle-groovy" label="Gradle (Groovy)">
+        <CodeBlock className="language-groovy">{`
+
+        tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs += '-parameters'
+        }
+        
+        `}</CodeBlock>
+    </TabItem>
+    <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
+        <CodeBlock className="language-kotlin">{`
+        tasks.withType<JavaCompile>().configureEach {
+            options.compilerArgs += "-parameters"
+        }
+
+        `}</CodeBlock>
+    </TabItem>
+</Tabs>
+
+## Example
+
+```java
+@RootCommand({"total", "sum"})
+public class TotalCommand {
+
+    @Execute
+    public void calculateSum(PLATFORMSOURCE source, int a, int b) {
+        source.sendMessage("The sum of " + a + " and " + b + " = " + (a + b));
+    }
+}
+```
+
+- `@RootCommand({"total", "sum"})` — command can be invoked as `/total` or `/sum` (first name is primary)
+- `calculateSum` — pathway that runs when the command is executed
+- Syntax: `total <a> <b>` or `sum <a> <b>`
+
+## Bukkit Example
+
+```java
+@RootCommand({"tell", "msg", "t", "w", "whisper", "pm"})
+public class TellCmd {
+
+    @Execute
+    public void def(Player source) {
+        source.sendMessage("Usage: /tell <target> <message>");
+    }
+
+    @Execute
+    public void whisper(Player source, Player target, @Greedy String message) {
+        source.sendMessage("Message from " + source.getName() + " to " + target.getName() + ": " + message);
+        target.sendMessage("Message from " + source.getName() + " to " + target.getName() + ": " + message);
+    }
+}
+```
+
+- `@Greedy` captures all remaining input as a single string (multi-word messages)
+- `Player` as a parameter type automatically resolves the player — this restricts the command to players only
+- Multiple `@Execute` methods create different pathways for the same command
+
+## FAQs
+
+**Can I have multiple `@Execute` methods in the same command class?**
+Yes, each defines a different pathway. Just ensure each has a unique parameter structure.
+
+**Can I use quotes instead of `@Greedy` for multi-word arguments?**
+Yes. Both double (`"`) and single (`'`) quotes work: `/tell player1 "Hello there!"`
+
+**Why does `Player` work as a source parameter?**
+Imperat uses `SourceProvider` system to match parameter types to platform sources. 
+> If the type matches (e.g., `Player` for Bukkit), it injects automatically.

@@ -14,6 +14,8 @@ export interface DocFile {
   frontmatter: DocFrontmatter;
   /** Project this doc belongs to */
   project?: string;
+  /** Version this doc belongs to (e.g. `v1`, `v4`). */
+  version?: string;
   /** Category within the project */
   category: string;
   /** File extension (.md or .mdx) */
@@ -68,25 +70,26 @@ export interface DocProject {
   name: string;
   /** Project description */
   description: string;
-  /** Categories within this project */
-  categories: DocCategory[];
-  /** All docs flattened */
-  allDocs?: DocFile[];
   /** Project metadata from config */
   meta: {
     emoji: string;
     color: string;
     githubRepo?: string;
   };
-  /** Detected version folders. Empty array = unversioned. */
-  versions?: DocVersion[];
+  /** All declared versions for the project (always at least one). */
+  versions: DocVersion[];
 }
 
-/** A detected documentation version (`v1`, `v2`, `latest`). */
+/** A documentation version (`v1`, `v3`, `v4`) — owns its own categories. */
 export interface DocVersion {
+  /** Folder name — e.g. `v1`, `v4`. */
   id: string;
+  /** Human label — same as id unless overridden. */
   label: string;
+  /** True for the project's default / latest version. */
   latest: boolean;
+  /** Categories belonging to this version. */
+  categories: DocCategory[];
 }
 
 // Navigation item for sidebar

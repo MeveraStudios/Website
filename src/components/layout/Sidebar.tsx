@@ -1,34 +1,51 @@
 /**
  * Sidebar Component
- * 
+ *
  * Displays the documentation sidebar with:
- * - Project selector
- * - Category sections
- * - Document navigation links
+ * - Project header
+ * - Version switcher (when the project has more than one version)
+ * - Category sections + document navigation links
  * - Mobile responsive drawer
  */
 
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, BookOpen, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { DocProject, DocCategory } from '@/types/docs';
+import type { DocCategory, DocProject, DocVersion } from '@/types/docs';
 
 /**
  * Version switcher — shown only when the project has detected version
- * folders (see `detectVersions` in scripts/precompile-docs.ts).
+ * folders (see `detectVersionIds` in scripts/precompile-docs.ts).
  *
- * It's intentionally a plain <select> for now: keyboard-accessible by
- * default and renders a native system picker on mobile.
+ * Switching versions navigates to the same slug under the new version when
+ * it exists; otherwise lands on the version's first doc.
  */
-function VersionSwitcher({ project }: { project: DocProject }) {
+function VersionSwitcher({ project, version }: { project: DocProject; version: DocVersion }) {
   const versions = project.versions ?? [];
+  const navigate = useNavigate();
+  const location = useLocation();
+
   if (versions.length <= 1) return null;
 
-  const latest = versions.find(v => v.latest)?.id ?? versions[0].id;
+  const currentSlug = location.pathname.split('/').pop() || '';
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextId = e.target.value;
+    const next = versions.find(v => v.id === nextId);
+    if (!next) return;
+
+    const sameSlug = next.categories
+      .flatMap(c => c.docs)
+      .find(d => d.slug === currentSlug);
+    const targetSlug = sameSlug?.slug || next.categories[0]?.docs[0]?.slug;
+    if (!targetSlug) return;
+
+    navigate(`/docs/${project.id}/${next.id}/${targetSlug}`);
+  };
 
   return (
     <div className="mb-4 px-3">
@@ -40,7 +57,8 @@ function VersionSwitcher({ project }: { project: DocProject }) {
       </label>
       <select
         id={`version-${project.id}`}
-        defaultValue={latest}
+        value={version.id}
+        onChange={handleChange}
         className="w-full rounded-md border bg-background px-2 py-1 text-sm"
         aria-label={`${project.name} version`}
       >
@@ -57,6 +75,7 @@ function VersionSwitcher({ project }: { project: DocProject }) {
 
 interface SidebarProps {
   project: DocProject;
+  version: DocVersion;
   className?: string;
 }
 
@@ -64,11 +83,12 @@ interface CategorySectionProps {
   category: DocCategory;
   currentSlug: string;
   projectId: string;
+  versionId: string;
 }
 
-function CategorySection({ category, currentSlug, projectId }: CategorySectionProps) {
+function CategorySection({ category, currentSlug, projectId, versionId }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(true);
-  const regionId = `cat-${projectId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
+  const regionId = `cat-${projectId}-${versionId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
     <div className="mb-4">
@@ -93,7 +113,7 @@ function CategorySection({ category, currentSlug, projectId }: CategorySectionPr
             return (
               <li key={doc.slug}>
                 <Link
-                  to={`/docs/${projectId}/${doc.slug}`}
+                  to={`/docs/${projectId}/${versionId}/${doc.slug}`}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'block px-3 py-1.5 text-sm rounded-md transition-colors',
@@ -113,7 +133,12 @@ function CategorySection({ category, currentSlug, projectId }: CategorySectionPr
   );
 }
 
-export function Sidebar({ project, className }: SidebarProps) {
+function projectHomeHref(project: DocProject, version: DocVersion): string {
+  const firstDoc = version.categories[0]?.docs[0];
+  return firstDoc ? `/docs/${project.id}/${version.id}/${firstDoc.slug}` : `/docs/${project.id}/${version.id}`;
+}
+
+export function Sidebar({ project, version, className }: SidebarProps) {
   const location = useLocation();
   const currentSlug = location.pathname.split('/').pop() || '';
 
@@ -128,7 +153,7 @@ export function Sidebar({ project, className }: SidebarProps) {
             {/* Project Header */}
             <div className="mb-6 px-3">
               <Link
-                to={`/docs/${project.id}/getting-started`}
+                to={projectHomeHref(project, version)}
                 className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors"
               >
                 <span className="text-2xl" aria-hidden="true">{project.meta.emoji}</span>
@@ -139,16 +164,17 @@ export function Sidebar({ project, className }: SidebarProps) {
               </p>
             </div>
 
-            <VersionSwitcher project={project} />
+            <VersionSwitcher project={project} version={version} />
 
             {/* Categories */}
             <nav aria-label="Documentation sections">
-              {project.categories.map((category) => (
+              {version.categories.map((category) => (
                 <CategorySection
                   key={category.name}
                   category={category}
                   currentSlug={currentSlug}
                   projectId={project.id}
+                  versionId={version.id}
                 />
               ))}
             </nav>
@@ -160,7 +186,7 @@ export function Sidebar({ project, className }: SidebarProps) {
 }
 
 // Mobile Sidebar
-export function MobileSidebar({ project }: { project: DocProject }) {
+export function MobileSidebar({ project, version }: { project: DocProject; version: DocVersion }) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const currentSlug = location.pathname.split('/').pop() || '';
@@ -184,7 +210,7 @@ export function MobileSidebar({ project }: { project: DocProject }) {
             {/* Project Header */}
             <div className="mb-6">
               <Link
-                to={`/docs/${project.id}/getting-started`}
+                to={projectHomeHref(project, version)}
                 className="flex items-center gap-2 text-lg font-semibold"
                 onClick={() => setOpen(false)}
               >
@@ -196,9 +222,11 @@ export function MobileSidebar({ project }: { project: DocProject }) {
               </p>
             </div>
 
+            <VersionSwitcher project={project} version={version} />
+
             {/* Categories */}
             <nav aria-label="Documentation sections">
-              {project.categories.map((category) => (
+              {version.categories.map((category) => (
                 <div key={category.name} className="mb-4">
                   <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
                     {category.name}
@@ -209,7 +237,7 @@ export function MobileSidebar({ project }: { project: DocProject }) {
                       return (
                         <li key={doc.slug}>
                           <Link
-                            to={`/docs/${project.id}/${doc.slug}`}
+                            to={`/docs/${project.id}/${version.id}/${doc.slug}`}
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
                               'block px-3 py-1.5 text-sm rounded-md transition-colors',

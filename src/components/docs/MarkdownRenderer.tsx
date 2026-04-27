@@ -30,6 +30,36 @@ import '@/styles/tabs.css';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  /** Active project — used to rewrite version-less /docs/<project>/... links. */
+  projectId?: string;
+  /** Active version — injected into rewritten cross-doc links. */
+  version?: string;
+}
+
+/**
+ * If `href` points at the same project's docs without a version segment,
+ * inject the active version. Authors keep writing `/docs/Imperat/foo` and
+ * we make sure they land on `/docs/Imperat/v4/foo`.
+ */
+function rewriteDocHref(href: string | undefined, projectId?: string, version?: string): string | undefined {
+  if (!href || !projectId || !version) return href;
+  if (!href.startsWith('/docs/')) return href;
+
+  const parts = href.split('#');
+  const pathPart = parts[0];
+  const hashPart = parts[1] !== undefined ? `#${parts[1]}` : '';
+
+  const segments = pathPart.split('/').filter(Boolean); // ['docs', '<project>', ...rest]
+  if (segments.length < 2) return href;
+  if (segments[1] !== projectId) return href;
+
+  // Already versioned (`/docs/<project>/v\d+/...`) — leave it alone.
+  if (segments.length >= 3 && /^v\d+$/i.test(segments[2])) return href;
+
+  const rest = segments.slice(2).join('/');
+  return rest
+    ? `/docs/${projectId}/${version}/${rest}${hashPart}`
+    : `/docs/${projectId}/${version}${hashPart}`;
 }
 
 // ─── Heading (pure presentational — reads `id` prop from rehype plugin) ───────
@@ -55,9 +85,10 @@ function Heading({ level, id, children }: { level: 1|2|3|4|5|6; id?: string; chi
   );
 }
 
-// ─── Static component map (no dynamic state — safe at module level) ───────────
+// ─── Component map factory — needs projectId/version for link rewriting. ─────
 
-const components = {
+function buildComponents(projectId?: string, version?: string) {
+  return {
   code({ className, children, inline, ...props }: any) {
     if (inline || !className) {
       return (
@@ -133,8 +164,9 @@ const components = {
 
   a: ({ href, children, ...props }: any) => {
     const isExternal = href?.startsWith('http');
+    const finalHref = isExternal ? href : rewriteDocHref(href, projectId, version);
     return (
-      <a href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined} {...props}>
+      <a href={finalHref} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined} {...props}>
         {children}
       </a>
     );
@@ -155,16 +187,18 @@ const components = {
       <table className="min-w-full divide-y divide-border" {...props}>{children}</table>
     </div>
   ),
-};
+  };
+}
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
-export const MarkdownRenderer = memo(({ content, className }: MarkdownRendererProps) => {
+export const MarkdownRenderer = memo(({ content, className, projectId, version }: MarkdownRendererProps) => {
   const remarkPlugins = useMemo(
     () => [remarkGfm, remarkDirective, remarkAdmonitions, remarkCodeMeta],
     []
   );
   const rehypePlugins = useMemo(() => [rehypeRaw, rehypeHeadingIds], []);
+  const components = useMemo(() => buildComponents(projectId, version), [projectId, version]);
 
   return (
     <div className={cn('prose prose-invert max-w-none', className)}>

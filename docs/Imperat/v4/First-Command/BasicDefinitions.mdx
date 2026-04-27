@@ -1,0 +1,82 @@
+---
+title: Basic Definitions
+description: Build your core understanding of imperat with basic definitions.
+order: 1
+---
+
+# Basic Definitions
+
+Essential terminology for understanding Imperat.
+
+## Placeholders
+
+`PLATFORMSOURCE` and `PLATFORMIMPERAT` are placeholders for platform-specific implementations (Bukkt, Sponge, etc.).
+
+- `PLATFORMSOURCE` — the command sender (player, console, etc.)
+- `PLATFORMIMPERAT` — the Imperat instance for that platform
+
+## Command
+
+A **Command** is an executable action. It contains pathways (ways to run it) and can have subcommands and arguments.
+
+### Root Command
+
+The top-level command in a hierarchy. Entry point for command execution with no parent. Can have subcommands and pathways.
+
+### Subcommand
+
+A Command nested within another (parent) Command. Can have its own pathways, and each pathway can have its own arguments.
+
+## Raw-Input
+If user enters `/sum 5 10`, this whole string after the command label (`5 10`) is the `raw-input`. 
+It is the unprocessed string that gets parsed into arguments.
+
+### Raw-Argument
+The `raw-argument` is the entire unprocessed string after the command label, like `5 10`.
+The unprocessed string the user types before its parsed to a typed argument. 
+
+## Argument
+
+A parameter a Command accepts. Classified by type:
+
+- **Literal** — fixed value, used for subcommands
+- **Required** — must be provided
+- **Optional** — can be omitted, may have defaults
+- **Flag** — toggles options (Switch) or sets values (True-Flag)
+- **Greedy** — captures all remaining input
+
+:::tip
+Flags can be entered in any order, not just in sequence.
+:::
+
+<Admonition type="custom" sideColor="#00d4ff" bgColor="#00d4ff20" title="PRO-TIP" icon="LightBulb">
+
+Flags have two types:
+- **Switch** — boolean on/off toggle
+- **True-Flag** — set to a specific value (string, number, etc.)
+
+</Admonition>
+
+## Pathway
+
+A specific way to execute a Command — the sequence of arguments and options that triggers it. 
+A Command can have multiple pathways.
+
+### Main Pathway
+
+Requires specific arguments in sequence. Example: `/print <message>`
+
+### Default Pathway
+
+No arguments required. Example: `/print`
+
+## Context
+
+An object holding the current state of command operation (execution, parsing, suggestion).
+
+- **Execution Context** — during command execution
+- **Suggestion Context** — while user is typing, for tab-completion
+
+## ImperatConfig
+
+Holds all customizable framework settings.
