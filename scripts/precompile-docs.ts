@@ -48,6 +48,11 @@ interface ProjectConfig {
     hoverAnimator?: string;
     titleColor?: string;
     titleHoverColor?: string;
+    /**
+     * Override which version is treated as `latest`. Must match a folder
+     * name like `v3`. When omitted, the highest-numbered `vN` wins.
+     */
+    defaultVersion?: string;
 }
 
 // Ensure public directory exists
@@ -288,10 +293,11 @@ function getCategoryMetadata(versionDir: string, categoryPath: string): { label?
  * Detect version subfolders directly beneath `docs/<project>/`.
  *
  * A version is any immediate child folder whose name matches `v<digits>`.
- * The highest-numbered `vN` is marked as `latest: true`. Returns `[]` if
- * no version folders exist (the project will be skipped with a warning).
+ * If the project config supplies `defaultVersion`, that one is marked as
+ * `latest`. Otherwise the highest-numbered `vN` wins. Returns `[]` if no
+ * version folders exist (the project will be skipped with a warning).
  */
-function detectVersionIds(projectDir: string): { id: string; label: string; latest: boolean }[] {
+function detectVersionIds(projectDir: string, defaultVersion?: string): { id: string; label: string; latest: boolean }[] {
     if (!existsSync(projectDir)) return [];
     const entries = readdirSync(projectDir);
     const versions: { id: string; label: string; latest: boolean }[] = [];
@@ -311,7 +317,17 @@ function detectVersionIds(projectDir: string): { id: string; label: string; late
         const bn = parseInt(b.id.slice(1), 10) || 0;
         return an - bn;
     });
-    versions[versions.length - 1].latest = true;
+
+    let latestIdx = versions.length - 1;
+    if (defaultVersion) {
+        const overrideIdx = versions.findIndex(v => v.id.toLowerCase() === defaultVersion.toLowerCase());
+        if (overrideIdx >= 0) {
+            latestIdx = overrideIdx;
+        } else {
+            console.log(`⚠️  defaultVersion "${defaultVersion}" not found among ${versions.map(v => v.id).join(', ')} — falling back to highest vN.`);
+        }
+    }
+    versions[latestIdx].latest = true;
     return versions;
 }
 
@@ -599,7 +615,7 @@ function precompileDocs() {
             return;
         }
 
-        const detectedVersions = detectVersionIds(projectDir);
+        const detectedVersions = detectVersionIds(projectDir, projectCfg.defaultVersion);
         if (detectedVersions.length === 0) {
             console.log(`⚠️  Warning: ${projectCfg.id} has no version subfolders (expected docs/${projectCfg.id}/v1/...). Skipping.`);
             return;
