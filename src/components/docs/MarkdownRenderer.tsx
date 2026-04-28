@@ -145,11 +145,11 @@ function buildComponents(projectId?: string, version?: string) {
   TabItem: ({ value, label, icon, children }: any) => (
     <TabItemComponent value={value} label={label} icon={icon}>{children}</TabItemComponent>
   ),
-  LatestVersionBlock: ({ owner, repo, group, id, version }: any) => (
-    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} version={version} />
+  LatestVersionBlock: ({ owner, repo, group, id, version, snapshot }: any) => (
+    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} version={version} snapshot={snapshot} />
   ),
-  latestversionblock: ({ owner, repo, group, id, version }: any) => (
-    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} version={version} />
+  latestversionblock: ({ owner, repo, group, id, version, snapshot }: any) => (
+    <LatestVersionBlockComponent owner={owner} repo={repo} group={group} id={id} version={version} snapshot={snapshot} />
   ),
   SnapshotRepoBlock: () => <SnapshotRepoBlockComponent />,
   snapshotrepoblock: () => <SnapshotRepoBlockComponent />,

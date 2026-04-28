@@ -9,11 +9,13 @@ interface LatestVersionBlockProps {
   id: string;
   /** Pin a specific version (e.g. "4.0.0-SNAPSHOT") instead of fetching the latest GitHub tag. */
   version?: string;
+  /** When true, render the next-minor `-SNAPSHOT` derived from the latest GitHub tag. */
+  snapshot?: boolean;
 }
 
-export default function LatestVersionBlock({ owner, repo, group, id, version }: LatestVersionBlockProps) {
+export default function LatestVersionBlock({ owner, repo, group, id, version, snapshot }: LatestVersionBlockProps) {
   return (
-    <LatestVersion owner={owner} repo={repo} version={version}>
+    <LatestVersion owner={owner} repo={repo} version={version} snapshot={snapshot}>
       {(v: string) => {
         const maven = `<dependency>
   <groupId>${group}</groupId>

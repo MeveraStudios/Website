@@ -52,11 +52,17 @@ To avoid classpath conflicts, shade and relocate Imperat packages in your final 
 <ShadingBlock/>
 
 ### Snapshots
-If you would like to use/test the latest features on the experimental builds(per commit),
-Then use the snapshot version of the NEXT current version.
-
-For **example**:
-If current latest official version is `3.4.0`, then the **LATEST** snapshot version would be `3.5.0-SNAPSHOT`
+v4 itself ships only as a snapshot for now — the install block above already
+points at `4.0.0-SNAPSHOT`. If you want the auto-derived snapshot (next
+minor bumped from the latest GitHub tag), use the block below.
 
 You must have the snapshots repo added:
 <SnapshotRepoBlock/>
+
+<LatestVersionBlock
+    owner="MeveraStudios"
+    repo="imperat"
+    group="studio.mevera"
+    id="imperat-core"
+    snapshot
+/>
