@@ -7,11 +7,13 @@ interface LatestVersionBlockProps {
   repo: string;
   group: string;
   id: string;
+  /** Pin a specific version (e.g. "4.0.0-SNAPSHOT") instead of fetching the latest GitHub tag. */
+  version?: string;
 }
 
-export default function LatestVersionBlock({ owner, repo, group, id }: LatestVersionBlockProps) {
+export default function LatestVersionBlock({ owner, repo, group, id, version }: LatestVersionBlockProps) {
   return (
-    <LatestVersion owner={owner} repo={repo}>
+    <LatestVersion owner={owner} repo={repo} version={version}>
       {(v: string) => {
         const maven = `<dependency>
   <groupId>${group}</groupId>

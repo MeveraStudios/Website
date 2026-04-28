@@ -5,14 +5,26 @@ interface LatestVersionProps {
   repo: string;
   stripV?: boolean;
   codeBlock?: boolean;
+  /**
+   * When supplied, this literal version is rendered instead of fetching the
+   * latest GitHub tag. Lets a doc page pin a specific snapshot/release
+   * without losing the auto-fetched default for unpinned pages.
+   */
+  version?: string;
   children?: (version: string) => React.ReactNode;
 }
 
-export default function LatestVersion({ owner, repo, stripV = true, codeBlock = false, children }: LatestVersionProps) {
-  const [version, setVersion] = useState('loading...');
+export default function LatestVersion({ owner, repo, stripV = true, codeBlock = false, version: pinnedVersion, children }: LatestVersionProps) {
+  const [version, setVersion] = useState(pinnedVersion ?? 'loading...');
   const cacheKey = `${owner}/${repo}-version`;
 
   useEffect(() => {
+    // Page pinned an explicit version — skip the network round-trip entirely.
+    if (pinnedVersion) {
+      setVersion(pinnedVersion);
+      return;
+    }
+
     const cachedVersion = sessionStorage.getItem(cacheKey);
     if (cachedVersion) {
       setVersion(cachedVersion);
@@ -38,7 +50,7 @@ export default function LatestVersion({ owner, repo, stripV = true, codeBlock = 
         })
         .catch(() => setVersion('error'));
     }
-  }, [owner, repo, stripV, cacheKey]);
+  }, [owner, repo, stripV, cacheKey, pinnedVersion]);
 
   if (typeof children === 'function') {
     return children(version);
