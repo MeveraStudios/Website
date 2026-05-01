@@ -202,13 +202,16 @@ After that, the session works with its current snapshot until you reload it or r
 If you are unsure, start with `of(...)`. It is simpler. Move to `dynamic(...)` when you actually
 need player-specific results.
 
-### 3. `ComponentRenderer<T, X>`
+### 3. `ItemRenderer<T, X>`
 
 The renderer tells Lotus how to turn **one item from your source** into **one clickable button in
 the inventory**:
 
+> Renamed from `ComponentRenderer` in 2.1.0 — the old name suggested Adventure text formatting
+> but it produces a `Button`. The deprecated alias still works; remove it before 3.0.0.
+
 ```java
-ComponentRenderer<TagEntry, ?> renderer = (entry, ctx) -> Button.clickable(
+ItemRenderer<TagEntry, ?> renderer = (entry, ctx) -> Button.clickable(
     entry.icon(),
     (view, event) -> tagService.select(view.viewer(), entry.id())
 );

@@ -49,7 +49,7 @@ If you plan to use `suspend` commands, you also need to provide a `CoroutineScop
 ```kotlin
 class MyPlugin : JavaPlugin() {
 
-    lateinit var imperat: BukkitImperat
+    lateinit var imperat: BukkitImperat<BukkitCommandSource>
 
     override fun onEnable() {
         imperat = BukkitImperat.builder(this)
@@ -64,6 +64,8 @@ class MyPlugin : JavaPlugin() {
     }
 }
 ```
+
+> The `BukkitImperat<BukkitCommandSource>` witness is required since v4 parameterizes the platform Imperat over its canonical source type. See [Custom Sources](../Execution-Pipeline/Custom-Sources) for the custom-source path.
 
 ---
 

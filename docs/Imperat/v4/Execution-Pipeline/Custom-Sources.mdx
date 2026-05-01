@@ -1,84 +1,180 @@
 ---
 title: Custom Sources
-description: Learn how to create and use your own custom command-sources in your pathway-methods.
+description: Use your own command-source class as the canonical type the entire framework operates on.
 order: 6
 ---
 # Custom Sources
-In Imperat, a **command source** represents the entity that initiates a command execution.
-By default, Imperat provides a command source for the platform you are using (for example, `BukkitCommandSource` for Bukkit/Spigot).
-However, you can also create and use your own custom command sources that wraps around these platform-specific sources, 
-allowing you to add additional functionality or context to the command source.
 
-## Creating a Custom Command Source
-To create a custom command source, you need to define a class that implements the `CommandSource` interface.
+In Imperat, a **command source** represents the entity executing a command. Each platform ships a default — `BukkitCommandSource` on Bukkit, `BungeeCommandSource` on Bungee, etc.
+
+In **v4**, you can declare ONE custom source class and have it flow as the canonical type `S` through the **entire framework** — argument types, suggestion providers, context resolvers, dummy senders, every internal site. This is a breaking change from v3's hacky `SourceProvider` registry, which only delivered the custom type at `@Execute` method parameter injection.
+
+## When you need this
+
+Most plugins don't. The default path requires zero configuration beyond a one-liner type-witness:
+
+```java
+BukkitImperat<BukkitCommandSource> imperat = BukkitImperat.builder(plugin).build();
+```
+
+Reach for a custom source when you want domain-specific data attached to every command source — locale, audit trail, cached permissions, transient state — and want it visible to your `ArgumentType`s, suggesters, and context resolvers without going through the source object.
+
+## Step 1 — Declare your source class
+
+Your class **must extend the platform's source class** (`BukkitCommandSource`, `BungeeCommandSource`, `VelocityCommandSource`, …). The `<S extends P>` bound is enforced at the framework level — it lets internals call platform methods on your `S` directly via inheritance, no unwrap needed per call site.
 
 ```java
 import studio.mevera.imperat.BukkitCommandSource;
-import studio.mevera.imperat.context.CommandSource;
 
-public class CustomCommandCommandSource implements CommandSource {
-    
-    private final BukkitCommandSource platformSource;
+public final class MyCustomSource extends BukkitCommandSource {
 
-    public CustomCommandCommandSource(BukkitCommandSource platformSource) {
-        this.platformSource = platformSource;
+    private final String locale;
+
+    public MyCustomSource(BukkitCommandSource platform, String locale) {
+        super(platform.origin(), platform.adventureProvider());
+        this.locale = locale;
+    }
+
+    public String locale() {
+        return locale;
     }
 
     public void greet() {
-        reply("Hello Sir!");
-    }
-
-    @Override 
-    public String name() {
-        return platformSource.name();
-    }
-
-    @Override
-    public Object origin() {
-        return platformSource.origin();
-    }
-
-    @Override 
-    public void reply(String message) {
-        platformSource.reply(message);
-    }
-
-    @Override 
-    public void warn(String message) {
-        platformSource.warn(message);
-    }
-
-    @Override 
-    public void error(String message) {
-        platformSource.error(message);
-    }
-
-    @Override 
-    public boolean isConsole() {
-        return platformSource.isConsole();
+        reply("Hello, " + name() + "!");
     }
 }
 ```
 
-### Registering a SourceProvider for the Custom Command Source
-Then, you have to register a `SourceProvider` for that `CustomCommandSource` in your `PLATFORMIMPERAT` builder, 
-which defines how to create an instance of the custom source from the platform-specific source.
+**Alternative**: if the platform source is awkward to extend (final class, complex constructor, etc.), extend the `DelegatingCommandSource<P>` helper which forwards every `CommandSource` method to a held platform instance.
+
 ```java
-PLATFORMIMPERAT imperat = PLATFORMIMPERAT.builder()
-    .sourceProvider(CustomCommandSource.class, (source, context) -> new CustomCommandSource(source))
+import studio.mevera.imperat.context.DelegatingCommandSource;
+
+public final class MyCustomSource extends DelegatingCommandSource<BukkitCommandSource> {
+
+    private final String locale;
+
+    public MyCustomSource(BukkitCommandSource platform, String locale) {
+        super(platform);
+        this.locale = locale;
+    }
+
+    public String locale() { return locale; }
+}
+```
+
+## Step 2 — Build with the source class + mapper
+
+The custom-source builder takes **three arguments**: the plugin instance, the source class token, and the `CommandSourceMapper` that lifts platform sources to your custom type. There's no `.source(...)` chainable method — both pieces are supplied at the same site.
+
+```java
+import studio.mevera.imperat.providers.CommandSourceMapper;
+
+BukkitImperat<MyCustomSource> imperat = BukkitImperat.builder(
+        plugin,
+        MyCustomSource.class,
+        CommandSourceMapper.wrapping(bukkit -> new MyCustomSource(bukkit, "en_US"))
+    )
     .build();
 ```
 
-### Usage example
-and now you can use `CustomCommandSource` as a parameter in your pathway methods , it shall represent the command source,
- and Imperat will automatically create an instance of it using the registered `SourceProvider` when executing the command.
+> `CommandSourceMapper.wrapping(...)` takes only the `P → S` lift function. The reverse direction (`S → P`) inherits the default identity cast on the interface — valid because the framework enforces `S extends P`. Use `CommandSourceMapper.of(wrap, unwrap)` when your unwrap needs a non-trivial body (e.g. a wrapping subclass that surfaces a different platform instance than the one held).
+
+The same shape replicates per platform:
+
+```java
+// Bungee
+BungeeImperat<MyProxySource> imperat = BungeeImperat.builder(plugin, MyProxySource.class, mapper).build();
+
+// Velocity
+VelocityImperat<MyPlugin, MyProxySource> imperat =
+    VelocityImperat.builder(plugin, proxyServer, MyProxySource.class, mapper).build();
+
+// Minestom
+MinestomImperat<MyCustomSource> imperat = MinestomImperat.builder(serverProcess, MyCustomSource.class, mapper).build();
+
+// JDA
+JdaImperat<MyDiscordSource> imperat = JdaImperat.builder(jda, MyDiscordSource.class, mapper).build();
+
+// CLI
+CommandLineImperat<MyConsoleSource> imperat =
+    CommandLineImperat.builder(System.in, MyConsoleSource.class, mapper).build();
+
+// Hytale
+HytaleImperat<MyCustomSource> imperat = HytaleImperat.builder(plugin, MyCustomSource.class, mapper).build();
+```
+
+## Step 3 — Use it everywhere
+
+Once the framework is parameterized over your `S`, your custom source flows through every site:
+
 ```java
 @RootCommand("greet")
-public class GreetCommand {
-    
+public final class GreetCommand {
+
     @Execute
-    public void greet(CustomCommandSource source) {
-        source.greet(); // This will send "Hello Sir!" to the command source.
+    public void greet(MyCustomSource source) {
+        source.greet();
+        source.reply("Your locale: " + source.locale());
     }
 }
 ```
+
+`@Execute` parameters typed as your custom class get the live instance. Same goes for `ArgumentType<MyCustomSource, T>`, `SuggestionProvider<MyCustomSource>`, `ContextArgumentProvider<MyCustomSource, T>` — the framework treats `MyCustomSource` as canonical at compile time.
+
+## How it works
+
+The mapper is consulted at **exactly one seam**: the active backend's `wrapSender(Object)`. The platform-native source is built as it always was (Adventure-aware, stack-aware, etc.), then `mapper.wrap(p)` lifts it to `S`. Same hop in `createDummySender()` for tree-only phases. After the lift, `S` is the only type the framework sees — there's no per-call-site cast tax, no runtime reflection on hot paths, and no boilerplate at user code sites.
+
+The default path uses `CommandSourceMapper.identity()` — a singleton no-op that returns its input. Zero runtime cost when you don't need a custom source.
+
+## Cross-source-type method parameters
+
+Want `Player` (Bukkit) or `ProxiedPlayer` (Bungee) directly as a method param instead of going through `source.asPlayer()`?
+
+```java
+@Execute
+public void cmd(Player player, String message) {
+    player.sendMessage("hi " + message);
+}
+```
+
+The framework registers gating-aware **`ContextArgumentProvider`s** for these by default — `Player` only when not console, `ConsoleCommandSender` only when console, etc. Throws `ResponseException` on the wrong sender type.
+
+For domain-specific types you want injected at the same slot, register your own:
+
+```java
+config.registerContextArgumentProvider(MyDomainContext.class, (ctx, paramElement) -> {
+    MyCustomSource source = ctx.source();
+    return MyDomainContext.derive(source);
+});
+```
+
+## Migration from v3
+
+Plugins **not** using a custom source — minimal change, one line per declaration:
+
+```diff
+- private BukkitImperat imperat;
++ private BukkitImperat<BukkitCommandSource> imperat;
+```
+
+Existing `imperat.registerCommand(...)` and `ArgumentType<BukkitCommandSource, T>` registrations compile unchanged.
+
+Plugins **using v3's `SourceProvider`** for cross-type injection (`Player`, `ConsoleCommandSender`, etc.) — those defaults are now built into each platform's builder via `ContextArgumentProvider`, so no migration needed for the standard cases. Custom domain types previously registered as `SourceProvider<S, R>` should be re-registered as `ContextArgumentProvider<S, R>` (same body, one less indirection). The `SourceProvider` SPI is removed in v4.
+
+Plugins **using v3 with their own custom source** through `sourceProvider(...)` — adopt the new builder shape:
+
+```diff
+- BukkitImperat imperat = BukkitImperat.builder(plugin)
+-     .sourceProvider(MyCustomSource.class, (src, ctx) -> new MyCustomSource(src))
+-     .build();
++ BukkitImperat<MyCustomSource> imperat = BukkitImperat.builder(
++         plugin,
++         MyCustomSource.class,
++         CommandSourceMapper.wrapping(bukkit -> new MyCustomSource(bukkit))
++     )
++     .build();
+```
+
+Now your custom source is canonical EVERYWHERE — not just at `@Execute` method params.

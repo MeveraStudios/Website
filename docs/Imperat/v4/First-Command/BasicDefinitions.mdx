@@ -10,10 +10,17 @@ Essential terminology for understanding Imperat.
 
 ## Placeholders
 
-`PLATFORMSOURCE` and `PLATFORMIMPERAT` are placeholders for platform-specific implementations (Bukkt, Sponge, etc.).
+`PLATFORMSOURCE` and `PLATFORMIMPERAT` are placeholders for platform-specific implementations (Bukkit, Sponge, etc.).
 
-- `PLATFORMSOURCE` — the command sender (player, console, etc.)
-- `PLATFORMIMPERAT` — the Imperat instance for that platform
+- `PLATFORMSOURCE` — the command sender (player, console, etc.). Concrete examples: `BukkitCommandSource`, `BungeeCommandSource`, `VelocityCommandSource`, `MinestomCommandSource`, `JdaCommandSource`, `HytaleCommandSource`, `ConsoleCommandSource` (CLI).
+- `PLATFORMIMPERAT` — the Imperat instance for that platform. Concrete examples: `BukkitImperat<S>`, `BungeeImperat<S>`, `VelocityImperat<P, S>`, etc. Each is generic over the canonical source type `S`.
+
+:::info v4 type-witness
+Every platform's Imperat is parameterized over its canonical source class — `BukkitImperat<S extends BukkitCommandSource>`. When you write field declarations or builder return types, you supply the witness:
+
+- Default path → `BukkitImperat<BukkitCommandSource>`
+- Custom-source path → `BukkitImperat<MyCustomSource>` (see [Custom Sources](../Execution-Pipeline/Custom-Sources))
+:::
 
 ## Command
 

@@ -25,11 +25,11 @@ Registering your command using the created `Imperat` instance can be done in two
 Here's a simple example of how to build an instance of Imperat in bukkit plugin;
 ```java
 public class MyPlugin extends JavaPlugin {
-    private BukkitImperat imperat;
+    private BukkitImperat<BukkitCommandSource> imperat;
 
     @Override
     public void onEnable() {
-        this.imperat = BukkitImperat.builder()
+        this.imperat = BukkitImperat.builder(this)
             .build();
         
         // Register your command classes here
@@ -40,6 +40,10 @@ public class MyPlugin extends JavaPlugin {
     }
 }
 ```
+
+<Admonition type="info" title="Type-witness on the field">
+v4 parameterizes every platform's Imperat over its source class — `BukkitImperat<S extends BukkitCommandSource>`. The field type now requires a type-witness: `BukkitImperat<BukkitCommandSource>` for the default path. If you're using a [custom source](../Execution-Pipeline/Custom-Sources), the witness becomes your custom class.
+</Admonition>
 
 <Admonition type="tip" title="Pro-Tip">
 If your command class has a no-argument constructor, you can simply register it by its class.
