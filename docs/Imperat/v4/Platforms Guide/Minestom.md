@@ -11,11 +11,11 @@ The Minestom module integrates Imperat with Minestom servers. It natively bridge
 ## Constructing
 
 ```java
-MinestomImperat imperat = MinestomImperat.builder(serverProcess)
+MinestomImperat<MinestomCommandSource> imperat = MinestomImperat.builder(serverProcess)
     .build();
 ```
 
-The builder requires a Minestom `ServerProcess` instance.
+The builder requires a Minestom `ServerProcess` instance. Custom-source variant: `MinestomImperat.builder(serverProcess, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 ## Default Argument Types
 

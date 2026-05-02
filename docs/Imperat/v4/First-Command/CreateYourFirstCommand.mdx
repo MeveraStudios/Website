@@ -132,6 +132,6 @@ Yes, each defines a different pathway. Just ensure each has a unique parameter s
 Yes. Both double (`"`) and single (`'`) quotes work: `/tell player1 "Hello there!"`
 
 **Why does `Player` work as a source parameter?**
-In v4 Imperat, each platform builder pre-registers gating-aware `ContextArgumentProvider`s for the standard derived-source views — `Player` only when the executor isn't console, `ConsoleCommandSender` only when it is, etc. The framework injects these at the same slot as your canonical source `S` based on the parameter type. The legacy `SourceProvider` registry from v3 has been removed; everything goes through the unified `ContextArgumentProvider` path now.
+In v4 Imperat, `ExecutionContext.provideSource(Type)` resolves derived-source views through a fixed chain: `S`-identity → registered `SourceProvider` → `source.origin()` instance check → registered `ContextArgumentProvider` → throw. Each platform builder pre-registers gating-aware `ContextArgumentProvider`s for the standard derived-source views — `Player` only when the executor isn't console, `ConsoleCommandSender` only when it is, etc. — so they Just Work at any `@Execute` parameter slot. If you want explicit control over how a specific type resolves, register a `SourceProvider<S, R>` via `.sourceProvider(Class, SourceProvider)` — it slots in BEFORE the origin/context-argument defaults.
 
 > See [Custom Sources](../Execution-Pipeline/Custom-Sources) if you want your OWN class to flow through the framework as the canonical source type.

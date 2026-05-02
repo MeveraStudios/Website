@@ -11,11 +11,11 @@ The JDA module integrates Imperat with Discord bots using JDA (Java Discord API)
 ## Constructing
 
 ```java
-JdaImperat imperat = JdaImperat.builder(jda)
+JdaImperat<JdaCommandSource> imperat = JdaImperat.builder(jda)
     .build();
 ```
 
-The builder requires a `JDA` instance.
+The builder requires a `JDA` instance. Custom-source variant: `JdaImperat.builder(jda, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 Commands are automatically synced to Discord as slash commands whenever you register or unregister a command.
 

@@ -11,13 +11,15 @@ The Velocity module integrates Imperat with Velocity proxy servers.
 ## Constructing
 
 ```java
-VelocityImperat<MyPlugin> imperat = VelocityImperat.builder(plugin, proxyServer)
-    .build();
+VelocityImperat<MyPlugin, VelocityCommandSource> imperat =
+    VelocityImperat.builder(plugin, proxyServer).build();
 ```
 
 The builder requires **two** parameters:
 - Your **plugin instance** (generic type `P`).
 - The Velocity **`ProxyServer`** instance.
+
+`VelocityImperat<P, S>` carries two type parameters — the plugin type `P` (so plugin-typed `ContextArgumentProvider`s are type-safe) and the canonical source type `S` (defaults to `VelocityCommandSource`). Custom-source variant: `VelocityImperat.builder(plugin, proxyServer, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 ## Default Argument Types
 

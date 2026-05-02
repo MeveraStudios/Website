@@ -9,11 +9,11 @@ The BungeeCord module integrates Imperat with BungeeCord proxy servers.
 ## Constructing
 
 ```java
-BungeeImperat imperat = BungeeImperat.builder(plugin)
+BungeeImperat<BungeeCommandSource> imperat = BungeeImperat.builder(plugin)
     .build();
 ```
 
-The builder requires a BungeeCord `Plugin` instance.
+The builder requires a BungeeCord `Plugin` instance. Custom-source variant: `BungeeImperat.builder(plugin, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 ## Default Argument Types
 

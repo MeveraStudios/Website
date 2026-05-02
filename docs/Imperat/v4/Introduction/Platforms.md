@@ -38,13 +38,13 @@ as shown in the table below:
 
 ### BUKKIT Brigadier Integration
 
-You can integrate Imperat with Mojang's Brigadier for enhanced command features (like suggestions and argument types) on compatible servers (Minecraft 1.13+).
-Just add a boolean parameter (which represents whether imperat will integrate with brigadier or not) in  your builder method:
+Brigadier integration is **automatic** in v4. The Bukkit backend selects the strongest available registration capability at runtime — modern Paper's lifecycle Brigadier API on supported servers, the legacy Brigadier path through Commodore on older Spigot/Paper builds, and a plain command-map fallback when neither is present. There's no boolean flag to toggle.
 
 ```java
-BukkitImperat imperat = BukkitImperat.builder(this, true)
-    .build();
+BukkitImperat<BukkitCommandSource> imperat = BukkitImperat.builder(this).build();
 ```
+
+On modern Paper, this gives you Brigadier-backed client-side suggestions, native argument types (`Player`, `OfflinePlayer`, `Location`, target selectors), and rich error highlighting — for free. On legacy backends you get the same Imperat features minus the Brigadier-only client-side bells.
 
 :::danger{label="READ THIS"}
 Do **NOT** register your commands within your plugin's `plugin.yml` file. Imperat handles registration dynamically and internal conflicts may occur if defined in both places.

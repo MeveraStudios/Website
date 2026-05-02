@@ -11,11 +11,11 @@ The CLI module integrates Imperat with standalone Java console applications. It 
 ## Constructing
 
 ```java
-CommandLineImperat imperat = CommandLineImperat.builder(System.in)
+CommandLineImperat<ConsoleCommandSource> imperat = CommandLineImperat.builder(System.in)
     .build();
 ```
 
-The builder requires an `InputStream` (typically `System.in`).
+The builder requires an `InputStream` (typically `System.in`). Custom-source variant: `CommandLineImperat.builder(System.in, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 To dispatch a command from the input stream:
 

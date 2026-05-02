@@ -7,7 +7,7 @@ order: 6
 
 In Imperat, a **command source** represents the entity executing a command. Each platform ships a default — `BukkitCommandSource` on Bukkit, `BungeeCommandSource` on Bungee, etc.
 
-In **v4**, you can declare ONE custom source class and have it flow as the canonical type `S` through the **entire framework** — argument types, suggestion providers, context resolvers, dummy senders, every internal site. This is a breaking change from v3's hacky `SourceProvider` registry, which only delivered the custom type at `@Execute` method parameter injection.
+In **v4**, you can declare ONE custom source class and have it flow as the canonical type `S` through the **entire framework** — argument types, suggestion providers, context resolvers, dummy senders, every internal site. This replaces the v3 model where `S` was always the platform source and the user's type only reached `@Execute` parameter injection.
 
 ## When you need this
 
@@ -150,6 +150,44 @@ config.registerContextArgumentProvider(MyDomainContext.class, (ctx, paramElement
 });
 ```
 
+## Customising per-type resolution with `SourceProvider`
+
+The default resolution chain inside `ExecutionContext.provideSource(Type)` is:
+
+1. **`S`-identity** — if the parameter type is `S` (or a `CommandSource` supertype of `S`), return the live source instance directly.
+2. **`SourceProvider`** — if you registered one for this type, run it.
+3. **`source.origin()` instance check** — if the type matches the platform-native sender held inside the source (e.g. `Player`, `ConsoleCommandSender` on Bukkit, `ProxiedPlayer` on Bungee), return it.
+4. **`ContextArgumentProvider`** — fallback for domain-typed views.
+5. Throw — type unreachable from the source.
+
+Use `SourceProvider` when you want explicit control over how a specific parameter type is materialised from the canonical source — overriding the default origin path, gating on source state, or producing a derived projection that needs the live `S`.
+
+```java
+import studio.mevera.imperat.providers.SourceProvider;
+
+BukkitImperat<MyCustomSource> imperat = BukkitImperat.builder(
+        plugin,
+        MyCustomSource.class,
+        CommandSourceMapper.wrapping(bukkit -> new MyCustomSource(bukkit, "en_US"))
+    )
+    // Replace the default `Player` resolution with one that pulls from a session cache
+    .sourceProvider(Player.class, src -> sessionCache.activePlayer(src.uuid()))
+    // Project the source into a domain view
+    .sourceProvider(LocaleScope.class, src -> new LocaleScope(src.locale()))
+    .build();
+```
+
+Returning `null` from a `SourceProvider` falls through to step 3 (origin path) — useful for conditional overrides that delegate to the default when the override doesn't apply.
+
+`SourceProvider` and `ContextArgumentProvider` are complementary, not duplicate:
+
+| SPI | Receives | Use for |
+|---|---|---|
+| `SourceProvider<S, R>` | the source `S` | source-derived views (transformations / projections of the live source) |
+| `ContextArgumentProvider<S, R>` | the full `ExecutionContext<S>` | pipeline-context-derived data (also needs parsed args / resolved flags / etc.) |
+
+Both register against the same parameter type. If both are registered, `SourceProvider` wins (step 2 runs before step 4).
+
 ## Migration from v3
 
 Plugins **not** using a custom source — minimal change, one line per declaration:
@@ -161,9 +199,9 @@ Plugins **not** using a custom source — minimal change, one line per declarati
 
 Existing `imperat.registerCommand(...)` and `ArgumentType<BukkitCommandSource, T>` registrations compile unchanged.
 
-Plugins **using v3's `SourceProvider`** for cross-type injection (`Player`, `ConsoleCommandSender`, etc.) — those defaults are now built into each platform's builder via `ContextArgumentProvider`, so no migration needed for the standard cases. Custom domain types previously registered as `SourceProvider<S, R>` should be re-registered as `ContextArgumentProvider<S, R>` (same body, one less indirection). The `SourceProvider` SPI is removed in v4.
+Plugins **using v3's `SourceProvider`** for cross-type injection (`Player`, `ConsoleCommandSender`, etc.) — those standard defaults are now built into each platform's builder via `ContextArgumentProvider`, so no migration needed for the standard cases. The v4 `SourceProvider` SPI is still available as a per-type override layer (see [Customising per-type resolution](#customising-per-type-resolution-with-sourceprovider) above) — but its signature is leaner: `provide(S source)` instead of v3's `provide(ExecutionContext, Type)`. If your v3 provider only read state from the source itself, port it directly. If it also touched the execution context, port it as a `ContextArgumentProvider<S, R>` instead — same body, less indirection.
 
-Plugins **using v3 with their own custom source** through `sourceProvider(...)` — adopt the new builder shape:
+Plugins **using v3 with their own custom source** through `sourceProvider(...)` for the source itself — adopt the new builder shape:
 
 ```diff
 - BukkitImperat imperat = BukkitImperat.builder(plugin)

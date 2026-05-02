@@ -11,11 +11,11 @@ The Bukkit module integrates Imperat with Bukkit/Spigot/Paper servers.
 ## Constructing
 
 ```java
-BukkitImperat imperat = BukkitImperat.builder(plugin)
+BukkitImperat<BukkitCommandSource> imperat = BukkitImperat.builder(plugin)
     .build();
 ```
 
-The builder requires a `Plugin` instance.
+The builder requires a `Plugin` instance. Custom-source variant: `BukkitImperat.builder(plugin, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 ## Platform-Specific Options
 
@@ -24,9 +24,8 @@ The builder requires a `Plugin` instance.
 | `setAdventureProvider(provider)`  | Overrides the auto-detected Adventure provider with a custom one.                                 |
 
 
-### Integrating Brigadier
-When `BukkitImperat.builder(plugin, true)` is used, Imperat registers commands through Brigadier for richer client-side tab completion.  
-When it is **not** set, Imperat falls back to an async tab listener on Paper (if supported).
+### Brigadier Integration
+Brigadier integration is **automatic** in v4 — there's no boolean toggle. The Bukkit backend selects the strongest available capability at runtime: modern Paper's lifecycle Brigadier API on supported servers, the legacy Brigadier path on older Spigot/Paper builds, and a plain command-map fallback when neither is present. Modern Paper installs Paper-native argument types (`Player`, `Location`, target selectors) with client-side suggestions; legacy backends fall back to async tab completion.
 
 ## Default Argument Types
 

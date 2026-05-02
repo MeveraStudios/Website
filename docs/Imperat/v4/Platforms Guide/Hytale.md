@@ -11,11 +11,11 @@ The Hytale module integrates Imperat with Hytale dedicated servers. It bridges H
 ## Constructing
 
 ```java
-HytaleImperat imperat = HytaleImperat.builder(plugin)
+HytaleImperat<HytaleCommandSource> imperat = HytaleImperat.builder(plugin)
     .build();
 ```
 
-The builder requires a Hytale `JavaPlugin` instance.
+The builder requires a Hytale `JavaPlugin` instance. Custom-source variant: `HytaleImperat.builder(plugin, MyCustomSource.class, mapper)` — see [Custom Sources](../Execution-Pipeline/Custom-Sources).
 
 ## Platform-Specific Annotations
 
