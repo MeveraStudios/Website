@@ -22,8 +22,8 @@ They are often used for arguments that have a fixed set of valid values, such as
 Dynamic suggestions can be particularly useful for arguments that require more complex input or have a large number of valid values, 
 as they can provide real-time feedback and guidance to users as they type.
 
-## What is `SuggestionResolver`?
-A `SuggestionResolver` is a functional interface that defines a method for providing suggestions based on the current input and context of a command execution.
+## What is `SuggestionProvider`?
+A `SuggestionProvider` is a functional interface that defines a method for providing suggestions based on the current input and context of a command execution.
 It's the core component responsible for generating suggestions for command arguments, allowing you to create dynamic and context-aware suggestions.
 
 > It can also be used to create static suggestions by returning a fixed **CACHED** list of suggestions regardless of the input or context.

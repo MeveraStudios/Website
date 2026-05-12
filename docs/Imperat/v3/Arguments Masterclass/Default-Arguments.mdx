@@ -55,7 +55,7 @@ But first, you have to create a class that will provide the default value, it mu
 public class ExampleDefaultProvider implements DefaultValueProvider {
 
     @Override
-    public @Nullable <S extends Source> String provide(
+    public @Nullable <S extends CommandSource> String provide(
             ExecutionContext<S> context,
             Argument<S> parameter
     ) {

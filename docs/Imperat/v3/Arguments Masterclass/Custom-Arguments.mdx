@@ -54,16 +54,16 @@ And you have a registry of ranks that define the available ranks in your plugin.
 You want to create a mechanism that when a user inputs a rank name as an argument, it gets parsed into a `Rank` object that you can use in your command logic.
 and you would want the input to always be validated as an available rank otherwise an error message is sent to the user.
 
-To handle errors, create a custom exception extending `SelfHandledException`:
+To handle errors, create a custom exception extending `SelfHandlingException`:
 ```java
-public class UnknownRankException extends SelfHandledException {
+public class UnknownRankException extends SelfHandlingException {
     private final String input;
     public UnknownRankException(String input) {
         this.input = input;
     }
 
     @Override
-    public <S extends Source> void handle(
+    public <S extends CommandSource> void handle(
             CommandContext<S> context
     ) {
         var sender = context.source();
