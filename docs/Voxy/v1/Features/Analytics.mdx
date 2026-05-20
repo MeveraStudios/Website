@@ -1,0 +1,55 @@
+---
+title: Analytics
+description: Network-wide playtime, peak, and player tracking with historical data
+order: 9
+---
+
+# Analytics
+
+Voxy tracks playtime, peak player counts, new players, and version distribution across the network, per group, and per server. Data is stored in Redis with a 365-day retention window.
+
+## What Is Tracked
+
+| Metric | Scopes | Time Periods |
+|--------|--------|--------------|
+| Average playtime per player | Global, group, server | Today, yesterday, last 7 days, all-time |
+| Peak concurrent players | Global, group, server | Today, yesterday, last 7 days, all-time |
+| New player count | Global, group, server | Today, yesterday, last 7 days |
+| Top server by playtime | Global only | All-time |
+| Minecraft version distribution | Global only | Current |
+
+## How It Works
+
+- Playtime is buffered in memory and flushed to Redis every **15 seconds** and on proxy shutdown
+- Peak counts are tracked in memory per day and flushed on the same schedule
+- Player events (join, server switch, leave) update the relevant server and group buckets
+- Data keys expire after **365 days**
+
+## Viewing Analytics
+
+Analytics are viewed in-game via a GUI opened from the proxy. The command is proxy-side — the GUI opens on whichever Spigot server you are connected to.
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/analytics` | `voxy.analytics` | Open global network analytics |
+| `/analytics server <name>` | `voxy.analytics` | Open analytics for a specific server |
+| `/analytics group <name>` | `voxy.analytics` | Open analytics for a server group |
+| `/analytics clear` | `voxy.analytics` | Clear all analytics data |
+
+### Global view (5-slot GUI)
+
+| Slot | Item | Shows |
+|------|------|-------|
+| Average Playtime | Clock | Today / yesterday / last 7 days / all-time per-player avg |
+| Player Peaks | Custom head | Today / yesterday / last 7 days / all-time peak |
+| New Players | Emerald | Today / yesterday / last 7 days |
+| Top Server | Grass block | Server name + share of network playtime |
+| Versions | Book | Minecraft version breakdown by percentage |
+
+### Server / Group view (3-slot GUI)
+
+Shows Average Playtime, Player Peaks, and New Players for the selected scope.
+
+## PlaceholderAPI / Synapse
+
+Online count placeholders are available for use in scoreboards, tab lists, and other integrations. See the [Ranks](./Ranks) page for placeholder setup details.

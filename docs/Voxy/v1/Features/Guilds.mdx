@@ -1,0 +1,42 @@
+---
+title: Guilds
+description: Player-run guilds with roles, invites, and join requests
+order: 5
+---
+
+# Guilds
+
+Guilds are player-run groups with their own roles, membership management, and cross-server sync. Guild data is stored in MongoDB and changes propagate across all servers via Redis packets.
+
+## Guild Roles
+
+| Role | Permissions |
+|------|-------------|
+| Leader | Full control — rename, disband, manage members and roles |
+| Officer | Invite, kick members, manage join requests |
+| Member | Basic membership |
+
+## Guild Features
+
+- **Invites** — Officers and leaders can invite players to join
+- **Join requests** — Players can request to join a guild; officers and leaders can accept or deny
+- **Cross-server sync** — Guild updates (joins, leaves, role changes) propagate to all servers immediately
+
+## Guild Management
+
+**Commands** — `/guild` (alias: `g`) | **Permission:** `voxy.guild`
+
+| Subcommand | Description |
+|-----------|-------------|
+| `create <name>` | Creates a new guild |
+| `join <name>` | Joins a guild |
+| `invite <player>` | Invites a player |
+| `accept <player>` | Accepts a join request |
+| `chat [message]` | Sends to guild chat or switches to it |
+| `info` | Shows your guild info |
+| `tag <tag>` | Sets your guild tag |
+| `tagcolor <color>` | Sets your guild tag color |
+| `settings inviteonly <true/false>` | Restricts joins to invited players only |
+| `disband` | Disbands the guild |
+
+Guild data is backed up as part of the automatic backup system if enabled in `settings.yml`.

@@ -1,0 +1,33 @@
+---
+title: Rewards
+description: Queued reward actions for players
+order: 8
+---
+
+# Rewards
+
+Voxy's reward system queues actions to be delivered to players. Rewards have rarities and can execute server commands when claimed.
+
+## Reward Actions
+
+The primary reward action type is `RunCommand` — when a player claims a reward, a configured command runs on the server. This lets you give currency, items, ranks, or anything else a command can do.
+
+## Reward Rarities
+
+Rewards are assigned a rarity which can be used to display or categorise them:
+
+- Common
+- Uncommon
+- Rare
+- Epic
+- Legendary
+
+## Player Rewards Menu
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/reward [player]` | `voxy.menu.reward` | Open pending rewards menu — omit player for your own, specify player to open theirs |
+
+## Distributing Rewards
+
+Rewards are queued programmatically via the Voxy API or through admin tooling. The reward service delivers queued rewards to players when they claim them through the `/reward` menu.

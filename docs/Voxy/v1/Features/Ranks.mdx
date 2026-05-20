@@ -1,0 +1,84 @@
+---
+title: Ranks
+description: Managing ranks, permissions, and inheritance
+order: 1
+---
+
+# Ranks
+
+Voxy's rank system handles all player permission management across your network. Ranks support inheritance, prefixes/suffixes, colors, Discord role linking, and per-rank friend limits.
+
+## Concepts
+
+- **Rank** — A named group with a set of permissions. Players hold one or more grants (rank assignments).
+- **Grant** — An assignment of a rank to a player. Grants can be permanent or time-limited.
+- **Inheritance** — A rank can inherit all permissions from one or more other ranks.
+- **Default rank** — The rank all new players receive automatically. Set with `/rank setdefault`.
+
+## Managing Ranks
+
+All rank management is done via the `/rank` command (permission: `voxy.admin`).
+
+### Create & delete
+
+| Command | Description |
+|---------|-------------|
+| `/rank create <name>` | Creates a new rank |
+| `/rank delete <rank>` | Deletes a rank |
+| `/rank list` | Lists all ranks |
+| `/rank rename <rank> <new-name>` | Renames a rank |
+
+### Configure a rank
+
+| Command | Description |
+|---------|-------------|
+| `/rank setprefix <rank> <prefix>` | Set chat prefix (MiniMessage supported) |
+| `/rank setsuffix <rank> <suffix>` | Set chat suffix |
+| `/rank setcolor <rank> <color>` | Set rank color (hex, e.g. `#e11d48`) |
+| `/rank setpriority <rank> <priority>` | Set priority (higher = shown first, 0–1000000000) |
+| `/rank staff <rank>` | Toggle staff status |
+| `/rank setdefault <rank>` | Make this the default rank for new players |
+| `/rank setfriendlimit <rank> <limit>` | Max friends (-1 for unlimited) |
+| `/rank setdiscordrole <rank> <role-id>` | Link a Discord role ID |
+
+### Permissions
+
+| Command | Description |
+|---------|-------------|
+| `/rank addperm <rank> <permission> [--duration] [--force]` | Add a permission |
+| `/rank remperm <rank> <permission>` | Remove a permission |
+| `/rank checkperm <rank> <permission>` | Check if rank has a permission |
+| `/rank editperms <rank>` | Open GUI permission editor |
+
+The `--force` flag bypasses rank-guard restrictions if you have `voxy.admin`.
+
+### Inheritance
+
+| Command | Description |
+|---------|-------------|
+| `/rank inherit <rank> <parent>` | Inherit another rank's permissions |
+| `/rank uninherit <rank> <parent>` | Remove inheritance |
+
+## Granting Ranks to Players
+
+| Command | Description |
+|---------|-------------|
+| `/grant [player]` | Open rank selection GUI |
+| `/grants [player]` | Show active grants on a player |
+| `/setrank <player> <rank> <duration> [--extend] [reason]` | Directly assign a rank |
+
+Duration examples: `permanent`, `7d`, `30d`, `1y`.
+
+## Vault Integration
+
+When the Vault plugin is present, Voxy registers as the permission provider. Other plugins that check permissions via Vault will see Voxy rank permissions automatically. No extra configuration needed.
+
+## Player Permissions
+
+Individual players can also have permissions outside of ranks:
+
+| Command | Description |
+|---------|-------------|
+| `/user addperm <player> <permission> [duration]` | Add a permission to a player |
+| `/user remperm <player> <permission>` | Remove a player permission |
+| `/user editperms [player]` | Open GUI permission editor |

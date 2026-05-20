@@ -1,0 +1,119 @@
+---
+title: Social
+description: Friends, parties, private messages, and chat channels
+order: 4
+---
+
+# Social
+
+Voxy includes a full social system covering friends, parties, private messages, and chat channels — all synced across your network.
+
+## Friends
+
+Players can add each other as friends, see when friends are online, and use friend-exclusive features.
+
+- Friend requests are sent and accepted in-game
+- Friend counts are tracked online across the network in real time
+- Maximum friend count is configurable per rank (`/rank setfriendlimit <rank> <limit>`)
+
+**Commands** — `/friends` (aliases: `friend`, `f`) | **Permission:** `voxy.friend`
+
+| Subcommand | Description |
+|-----------|-------------|
+| `list [page]` | Lists all friends (paginated) |
+| `add <player>` | Sends a friend request |
+| `accept <player>` | Accepts an incoming request |
+| `deny <player>` | Denies an incoming request |
+| `remove <player>` | Removes a friend |
+| `best <player>` | Marks/unmarks as best friend |
+| `forceadd <player>` | Force-adds a friend *(Permission: `voxy.friend.forceadd`)* |
+
+---
+
+## Parties
+
+Parties allow groups of players to move together across servers and communicate in a dedicated chat channel.
+
+**Party roles:**
+
+| Role | Description |
+|------|-------------|
+| Leader | Full control — invite, kick, warp, disband |
+| Mod | Can invite and kick members |
+| Member | Can chat in party, follow warps |
+
+Key party features:
+- Party leaders can warp all online members to their server
+- Party chat is isolated from public chat
+- Invites expire automatically
+
+**Commands** — `/party` (aliases: `p`) | **Permission:** `voxy.party`
+
+| Subcommand | Description |
+|-----------|-------------|
+| `invite <player>` | Invites a player |
+| `accept` | Accepts a party invite |
+| `deny` | Denies a party invite |
+| `list` | Lists party members |
+| `chat [message]` | Sends to party chat or switches to it |
+| `warp` | Warps all online members to your server |
+| `promote <player>` | Promotes a member to mod |
+| `demote <player>` | Demotes a mod |
+| `kick <player>` | Kicks a player |
+| `kickoffline` | Kicks all offline members |
+| `leave` | Leaves the party |
+| `disband` | Disbands the party |
+
+---
+
+## Private Messages
+
+Players can send direct messages to each other cross-server.
+
+| Command | Description |
+|---------|-------------|
+| `/message <player> <message>` (aliases: `msg`, `t`) | Send a private message |
+| `/reply <message>` (alias: `r`) | Reply to the last sender |
+
+No permission required.
+
+---
+
+## Blocking
+
+Players can block others to prevent messages and interactions.
+
+| Command | Description |
+|---------|-------------|
+| `/block <player>` (alias: `ignore`) | Block a player |
+| `/unblock <player>` (alias: `unignore`) | Unblock a player |
+
+No permission required.
+
+---
+
+## Chat Channels
+
+Voxy provides multiple chat channels players can switch between:
+
+| Channel | Description |
+|---------|-------------|
+| Global | Network-wide chat |
+| Local | Server-local chat |
+| Staff | Visible only to staff (`voxy.staff` required) |
+| Guild | Guild members only |
+| Party | Party members only |
+
+Switch channels with `/chatchannel <channel>` (aliases: `chat`, `cc`, `channel`, `ch`).
+
+Staff chat is also accessible directly via `/staffchat [message]` (alias: `sc`) — sends a single message or switches your active channel.
+
+---
+
+## Privacy Settings
+
+Players control who can interact with them via `/privacy` — no permission required. Options cover:
+
+- Who can send friend requests
+- Who can send private messages
+- Who can invite them to parties

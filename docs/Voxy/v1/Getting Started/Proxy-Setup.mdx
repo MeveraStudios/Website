@@ -1,0 +1,173 @@
+---
+title: Proxy Setup
+description: Installing and configuring Voxy on BungeeCord or Velocity
+order: 3
+---
+
+# Proxy Setup
+
+This page covers installing Voxy on your BungeeCord or Velocity proxy.
+
+:::caution
+Set up the proxy **before** your Spigot servers. The proxy is the central point that manages data loading and cross-server communication.
+:::
+
+## Installation
+
+1. Download the correct proxy jar for your platform:
+   - **BungeeCord** → `Vroxy-*.jar`
+   - **Velocity** → `Veloxy-*.jar`
+2. Place the jar in your proxy's `plugins/` folder.
+3. Start the proxy **once** to generate config files, then **stop** it.
+4. Configure each file as described below.
+5. Start the proxy again.
+
+:::danger{label="Startup Behavior"}
+If MongoDB is unreachable, Redis is unreachable, or the license key is invalid, Voxy will shut down the entire proxy. Fix the error in the logs before retrying.
+:::
+
+## Config Files
+
+All config files are generated in `plugins/Voxy/`.
+
+---
+
+### `settings.yml`
+
+```yaml
+general:
+  # Your Voxy license key — required
+  license: 'YOUR_LICENSE'
+  # Enable debug logging
+  debug: false
+  # Date format used in punishment messages, logs, etc.
+  date-format: "yyyy-MM-dd HH:mm:ss"
+
+automatic-backups:
+  enabled: false
+  # How often to back up, in minutes (1440 = daily)
+  interval-minutes: 1440
+  # What to back up: ALL, RANKS, PLAYERS, PUNISHMENTS, GUILDS
+  type: ALL
+```
+
+**Set your license key here before starting.**
+
+---
+
+### `database.yml`
+
+```yaml
+mongo:
+  host: 'localhost'
+  port: 27017
+  # Set to true if using an SRV connection string (e.g. MongoDB Atlas)
+  srv: false
+  database: 'voxy'
+  auth:
+    enabled: false
+    username: ''
+    password: ''
+
+redis:
+  host: 'localhost'
+  port: 6379
+  auth:
+    enabled: false
+    username: ''
+    password: ''
+```
+
+---
+
+### `server.yml`
+
+```yaml
+# Display name for this proxy shown in messages and GUIs
+server-name: 'Proxy'
+# Unique ID for this proxy instance — must be different per proxy if running multiple
+server-identifier: 'proxy-1'
+```
+
+:::danger
+Both `server-name` and `server-identifier` are **required**. The proxy will not start without them.
+:::
+
+If you run multiple proxy instances (e.g. for HA), give each a different `server-identifier`.
+
+---
+
+### `servers.yml`
+
+This file defines how your servers are grouped and how players are routed between them.
+
+```yaml
+settings:
+  maintenance: false
+  # Priority for connection event handling: LOWEST, LOW, NORMAL, HIGH, HIGHEST
+  priority: 'HIGH'
+  # Players are held in this group while data loads (limbo servers)
+  limbos-group: limbos
+  # Players are sent here after loading
+  target-group: lobbies
+  # Always send players to target-group on join (false = send to last server)
+  force-target-group: true
+  # Group players are sent to if kicked for AFK
+  afk-group: limbos
+
+groups:
+  limbos:
+    maintenance: false
+    # voxy: false means Voxy features are not active (used for limbo/auth servers)
+    voxy: false
+    balance: true
+    servers:
+      - limbo
+
+  lobbies:
+    maintenance: false
+    voxy: true
+    balance: true
+    servers:
+      - lobby-1
+      - lobby-2
+    # Commands that send players to this group
+    commands:
+      - 'lobby'
+      - 'hub'
+    fallback:
+      enabled: true
+      groups:
+        - limbos
+```
+
+**Key fields:**
+
+| Field | Description |
+|-------|-------------|
+| `voxy` | Whether Voxy features are active on servers in this group |
+| `balance` | Distribute players evenly across servers in the group |
+| `commands` | Proxy commands that route players to this group |
+| `fallback.groups` | Groups to fall back to if all servers in this group are full/offline |
+
+---
+
+### `messages.yml`
+
+Contains all player-facing messages. Supports MiniMessage formatting. Edit after initial setup to customise your network's messaging.
+
+---
+
+### `ladders.yml`
+
+Defines punishment ladder progressions. See [Punishments](../Features/Punishments) for details.
+
+---
+
+## Velocity-Specific Notes
+
+On Velocity, Voxy uses `@Plugin` injection — no `bungee.yml` is needed. Everything else is identical to BungeeCord.
+
+## Next Step
+
+Continue to [Spigot Setup](./Spigot-Setup) to install Voxy on your backend servers.

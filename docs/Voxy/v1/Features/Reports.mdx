@@ -1,0 +1,34 @@
+---
+title: Reports
+description: Player report system with configurable categories
+order: 7
+---
+
+# Reports
+
+Voxy includes a player report system that lets players report others for rule-breaking. Reports are categorised, stored in MongoDB, and manageable by staff via a GUI.
+
+## Report Categories
+
+Report categories define what reasons players can choose from when filing a report.
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/reportcategories` | `voxy.admin` | Open the report category management GUI |
+
+## Filing a Report
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/report <player> <category>` | `voxy.report` | File a report against a player |
+
+Each report is tied to a category and the reported player. A chat snapshot is automatically attached as evidence. Voxy enforces a **15-minute cooldown** — a player cannot file a second report against the same target within 15 minutes.
+
+## Managing Reports
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/reports` | `voxy.menu.reports` | Open all pending reports |
+| `/reports <player>` | `voxy.menu.reports` | Show reports filed against a specific player |
+
+The reports GUI shows pending reports and allows staff to mark them as handled.

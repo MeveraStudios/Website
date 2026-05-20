@@ -1,0 +1,168 @@
+---
+title: Management Commands
+description: Admin commands for managing Voxy systems
+order: 1
+---
+
+# Management Commands
+
+Commands for server administrators to manage Voxy systems. All require `voxy.admin` unless noted.
+
+## /vroxy
+
+**Permission:** `voxy.admin.vroxy` *(proxy only)*
+
+Proxy-level management command.
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `help` | `/vroxy help` | Shows help |
+| `debug` | `/vroxy debug` | Toggles debug logging |
+| `backup` | `/vroxy backup <type>` | Backs up data. Types: `ALL`, `RANKS`, `PLAYERS`, `PUNISHMENTS`, `GUILDS` |
+| `restore` | `/vroxy restore <date> <time> <type>` | Restores a backup |
+| `settings network-name` | `/vroxy settings network-name <name>` | Sets network display name |
+| `settings primary` | `/vroxy settings primary <color>` | Sets primary theme color |
+| `settings secondary` | `/vroxy settings secondary <color>` | Sets secondary theme color |
+| `settings input-retention-days` | `/vroxy settings input-retention-days <days>` | Sets how long input data is retained in the database |
+
+## /maintenance
+
+**Aliases:** `maint` | **Permission:** `voxy.admin.maintenance` *(proxy only)*
+
+Toggles maintenance mode for a server, group, or the entire proxy.
+
+```
+/maintenance <SERVER|GROUP|PROXY> <on|off>
+```
+
+## /analytics
+
+**Permission:** `voxy.analytics` *(proxy only)*
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| *(none)* | `/analytics` | Opens global analytics |
+| `server` | `/analytics server <name>` | Opens analytics for a specific server |
+| `group` | `/analytics group <name>` | Opens analytics for a server group |
+| `clear` | `/analytics clear` | Clears all analytics data |
+
+---
+
+## /voxy
+
+**Aliases:** `voxycore` | **Permission:** `voxy.admin`
+
+Core plugin management.
+
+| Subcommand | Description |
+|-----------|-------------|
+| `reload` | Reloads all config files |
+| `debug` | Toggles debug logging |
+| `migrate` | Runs pending permission migrations (e.g. from LuckPerms) |
+
+## /rank
+
+**Aliases:** `ranks` | **Permission:** `voxy.admin`
+
+Comprehensive rank management.
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `list` | `/rank list` | Lists all ranks |
+| `create` | `/rank create <name>` | Creates a new rank |
+| `delete` | `/rank delete <rank>` | Deletes a rank |
+| `rename` | `/rank rename <rank> <new-name>` | Renames a rank |
+| `setprefix` | `/rank setprefix <rank> [prefix] [--addspace]` | Sets rank prefix |
+| `setsuffix` | `/rank setsuffix <rank> <suffix>` | Sets rank suffix |
+| `setcolor` | `/rank setcolor <rank> <color>` | Sets rank color (hex) |
+| `setpriority` | `/rank setpriority <rank> <0–1000000000>` | Sets display priority |
+| `setdefault` | `/rank setdefault <rank>` | Sets as default rank for new players |
+| `setfriendlimit` | `/rank setfriendlimit <rank> <limit>` | Max friends (-1 = unlimited) |
+| `setdiscordrole` | `/rank setdiscordrole <rank> <role-id>` | Links a Discord role |
+| `staff` | `/rank staff <rank>` | Toggles staff status |
+| `authable` | `/rank authable <rank> <true/false>` | Requires authentication |
+| `forceAuth` | `/rank forceAuth <rank> <true/false>` | Forces authentication |
+| `inherit` | `/rank inherit <rank> <parent>` | Adds rank inheritance |
+| `uninherit` | `/rank uninherit <rank> <parent>` | Removes rank inheritance |
+| `addperm` | `/rank addperm <rank> <permission> [--duration] [--force]` | Adds permission |
+| `remperm` | `/rank remperm <rank> <permission>` | Removes permission |
+| `checkperm` | `/rank checkperm <rank> <permission>` | Checks if rank has permission |
+| `editperms` | `/rank editperms <rank>` | Opens permission editor GUI |
+
+## /user
+
+**Permission:** `voxy.admin`
+
+Player data and permission management.
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `addperm` | `/user addperm <player> <permission> [duration]` | Adds permission to player |
+| `remperm` | `/user remperm <player> <permission>` | Removes permission from player |
+| `editperms` | `/user editperms [player]` | Opens permission editor GUI |
+| `delete` | `/user delete <player>` | Deletes all data for a player |
+| `deleteall` | `/user deleteall [confirm]` | Deletes ALL player data (requires confirmation token) |
+
+## /currencies
+
+**Permission:** `voxy.admin`
+
+Opens the currencies management GUI.
+
+## /currency
+
+**Permission:** `voxy.admin`
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `give` / `add` | `/currency give <currency> <player> <amount>` | Gives currency to player |
+| `take` / `remove` | `/currency take <currency> <player> <amount>` | Removes currency from player |
+| `set` | `/currency set <currency> <player> <amount>` | Sets exact balance |
+| `randomgive` / `randomadd` | `/currency randomgive <currency> <player> <min> <max>` | Gives random amount |
+
+## /filters
+
+**Permission:** `voxy.admin`
+
+Opens the chat filter management GUI.
+
+## /ladders
+
+**Permission:** `voxy.admin`
+
+Opens the punishment ladder management GUI.
+
+## /level
+
+**Aliases:** `levels` | **Permission:** `voxy.admin`
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `setlevel` | `/level setlevel <player> <amount>` | Sets player level |
+| `addlevel` | `/level addlevel <player> <amount>` | Adds levels to player |
+| `setexp` | `/level setexp <player> <amount>` | Sets exact experience |
+| `addexp` | `/level addexp <player> <amount>` | Adds experience |
+| `addrandomexp` | `/level addrandomexp <player> <min> <max>` | Adds random experience |
+| `settings` | `/level settings` | Opens level settings GUI |
+
+## /reportcategories
+
+**Permission:** `voxy.admin`
+
+Opens the report category management GUI.
+
+## /setlobby
+
+**Permission:** `voxy.admin`
+
+Sets the server lobby/spawn point to your current location.
+
+## /sudo
+
+**Permission:** `voxy.sudo`
+
+Forces a player to execute a command or send a message.
+
+```
+/sudo <player> <command or message>
+```

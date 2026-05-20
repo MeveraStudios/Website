@@ -1,0 +1,56 @@
+---
+title: Server Groups
+description: Dynamic server group management, maintenance, and player routing
+order: 11
+---
+
+# Server Groups
+
+Server groups organise your backend servers into logical units. Voxy uses groups to route players, balance load, and control maintenance.
+
+## How Groups Work
+
+Groups are defined in `servers.yml` on the proxy. Each group contains one or more servers, and the proxy routes players between groups based on the configuration.
+
+```yaml
+groups:
+  lobbies:
+    maintenance: false
+    voxy: true          # Voxy features active on these servers
+    balance: true       # Distribute players evenly across servers
+    servers:
+      - lobby-1
+      - lobby-2
+    commands:           # Proxy commands that send players to this group
+      - 'lobby'
+      - 'hub'
+    fallback:
+      enabled: true
+      groups:
+        - limbos        # Fall back here if all lobbies are full/offline
+```
+
+## Player Routing
+
+The proxy controls routing with these settings in `servers.yml`:
+
+| Setting | Description |
+|---------|-------------|
+| `limbos-group` | Players wait here while their data loads (limbo servers) |
+| `target-group` | Players are sent here after data loads |
+| `force-target-group` | If true, always send to target group. If false, send to last connected server. |
+| `afk-group` | Group players are sent to after AFK kick |
+
+## Maintenance Mode
+
+Maintenance mode blocks non-staff players from joining a group or server. Toggle it per-group in `servers.yml` or via the management commands on the proxy.
+
+When `voxy: false` is set on a group (e.g. limbo servers), Voxy features like ranks and punishments are not active on those servers.
+
+## Dynamic Updates
+
+Group assignments and maintenance state are pushed to backend servers in real time via Redis packets. A server can receive its group assignment automatically from the proxy if `group` is left empty in the server's `server.yml`.
+
+## Group Commands
+
+Each group can have a list of commands that route players to it. For example, if `lobbies` has `commands: ['lobby', 'hub']`, typing `/lobby` or `/hub` on any server will send the player to an available lobby server.

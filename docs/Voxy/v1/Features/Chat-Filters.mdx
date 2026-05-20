@@ -1,0 +1,60 @@
+---
+title: Chat Filters
+description: Network-wide chat moderation and word filtering
+order: 3
+---
+
+# Chat Filters
+
+Voxy's filter system blocks or acts on messages containing defined words or phrases across all servers in real time. Filters are stored in MongoDB and synced via Redis so a change on one server takes effect everywhere immediately.
+
+## What Gets Filtered
+
+Filters can apply to:
+
+| Channel | Controlled by `settings.yml` |
+|---------|------------------------------|
+| Global chat messages | `filter.chat` |
+| Book content | `filter.books` |
+| Sign content | `filter.signs` |
+
+Set any of these to `false` in `settings.yml` to disable filtering for that channel on a server.
+
+## Filter Actions
+
+Each filter word or phrase is linked to an action. When a match is found, Voxy triggers that action against the player. Actions include things like cancelling the message, warning the player, or progressing them on a punishment ladder.
+
+Filter actions are configured per-filter when creating them via the `/filters` GUI.
+
+## Managing Filters
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/filters` | `voxy.admin` | Open the filter management GUI |
+
+From the GUI you can:
+- Create a new filter with a word/phrase and assign an action
+- Edit or delete existing filters
+- Changes sync to all servers immediately via Redis
+
+## Custom Chat Format
+
+Voxy can replace the default Minecraft chat format with a custom one. This is configured in `settings.yml`:
+
+```yaml
+chat:
+  enabled: true          # Enable Voxy's custom chat format
+  worlds:
+    whitelisted:
+      - "*"              # Apply to all worlds
+    blacklisted: []
+  per-world:
+    enabled: false       # Different format per world
+    worlds:
+      whitelisted:
+        - "*"
+      blacklisted:
+        - "lobby-*"
+```
+
+The format string itself lives in `messages.yml` under the `chat.format` key and supports MiniMessage.

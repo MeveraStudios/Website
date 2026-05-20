@@ -1,0 +1,58 @@
+---
+title: Disguise & Vanish
+description: Staff disguise and vanish systems
+order: 10
+---
+
+# Disguise & Vanish
+
+Voxy provides disguise and vanish systems for staff members to operate without being noticed by regular players.
+
+## Vanish
+
+Vanish hides a staff member from other players. Vanished players are invisible to non-staff and do not appear in the player list.
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/vanish` (alias: `v`) | `voxy.vanish` | Toggle vanish on/off |
+
+### Vanish worlds
+
+Control which worlds vanish is active in via `settings.yml`:
+
+```yaml
+staff:
+  vanish:
+    worlds:
+      whitelisted:
+        - "world"
+        - "lobby-*"
+      blacklisted: []
+```
+
+Use `"*"` in the whitelist to apply to all worlds.
+
+## Disguise
+
+Disguise lets staff members appear as a different player — with a custom name, skin, and rank displayed to other players.
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/disguise [nickname] [skin] [rank]` | `voxy.disguise` | Apply a disguise |
+| `/undisguise [target]` | `voxy.disguise` | Remove your disguise, or another player's if target is specified |
+
+### Disguise parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `nickname` | The fake name shown to others. Use `random` for a random name, `cached` for the last used name. |
+| `skin` | The skin to display. Use `random` for a random skin, `cached` for the last used skin, `me` for your own skin. |
+| `rank` | The rank displayed to others while disguised. |
+
+### Custom disguise
+
+Players with `voxy.disguise.custom` can specify all three parameters directly in the command. Without this permission, Voxy uses an interactive book UI to walk through each step.
+
+### Disguise at join
+
+Voxy can apply a cached disguise automatically when a player joins. If the join-time disguise fails to apply, the disguised state is cleared.

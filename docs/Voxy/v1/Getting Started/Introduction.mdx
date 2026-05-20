@@ -1,0 +1,59 @@
+---
+title: Introduction
+description: What Voxy is and what it does
+order: 1
+---
+
+# Introduction
+
+Voxy is an all-in-one Minecraft network management plugin designed to handle everything your server network needs — ranks, punishments, chat moderation, social systems, economy, and more — from a single cohesive plugin.
+
+## Supported Versions
+
+Voxy supports Minecraft Java Edition **1.8.8 – 1.21.11**.
+
+## Modules
+
+Voxy is split into two modules that work together:
+
+| Module | Platform | Purpose |
+|--------|----------|---------|
+| **Vroxy / Veloxy** | BungeeCord / Velocity | Proxy-level management: player routing, cross-server data, queue, group management |
+| **Voxy** | Spigot | Server-level features: commands, GUI menus, economy, disguise, vanish, placeholders |
+
+In a typical network setup you run the proxy module on your BungeeCord or Velocity proxy, and the spigot module on each backend server.
+
+## Features Overview
+
+### Network-wide
+- Permission system with ranks, grants, and inheritance
+- Punishment system (ban, mute, blacklist, warn, kick) with punishment ladders
+- Chat filters synced across all servers in real time
+- Friends, parties, private messages, and chat channels
+- Guild system with roles, invites, and join requests
+- Player reports with configurable categories
+- Reward system with queued actions
+- Staff rollback — undo a staff member's punishment actions
+- Network analytics with online player tracking
+- Server groups and maintenance controls
+
+### Proxy
+- Player routing with limbo and lobby groups
+- Configurable automatic database backups
+- Cross-server party warping and guild sync
+
+### Spigot
+- Economy and multi-currency management
+- Disguise and vanish systems
+- Interactive GUI menus for ranks, filters, grants, analytics
+- Essential staff commands (fly, gamemode, heal, tp, etc.)
+- Vault permission and economy hooks
+- PlaceholderAPI / Synapse placeholder support
+
+## License
+
+Voxy requires a valid license key. You will need it during setup — set it in `settings.yml` under `general.license`.
+
+## Next Step
+
+Continue to [Prerequisites](./Prerequisites) to set up the dependencies Voxy needs before installing.

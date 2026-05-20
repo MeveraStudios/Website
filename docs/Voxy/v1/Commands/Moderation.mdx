@@ -1,0 +1,193 @@
+---
+title: Moderation Commands
+description: Commands for punishing and investigating players
+order: 2
+---
+
+# Moderation Commands
+
+Staff commands for punishing players and reviewing moderation history.
+
+## Punishment Commands
+
+Common flags available on ban, mute, and blacklist:
+
+| Flag | Description |
+|------|-------------|
+| `-t <duration>` | Duration (e.g. `7d`, `2h`, `30m`). Omit for permanent. |
+| `-s` | Silent — no broadcast to staff |
+| `--extend` | Extend an existing active punishment |
+
+---
+
+### /ban - /unban
+
+**Permission:** `voxy.ban` - `voxy.unban`
+
+```
+/ban <player> [-t <duration>] [-s] [--extend] <reason>
+/unban <player>
+```
+
+Bans the player from joining the network.
+
+---
+
+### /mute - /unmute
+
+**Permission:** `voxy.mute` - `voxy.unmute`
+
+```
+/mute <player> [-t <duration>] [-s] [--extend] <reason>
+/unmute <player>
+```
+
+Prevents the player from sending chat messages.
+
+---
+
+### /blacklist - /unblacklist
+
+**Permission:** `voxy.blacklist` - `voxy.unblacklist`
+
+```
+/blacklist <player> [-t <duration>] [-s] [--extend] <reason>
+/unblacklist <player>
+```
+
+Like a ban, but also applies to detected alt accounts.
+
+---
+
+### /warn - /unwarn
+
+**Permission:** `voxy.warn` - `voxy.unwarn`
+
+```
+/warn <player> [-s] <reason>
+/unwarn <player>
+```
+
+Issues a warning tracked in the player's history. `/unwarn` removes the most recent warning.
+
+---
+
+### /kick
+
+**Permission:** `voxy.kick`
+
+```
+/kick <player> [-s] <reason>
+```
+
+Removes the player from the server immediately.
+
+---
+
+### /punish
+
+**Permission:** `voxy.punish`
+
+```
+/punish <player> <ladder> [-s] <reason>
+```
+
+Applies the next step of the named punishment ladder to the player.
+
+---
+
+## Grant Commands
+
+### /grant - /grants
+
+**Permission:** `voxy.grant`
+
+```
+/grant [player]     — Opens rank selection GUI for granting a rank
+/grants [player]    — Shows active grants on the player
+```
+
+### /setrank
+
+**Permission:** `voxy.grant`
+
+```
+/setrank <player> <rank> <duration> [--extend] [reason]
+```
+
+Directly assigns a rank to a player. Duration: `permanent`, `7d`, `30d`, etc.
+
+---
+
+## Investigation Commands
+
+### /history
+
+**Permission:** `voxy.history`
+
+```
+/history [player]
+```
+
+Opens a GUI showing the player's full punishment history.
+
+### /staffhistory
+
+**Permission:** `voxy.staffhistory`
+
+```
+/staffhistory <staff> [-t <duration>]
+```
+
+Shows all punishments issued by the specified staff member within the given time window.
+
+### /chatlogs
+
+**Permission:** `voxy.chatlogs`
+
+```
+/chatlogs <player> <duration> [page]
+```
+
+Shows the player's recent chat messages with word-diff highlighting. Paginated.
+
+### /commandlogs
+
+**Permission:** `voxy.commandlogs`
+
+```
+/commandlogs <player> <duration> [page]
+```
+
+Shows the player's recent command usage. Paginated.
+
+### /clearviolations
+
+**Permission:** `voxy.clearviolations`
+
+```
+/clearviolations [player]
+```
+
+Removes all active punishments and resets ladder progression for the player.
+
+### /staffrollback
+
+**Permission:** `voxy.staffrollback`
+
+```
+/staffrollback <staff> [-t <duration>=1h]
+```
+
+Reverts all punishment actions issued by the staff member in the given time window.
+
+---
+
+## /reports
+
+**Permission:** `voxy.menu.reports`
+
+```
+/reports             — Opens all pending reports
+/reports <player>   — Shows reports filed against this player
+```

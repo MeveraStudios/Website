@@ -1,0 +1,57 @@
+---
+title: Maintenance
+description: Put the proxy, a server group, or individual servers into maintenance mode
+order: 11
+---
+
+# Maintenance
+
+Voxy supports maintenance mode at three scopes: the entire proxy, a server group, or an individual server. Players without the bypass permission are blocked from connecting to anything in maintenance.
+
+## Scopes
+
+| Scope | What it affects |
+|-------|----------------|
+| `PROXY` | The entire network — players are disconnected on login |
+| `GROUP` | A server group — players can't switch into that group |
+| `SERVER` | A single server — players can't switch to that server |
+
+Checks are hierarchical: proxy maintenance is evaluated first, then group, then server. If a player is already connected and tries to switch to a server in maintenance, they receive a chat message and the connection is cancelled. If they have no current server (e.g., just joining), they are disconnected entirely.
+
+## Bypass Permission
+
+Players with **`voxy.maintenance.bypass`** skip all maintenance checks at every scope.
+
+## Command
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/maintenance <SERVER\|GROUP\|PROXY> <on\|off>` | `voxy.admin.maintenance` (alias: `maint`) | Toggle maintenance for the given scope |
+
+## State Persistence
+
+| Scope | Where stored |
+|-------|-------------|
+| `PROXY` | `servers.yml` → `settings.maintenance` |
+| `GROUP` | `servers.yml` → `groups.<name>.maintenance` |
+| `SERVER` | `server.yml` on the server + Redis (60-second TTL) |
+
+Proxy and group maintenance survives restarts. Server maintenance state is also persisted to the server's own `server.yml` and replicated via Redis so the proxy always has the current state.
+
+## Messages
+
+Maintenance messages are configured in `messages.yml`:
+
+```yaml
+maintenance:
+  proxy:
+    screen: "<red>Proxy is under maintenance</red>"
+  group:
+    chat: "<red>Group is under maintenance</red>"
+    screen: "<red>Group is under maintenance</red>"
+  server:
+    chat: "<red>Server is under maintenance</red>"
+    screen: "<red>Server is under maintenance</red>"
+```
+
+`screen` is the disconnect screen message. `chat` is the in-game chat message shown to players who are already connected somewhere else.

@@ -1,0 +1,116 @@
+---
+title: Discord Bot
+description: Standalone Discord bot for account linking and rank-role synchronization
+order: 1
+---
+
+# Discord Bot
+
+The Voxy Discord bot is a **standalone Java application** — not a Minecraft plugin. It runs separately and communicates with your network via the same MongoDB and Redis connections as Voxy.
+
+## Features
+
+- **Account linking** — Players link their Minecraft account to Discord in-game; the bot DMs them an approve/deny prompt
+- **Rank ↔ role sync** — Minecraft ranks are mapped to Discord roles; roles are assigned and removed automatically as grants change
+- **Linked role** — Optionally grant a special Discord role to all linked accounts
+- **Slash commands** — `/profile`, `/unlink`, `/associate`, `/disassociate`
+- **Status rotation** — Cycles through configurable bot presence messages
+
+## Setup
+
+### 1. Create a Discord Application
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and create a new application
+2. Under **Bot**, create a bot user and copy the token
+3. Enable the **Server Members Intent** under Privileged Gateway Intents
+4. Invite the bot to your server with `Manage Roles` and `Send Messages` permissions
+
+:::caution
+The bot's role must be positioned **above** any rank-associated roles in your server's role list, otherwise it cannot assign them.
+:::
+
+### 2. Configure `settings.yml`
+
+```yaml
+discord:
+  token: "YOUR_BOT_TOKEN"
+  guild: "YOUR_GUILD_ID"
+
+  # Role ID to grant all linked accounts. Set to 0 to disable.
+  linked-role: 0
+
+  presence:
+    interval: 30        # Seconds between status rotations (minimum 5)
+    status: "online"    # online | idle | dnd | invisible
+    activities:
+      - type: "Playing"
+        text: "On Your Network"
+      - type: "Custom"
+        text: "At your service!"
+
+server:
+  identifier: "discord-bot"
+  display-name: "Discord Bot"
+  group: "bots"
+
+database:
+  mongo:
+    host: "localhost"
+    port: 27017
+    database: "voxy"
+    srv: false
+    auth:
+      enabled: false
+      username: ""
+      password: ""
+  redis:
+    host: "localhost"
+    port: 6379
+    auth:
+      enabled: false
+      username: ""
+      password: ""
+```
+
+### 3. Start the bot
+
+```bash
+java -jar voxy-discord.jar
+```
+
+The bot exits with an error if MongoDB or Redis is unreachable.
+
+## Slash Commands
+
+| Command | Who | Description |
+|---------|-----|-------------|
+| `/profile [user]` | Anyone | View a linked player's Minecraft profile (name, UUID, rank, level, XP, playtime, join date) |
+| `/unlink` | Anyone | Unlinks your Discord account from Minecraft |
+| `/associate <rank> <role>` | Admin | Binds a Minecraft rank to a Discord role |
+| `/disassociate <rank>` | Admin | Removes a rank-role binding |
+
+All responses are ephemeral (visible only to the invoking user).
+
+## Account Linking
+
+1. Player runs `/linkdiscord` in-game
+2. Bot sends them a DM with **Approve** / **Deny** buttons
+3. Player clicks Approve — accounts are linked and role sync runs immediately
+4. Link requests expire after **5 minutes**
+
+To unlink, players run `/unlinkdiscord` in-game or `/unlink` on Discord.
+
+## Rank-Role Synchronization
+
+Map a Minecraft rank to a Discord role with `/associate`:
+
+```
+/associate <rank> <role>
+```
+
+Once associated, the bot automatically:
+- Assigns the role when a player receives that rank grant
+- Removes the role when the grant expires or is revoked
+- Reconciles all existing members on startup
+
+Multiple ranks can map to the same role. A rank can only have one associated role.

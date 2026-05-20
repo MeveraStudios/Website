@@ -1,0 +1,54 @@
+---
+title: Prerequisites
+description: What you need before installing Voxy
+order: 2
+---
+
+# Prerequisites
+
+Before installing Voxy, make sure you have everything on this page ready.
+
+## MongoDB
+
+Voxy uses MongoDB as its primary database for storing all persistent data — ranks, player data, punishments, guilds, reports, and more.
+
+- **Required on:** Proxy and Spigot
+- **Minimum version:** MongoDB 4.4+
+- Both standalone and SRV (Atlas/cloud) connections are supported
+
+If you don't have MongoDB, install it from [mongodb.com](https://www.mongodb.com/try/download/community) or use a hosted service like MongoDB Atlas.
+
+## Redis
+
+Voxy uses Redis for real-time cross-server communication — syncing ranks, filters, punishments, parties, and more between your proxy and backend servers.
+
+- **Required on:** Proxy (always), Spigot (when running behind a proxy)
+- **Optional on:** Standalone Spigot (not behind BungeeCord/Velocity) — Voxy will warn but continue
+- **Minimum version:** Redis 6+
+
+If you don't have Redis, install it from [redis.io](https://redis.io/download) or use a hosted service like Redis Cloud.
+
+## License Key
+
+Voxy requires a valid license key. Without it, the plugin will refuse to start and shut down the server.
+
+Keep your license key ready — you will paste it into `settings.yml` during setup.
+
+:::caution
+One license key covers one network. Do not share your license key.
+:::
+
+## Java
+
+Use the Java version appropriate for your Minecraft server version:
+
+| Minecraft Version | Minimum Java |
+|-------------------|-------------|
+| 1.8.8 – 1.16.x | Java 8 |
+| 1.17.x | Java 16 |
+| 1.18.x – 1.20.x | Java 17 |
+| 1.21.x | Java 21 |
+
+## Next Step
+
+Continue to [Proxy Setup](./Proxy-Setup) to install and configure the proxy module.

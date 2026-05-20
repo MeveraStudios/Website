@@ -1,0 +1,96 @@
+---
+title: Placeholders
+description: All available Voxy placeholders for PlaceholderAPI and Synapse
+order: 1
+---
+
+# Placeholders
+
+Voxy exposes placeholders for use in scoreboards, tab lists, chat formatters, and any other plugin that supports PlaceholderAPI or Synapse.
+
+## Providers
+
+| Provider | Format | Where |
+|---------|--------|-------|
+| PlaceholderAPI | `%voxy_<key>%` | Spigot only |
+| Synapse | `{voxy:<key>}` or `{v:<key>}` | Spigot, Hytale |
+
+Both providers expose the same set of keys. PlaceholderAPI must be installed for PAPI placeholders to work; Synapse is a separate library.
+
+## Player Identity
+
+| Key | Description |
+|-----|-------------|
+| `name` | Player's real username |
+| `coloredname` | Username with rank color applied (MiniMessage) |
+| `coloredname_legacy` | Username with rank color (legacy `§` codes) |
+
+## Rank
+
+| Key | Description |
+|-----|-------------|
+| `rank` | Rank name |
+| `rank_colored` | Rank name with color (MiniMessage) |
+| `rank_colored_legacy` | Rank name with color (legacy codes) |
+| `prefix` | Rank prefix |
+| `prefix_legacy` | Rank prefix (legacy codes) |
+| `suffix` | Rank suffix |
+| `suffix_legacy` | Rank suffix (legacy codes) |
+| `color` | Rank color as hex string |
+| `color_legacy` | Rank color as legacy code |
+| `priority` | Rank priority (numeric) |
+
+## Current (Disguise-aware)
+
+When a player is disguised, `current_*` keys reflect the disguise. When not disguised, they match the base rank values.
+
+| Key | Description |
+|-----|-------------|
+| `current_name` | Current display name |
+| `current_coloredname` | Current name with color (MiniMessage) |
+| `current_coloredname_legacy` | Current name with color (legacy codes) |
+| `current_rank` | Current rank name |
+| `current_rank_colored` | Current rank with color (MiniMessage) |
+| `current_rank_colored_legacy` | Current rank with color (legacy codes) |
+| `current_prefix` | Current prefix |
+| `current_prefix_legacy` | Current prefix (legacy codes) |
+| `current_suffix` | Current suffix |
+| `current_suffix_legacy` | Current suffix (legacy codes) |
+| `current_color` | Current rank color (hex) |
+| `current_color_legacy` | Current rank color (legacy code) |
+| `current_priority` | Current rank priority (numeric) |
+
+## Progression
+
+| Key | Description |
+|-----|-------------|
+| `level` | Player level (numeric) |
+| `exp` | Player experience points (numeric) |
+| `level_progress_<style>` | Level progress bar rendered in the given style |
+
+Replace `<style>` with a valid progress bar style identifier.
+
+## Playtime
+
+| Key | Description |
+|-----|-------------|
+| `playtime` | Total playtime (short format, e.g. `3h 12m`) |
+| `playtime_long` | Total playtime (long format, e.g. `3 hours 12 minutes`) |
+| `playtime_session` | Current session playtime (short format) |
+| `playtime_session_long` | Current session playtime (long format) |
+
+## Social
+
+| Key | Description |
+|-----|-------------|
+| `friends_online` | Number of online friends |
+| `friends_total` | Total friend count |
+| `guild_tag` | Guild tag with color (e.g. `[TAG]`), empty if not in a guild |
+
+## Economy
+
+| Key | Description |
+|-----|-------------|
+| `balance_<currency_id>` | Balance for the given currency ID (numeric) |
+
+Replace `<currency_id>` with the internal ID of the currency, e.g. `%voxy_balance_coins%`.

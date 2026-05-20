@@ -1,0 +1,179 @@
+---
+title: Spigot Setup
+description: Installing and configuring Voxy on Spigot backend servers
+order: 4
+---
+
+# Spigot Setup
+
+This page covers installing Voxy on your Spigot backend servers.
+
+:::caution
+Set up the [proxy module](./Proxy-Setup) **first**. Your Spigot servers connect to the same MongoDB and Redis as the proxy.
+:::
+
+## Installation
+
+1. Download `Voxy-spigot-*.jar`.
+2. Place it in your Spigot server's `plugins/` folder.
+3. Start the server **once** to generate config files, then **stop** it.
+4. Configure each file as described below.
+5. Start the server again.
+
+:::danger{label="Startup Behavior"}
+If MongoDB is unreachable or the license key is invalid, Voxy will shut down the server. If Redis is unreachable **and** the server is running behind BungeeCord/Velocity, the server will also shut down.
+:::
+
+## Proxy Mode Detection
+
+Voxy automatically detects if the server is running behind BungeeCord by reading `spigot.yml`. If `settings.bungeecord: true` is found, Redis is required. Otherwise Redis is optional.
+
+:::caution
+If your server is offline-mode (`online-mode: false` in `server.properties`) and not behind BungeeCord, you must set `general.allow-offline: true` in `settings.yml` or Voxy will refuse to start for security reasons.
+:::
+
+## Config Files
+
+All config files are generated in `plugins/Voxy/`.
+
+---
+
+### `settings.yml`
+
+```yaml
+general:
+  # Your Voxy license key — required
+  license: "YOUR_LICENSE"
+  debug: false
+  date-format: "yyyy-MM-dd HH:mm:ss"
+  # Only needed if running offline-mode without BungeeCord
+  allow-offline: false
+
+lobby:
+  walk-speed: 0.2
+  auto-fly:
+    enabled: true
+    worlds:
+      whitelisted:
+        - "world"
+        - "lobby-*"
+      blacklisted: []
+  spawn:
+    enabled: false
+    location:
+      world: "world"
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+
+filter:
+  # Filter global chat messages
+  chat: true
+  # Filter book content
+  books: true
+  # Filter sign content
+  signs: true
+
+chat:
+  # Enable Voxy's custom chat format (from messages.yml)
+  enabled: true
+  worlds:
+    whitelisted:
+      - "*"
+    blacklisted: []
+
+staff:
+  vanish:
+    worlds:
+      whitelisted:
+        - "world"
+        - "lobby-*"
+      blacklisted: []
+```
+
+---
+
+### `database.yml`
+
+Same format as the proxy's `database.yml`. **Must point to the same MongoDB and Redis instances.**
+
+```yaml
+mongo:
+  host: 'localhost'
+  port: 27017
+  srv: false
+  database: 'voxy'
+  auth:
+    enabled: false
+    username: ''
+    password: ''
+
+redis:
+  host: 'localhost'
+  port: 6379
+  auth:
+    enabled: false
+    username: ''
+    password: ''
+```
+
+---
+
+### `server.yml`
+
+```yaml
+# Must exactly match the server name in your BungeeCord config.yml or Velocity velocity.toml
+identifier: 'lobby'
+# Human-readable display name shown in messages and GUIs
+display-name: 'Lobby'
+# Optional: group this server belongs to (auto-assigned by proxy if left empty)
+group: ''
+
+settings:
+  maintenance:
+    enabled: false
+```
+
+:::danger
+`identifier` must **exactly** match the name BungeeCord/Velocity uses for this server. For example, if BungeeCord calls it `lobby-1`, set `identifier: lobby-1`. A mismatch causes packet routing failures.
+:::
+
+---
+
+### `economy.yml`
+
+```yaml
+# Register Voxy as the Vault economy provider for this server
+register-as-eco: false
+# ID of the currency exposed via Vault (must exist in the economy system)
+primary-currency: coins
+```
+
+Set `register-as-eco: true` if you want plugins that use Vault economy (e.g. shop plugins) to use Voxy's currency system.
+
+---
+
+### `messages.yml`
+
+All player-facing messages using MiniMessage formatting. Customise after initial setup.
+
+---
+
+## Optional Plugin Integrations
+
+Voxy automatically hooks into these plugins if they are present — no extra configuration needed:
+
+| Plugin | What Voxy provides |
+|--------|-------------------|
+| **Vault** | Permission provider (always), Economy provider (if `register-as-eco: true`) |
+| **PlaceholderAPI** | Registers Voxy placeholders for use in other plugins |
+| **Synapse** | Alternative placeholder provider (preferred over PAPI if both present) |
+| **LuckPerms** | Permission migration tool (via `/voxy migrate`) |
+
+---
+
+## Setup Complete
+
+Once both the proxy module and all Spigot servers are configured and running, your network is ready. Head to [Features](../Features/Ranks) to learn how to configure each system.

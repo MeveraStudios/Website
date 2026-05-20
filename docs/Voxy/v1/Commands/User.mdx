@@ -1,0 +1,368 @@
+---
+title: User Commands
+description: Commands available to players and staff
+order: 3
+---
+
+# User Commands
+
+Commands available to players and staff. Most require a specific permission node.
+
+## Chat
+
+### /chatchannel
+
+**Aliases:** `chat`, `cc`, `channel`, `ch` | **Permission:** none *(staff channel requires `voxy.staff`)*
+
+```
+/chatchannel <GLOBAL|STAFF|GUILD|PARTY>
+```
+
+Switches your active chat channel. Messages you type go to that channel until you switch again.
+
+### /staffchat
+
+**Aliases:** `sc` | **Permission:** `voxy.staff`
+
+```
+/staffchat [message]
+```
+
+Sends a message to staff chat, or switches your active channel to staff chat if no message is given.
+
+### /message
+
+**Aliases:** `msg`, `t` | **Permission:** none
+
+```
+/message <player> <message>
+```
+
+Sends a private message to a player.
+
+### /reply
+
+**Aliases:** `r` | **Permission:** none
+
+```
+/reply <message>
+```
+
+Replies to the last player who messaged you.
+
+---
+
+## Social
+
+### /friends
+
+**Aliases:** `friend`, `f` | **Permission:** `voxy.friend`
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `help` | `/friends help` | Shows help |
+| `list` | `/friends list [page]` | Lists all friends (paginated) |
+| `add` | `/friends add <player>` | Sends a friend request |
+| `accept` | `/friends accept <player>` | Accepts an incoming request |
+| `deny` | `/friends deny <player>` | Denies an incoming request |
+| `remove` | `/friends remove <player>` | Removes a friend |
+| `best` | `/friends best <player>` | Marks/unmarks a friend as best friend |
+| `forceadd` | `/friends forceadd <player>` | Force-adds a friend *(Permission: `voxy.friend.forceadd`)* |
+
+### /party
+
+**Aliases:** `p` | **Permission:** `voxy.party`
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `help` | `/party help` | Shows help |
+| `list` | `/party list` | Lists party members |
+| `chat` | `/party chat [message]` | Sends to party chat or switches to it |
+| `invite` | `/party invite <player>` | Invites a player |
+| `accept` | `/party accept` | Accepts a party invite |
+| `deny` | `/party deny` | Denies a party invite |
+| `leave` | `/party leave` | Leaves the party |
+| `promote` | `/party promote <player>` | Promotes a member to mod |
+| `demote` | `/party demote <player>` | Demotes a mod |
+| `kick` | `/party kick <player>` | Kicks a player from the party |
+| `kickoffline` | `/party kickoffline` | Kicks all offline members |
+| `warp` | `/party warp` | Warps all online members to your server |
+| `disband` | `/party disband` | Disbands the party |
+
+### /guild
+
+**Aliases:** `g` | **Permission:** `voxy.guild`
+
+| Subcommand | Syntax | Description |
+|-----------|--------|-------------|
+| `help` | `/guild help` | Shows help |
+| `create` | `/guild create <name>` | Creates a new guild |
+| `join` | `/guild join <name>` | Joins a guild |
+| `invite` | `/guild invite <player>` | Invites a player |
+| `accept` | `/guild accept <player>` | Accepts a join request |
+| `chat` | `/guild chat [message]` | Sends to guild chat or switches to it |
+| `info` | `/guild info` | Shows your guild info |
+| `tag` | `/guild tag <tag>` | Sets your guild tag |
+| `tagcolor` | `/guild tagcolor <color>` | Sets your guild tag color |
+| `settings inviteonly` | `/guild settings inviteonly <true/false>` | Restricts joins to invited players only |
+| `disband` | `/guild disband` | Disbands the guild |
+
+See [Guilds](../Features/Guilds) for full details on the guild system.
+
+### /block - /unblock
+
+**Aliases:** `ignore` / `unignore` | **Permission:** none
+
+```
+/block <player>
+/unblock <player>
+```
+
+Blocks a player, preventing them from messaging or interacting with you.
+
+### /report
+
+**Permission:** `voxy.report`
+
+```
+/report <player> <category>
+```
+
+Files a report against a player. A chat snapshot is automatically attached as evidence. See [Reports](../Features/Reports) for the full reports system.
+
+---
+
+## Account
+
+### /logout
+
+**Permission:** `voxy.logout`
+
+```
+/logout
+```
+
+Logs out your session.
+
+### /rankstatus
+
+**Aliases:** `rs` | **Permission:** none
+
+```
+/rankstatus [player]
+```
+
+Shows your current rank, when it expires, and remaining duration. Staff can check other players with `voxy.rankstatus.others`.
+
+### /linkdiscord - /unlinkdiscord
+
+**Aliases (link):** `discordlink` | **Aliases (unlink):** `discordunlink`, `unlink` | **Permission:** none
+
+```
+/linkdiscord
+/unlinkdiscord
+```
+
+Links or unlinks your Discord account to your Minecraft profile.
+
+---
+
+## Flight
+
+### /fly
+
+**Permission:** `voxy.fly`
+
+```
+/fly [player]
+```
+
+Toggles flight mode. Staff with the permission can toggle flight for other players.
+
+### /flyspeed
+
+**Permission:** `voxy.flyspeed`
+
+```
+/flyspeed <speed>
+```
+
+Sets flight speed. Range: `0.1` – `10.0`.
+
+---
+
+## Gamemode
+
+**Permissions:** `voxy.gamemode.all`, or per-mode: `voxy.gamemode.survival`, `voxy.gamemode.creative`, `voxy.gamemode.adventure`, `voxy.gamemode.spectator`
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `/gamemode <mode> [player]` | `/gm` | Set gamemode by name |
+| `/survival [player]` | `/gms` | Set Survival |
+| `/creative [player]` | `/gmc` | Set Creative |
+| `/adventure [player]` | `/gma` | Set Adventure |
+| `/spectator [player]` | `/spec`, `/gmsp` | Set Spectator |
+
+---
+
+## Health & Hunger
+
+### /heal
+
+**Permission:** `voxy.heal` / `voxy.heal.others`
+
+```
+/heal [@s|<target selector>]
+```
+
+Restores full health. Use `@s` for self or a target selector to heal others.
+
+### /feed
+
+**Permission:** `voxy.feed` / `voxy.feed.others`
+
+```
+/feed [@s|<target selector>]
+```
+
+Fills hunger bar and removes exhaustion.
+
+---
+
+## Items
+
+### /enchant
+
+**Aliases:** `ench` | **Permission:** `voxy.enchant`
+
+```
+/enchant <enchantment> [level]
+```
+
+Applies an unsafe enchantment to the held item. Level range: `1`–`10000`. Default level: `1`.
+
+### /repair
+
+**Aliases:** `fix` | **Permission:** `voxy.repair`
+
+```
+/repair [HAND|ARMOR|ALL]
+```
+
+Restores durability:
+- `HAND` — held item only
+- `ARMOR` — all equipped armor
+- `ALL` — entire inventory
+
+### /more
+
+**Permission:** `voxy.more`
+
+```
+/more
+```
+
+Stacks the held item to 64.
+
+---
+
+## Teleportation
+
+### /tp
+
+**Permission:** `voxy.tp` / `voxy.tp.others`
+
+```
+/tp <target selector> [destination player]
+```
+
+Teleports one or more players to a destination player.
+
+### /tploc
+
+**Permission:** `voxy.tp`
+
+```
+/tploc <target selector> <x> <y> <z> [world]
+```
+
+Teleports to specific coordinates, optionally in another world.
+
+### /tphere
+
+**Permission:** `voxy.tphere` / `voxy.tphere.others`
+
+```
+/tphere <target selector>
+```
+
+Teleports selected players to your location.
+
+### /top
+
+**Permission:** `voxy.top`
+
+```
+/top
+```
+
+Teleports you to the highest block directly above your current position.
+
+---
+
+## Staff
+
+### /vanish
+
+**Aliases:** `v` | **Permission:** `voxy.vanish`
+
+```
+/vanish
+```
+
+Toggles vanish. See [Disguise & Vanish](../Features/Disguise-Vanish) for world configuration.
+
+### /disguise
+
+**Aliases:** `nick` | **Permission:** `voxy.disguise`
+
+```
+/disguise [nickname] [skin] [rank]
+/undisguise [target]
+```
+
+See [Disguise & Vanish](../Features/Disguise-Vanish) for full details.
+
+---
+
+## Menus
+
+### /profile
+
+**Permission:** `voxy.menu.profile`
+
+```
+/profile [player]
+```
+
+Opens the player profile GUI.
+
+### /reward
+
+**Permission:** `voxy.menu.reward`
+
+```
+/reward [player]
+```
+
+Opens the rewards redemption menu.
+
+### /privacy
+
+**Permission:** None required
+
+```
+/privacy
+```
+
+Opens the privacy settings menu.

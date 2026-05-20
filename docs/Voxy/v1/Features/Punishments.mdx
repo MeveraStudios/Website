@@ -1,0 +1,77 @@
+---
+title: Punishments
+description: Bans, mutes, blacklists, warns, kicks and punishment ladders
+order: 2
+---
+
+# Punishments
+
+Voxy provides a full punishment suite with bans, mutes, blacklists, warns, and kicks. All punishments are stored in MongoDB and synced across your network via Redis.
+
+## Punishment Types
+
+| Type | Effect |
+|------|--------|
+| Ban | Blocks player from joining the network |
+| Mute | Blocks player from sending chat messages |
+| Blacklist | Like a ban, but also applies to detected alt accounts |
+| Warn | Issues a warning, tracked in history |
+| Kick | Removes player from the server immediately |
+
+## Issuing Punishments
+
+All punishment commands accept these common flags:
+
+| Flag | Description |
+|------|-------------|
+| `-t <duration>` | Duration (e.g. `7d`, `2h`). Omit for permanent. |
+| `-s` | Silent — no broadcast to staff |
+| `--extend` | Extend an existing active punishment |
+
+| Command | Description |
+|---------|-------------|
+| `/ban <player> [-t] [-s] [--extend] <reason>` | Ban a player |
+| `/mute <player> [-t] [-s] [--extend] <reason>` | Mute a player |
+| `/blacklist <player> [-t] [-s] [--extend] <reason>` | Blacklist a player |
+| `/warn <player> [-s] <reason>` | Issue a warning |
+| `/kick <player> [-s] <reason>` | Kick a player |
+
+## Removing Punishments
+
+| Command | Description |
+|---------|-------------|
+| `/unban <player>` | Remove a ban |
+| `/unmute <player>` | Remove a mute |
+| `/unblacklist <player>` | Remove a blacklist |
+| `/unwarn <player>` | Remove the most recent warning |
+
+## Punishment Ladders
+
+Ladders define a progression of escalating punishments. When a player is punished on a ladder, they automatically advance to the next step.
+
+Configure ladders in `ladders.yml` (proxy) or manage them via the `/ladders` GUI.
+
+| Command | Description |
+|---------|-------------|
+| `/punish <player> <ladder> [-s] <reason>` | Apply the next step of a ladder |
+| `/ladders` | Open ladder management GUI (`voxy.admin`) |
+
+## Staff Rollback
+
+| Command | Description |
+|---------|-------------|
+| `/staffrollback <staff> [-t <duration>=1h]` | Revert all punishments issued by a staff member in the given window |
+
+## Viewing History
+
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/history [player]` | `voxy.history` | Punishment history for a player |
+| `/staffhistory <staff> [-t <duration>]` | `voxy.staffhistory` | All punishments issued by a staff member |
+| `/chatlogs <player> <duration> [page]` | `voxy.chatlogs` | Recent chat messages |
+| `/commandlogs <player> <duration> [page]` | `voxy.commandlogs` | Recent command usage |
+| `/clearviolations [player]` | `voxy.clearviolations` | Clear all punishments and ladder progress |
+
+## PunishmentGuard
+
+Voxy enforces rank-based restrictions on who can punish whom. A staff member cannot punish a player whose rank has a higher priority than their own. Enforced automatically — no extra configuration needed.

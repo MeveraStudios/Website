@@ -14,6 +14,20 @@
         "titleHoverColor": "#e11d48"
     },
     {
+        "id": "Voxy",
+        "logoPath": "🔷",
+        "title": "Voxy",
+        "description": "All-in-one Minecraft network management plugin — ranks, punishments, economy, social systems, and more.",
+        "defaultVersion": "v1",
+        "docLink": "/docs/Voxy/v1/Introduction",
+        "color": "#3b82f6",
+        "featured": true,
+        "githubRepo": null,
+        "hoverAnimator": "DefaultAnimator",
+        "titleColor": "#ffffff",
+        "titleHoverColor": "#3b82f6"
+    },
+    {
         "id": "Lotus",
         "logoPath": "🌸",
         "title": "Lotus",
