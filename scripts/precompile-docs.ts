@@ -18,7 +18,7 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
@@ -33,6 +33,7 @@ const CONFIG_PATH = join(ROOT_DIR, 'src', 'data', 'projects.json');
 
 // Canonical public URL (override via SITE_URL env var for staging builds).
 const SITE_URL = (process.env.SITE_URL || 'https://docs.mevera.studio').replace(/\/$/, '');
+const VERBOSE_DOCS = process.env.PRECOMPILE_VERBOSE === '1';
 
 type YamlValue = string | number | boolean;
 
@@ -107,6 +108,67 @@ function contributorKey(name: string, email: string): string {
     if (normalizedEmail) return `email:${normalizedEmail}`;
 
     return `name:${name.trim().toLowerCase()}`;
+}
+
+function collectGitDocMetadata(): Map<string, GitDocMetadata> {
+    const metadataByPath = new Map<string, GitDocMetadata>();
+    const contributorKeysByPath = new Map<string, Set<string>>();
+
+    try {
+        const log = execSync('git log --format="commit:%H%x1f%aI%x1f%an%x1f%ae" --name-only -- docs', {
+            cwd: ROOT_DIR,
+            encoding: 'utf-8',
+            maxBuffer: 1024 * 1024 * 50,
+            stdio: ['pipe', 'pipe', 'ignore'],
+        });
+
+        let currentCommit: { date: string; name: string; email: string } | null = null;
+
+        for (const rawLine of log.split(/\r?\n/)) {
+            const line = rawLine.trim();
+            if (!line) continue;
+
+            if (line.startsWith('commit:')) {
+                const [, date, name, email] = line.slice('commit:'.length).split('\x1f');
+                currentCommit = { date, name, email };
+                continue;
+            }
+
+            if (!currentCommit || !/\.(md|mdx)$/i.test(line)) continue;
+
+            const metadata = metadataByPath.get(line) || {};
+            if (!metadata.lastUpdatedAt) {
+                metadata.lastUpdatedAt = currentCommit.date;
+            }
+
+            const key = contributorKey(currentCommit.name, currentCommit.email);
+            let contributorKeys = contributorKeysByPath.get(line);
+            if (!contributorKeys) {
+                contributorKeys = new Set<string>();
+                contributorKeysByPath.set(line, contributorKeys);
+            }
+
+            if (!contributorKeys.has(key)) {
+                contributorKeys.add(key);
+                const contributors = metadata.contributors || [];
+                if (contributors.length < 10) {
+                    const githubUsername = githubUsernameFromEmail(currentCommit.email);
+                    contributors.push({
+                        name: currentCommit.name,
+                        email: currentCommit.email,
+                        avatar: githubUsername ? `https://github.com/${githubUsername}.png?size=64` : undefined,
+                    });
+                    metadata.contributors = contributors;
+                }
+            }
+
+            metadataByPath.set(line, metadata);
+        }
+    } catch {
+        // Git metadata is best-effort. Builds outside a git checkout still work.
+    }
+
+    return metadataByPath;
 }
 
 interface DocCategory {
@@ -190,6 +252,15 @@ interface SearchIndexItem {
     projectId: string;
     version: string;
     category: string;
+}
+
+interface GitDocMetadata {
+    lastUpdatedAt?: string;
+    contributors?: DocContributor[];
+}
+
+function toGitPath(path: string): string {
+    return relative(ROOT_DIR, path).replace(/\\/g, '/');
 }
 
 /**
@@ -424,6 +495,7 @@ function buildVersion(
     projectName: string,
     versionDir: string,
     versionMeta: { id: string; label: string; latest: boolean },
+    gitMetadataByPath: Map<string, GitDocMetadata>,
     tocMap: Record<string, TocItem[]>,
     searchIndex: SearchIndexItem[],
     indexLatestOnlyForSearch: boolean
@@ -487,51 +559,7 @@ function buildVersion(
             categoryName = frontmatter.category;
         }
 
-        // Get last updated date from git
-        let lastUpdatedAt: string | undefined = undefined;
-        try {
-            const stdout = execSync(`git log -1 --format="%aI" -- "${fullPath}"`, {
-                encoding: 'utf-8',
-                stdio: ['pipe', 'pipe', 'ignore']
-            }).trim();
-
-            if (stdout) {
-                lastUpdatedAt = stdout;
-            }
-        } catch {
-            // Ignore errors (e.g., file not tracked by git yet)
-        }
-
-        // Collect unique contributors from git log.
-        let contributors: DocContributor[] = [];
-        try {
-            const log = execSync(`git log --format="%an|%ae" -- "${fullPath}"`, {
-                encoding: 'utf-8',
-                stdio: ['pipe', 'pipe', 'ignore']
-            }).trim();
-
-            const seen = new Set<string>();
-            for (const line of log.split('\n')) {
-                if (!line) continue;
-                const pipeIdx = line.indexOf('|');
-                if (pipeIdx < 0) continue;
-                const name = line.slice(0, pipeIdx).trim();
-                const email = line.slice(pipeIdx + 1).trim();
-                const key = contributorKey(name, email);
-                if (seen.has(key)) continue;
-                seen.add(key);
-
-                let avatar: string | undefined;
-                const githubUsername = githubUsernameFromEmail(email);
-                if (githubUsername) {
-                    avatar = `https://github.com/${githubUsername}.png?size=64`;
-                }
-                contributors.push({ name, email, avatar });
-            }
-            contributors = contributors.slice(0, 10);
-        } catch {
-            // ignore
-        }
+        const gitMetadata = gitMetadataByPath.get(toGitPath(fullPath));
 
         const docFile: DocFile = {
             slug,
@@ -542,8 +570,8 @@ function buildVersion(
             version: versionMeta.id,
             category: categoryName,
             extension,
-            lastUpdatedAt,
-            contributors: contributors.length > 0 ? contributors : undefined,
+            lastUpdatedAt: gitMetadata?.lastUpdatedAt,
+            contributors: gitMetadata?.contributors,
         };
 
         allDocs.push(docFile);
@@ -566,7 +594,9 @@ function buildVersion(
             });
         }
 
-        console.log(`  ✓ ${versionMeta.id}/${slug}${extension}`);
+        if (VERBOSE_DOCS) {
+            console.log(`  ✓ ${versionMeta.id}/${slug}${extension}`);
+        }
     });
 
     // Group docs into categories.
@@ -620,6 +650,7 @@ function precompileDocs() {
     const projectsMap = new Map<string, DocProject>();
     const searchIndex: SearchIndexItem[] = [];
     const tocMap: Record<string, TocItem[]> = {};
+    const gitMetadataByPath = collectGitDocMetadata();
 
     // Process each declared project.
     projectsConfig.forEach((projectCfg) => {
@@ -644,11 +675,15 @@ function precompileDocs() {
                 projectCfg.title,
                 join(projectDir, v.id),
                 v,
+                gitMetadataByPath,
                 tocMap,
                 searchIndex,
                 /* indexLatestOnlyForSearch = */ true,
             )
         );
+
+        const projectDocCount = versions.reduce((sum, version) => sum + version.allDocs.length, 0);
+        console.log(`  ✓ ${projectDocCount} docs across ${versions.length} version(s)`);
 
         projectsMap.set(projectCfg.id, {
             id: projectCfg.id,
