@@ -4,12 +4,28 @@ import { defineConfig } from "vite"
 import { inspectAttr } from 'kimi-plugin-inspect-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const buildId = process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || `${Date.now()}`
+const builtAt = new Date().toISOString()
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
+  define: {
+    __SITE_BUILD_ID__: JSON.stringify(buildId),
+  },
   plugins: [
     inspectAttr(),
     react(),
+    {
+      name: 'site-version',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'site-version.json',
+          source: JSON.stringify({ version: buildId, builtAt }),
+        })
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png', 'icon-1024.png'],
@@ -43,8 +59,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globIgnores: ['**/site-version.json'],
         maximumFileSizeToCacheInBytes: 4000000, // 4MB to allow React/UI vendor chunks
         runtimeCaching: [
+          {
+            urlPattern: /\/site-version\.json$/,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /\/docs-nav\.json$/,
             handler: 'CacheFirst',

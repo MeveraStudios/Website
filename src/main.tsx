@@ -6,6 +6,9 @@ import './i18n'
 import App from './App.tsx'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CodeThemeProvider } from '@/components/CodeThemeProvider'
+import { scheduleSiteUpdateCheck } from '@/lib/siteUpdate'
+
+scheduleSiteUpdateCheck()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
