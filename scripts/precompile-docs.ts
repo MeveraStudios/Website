@@ -94,6 +94,21 @@ interface DocFile {
     contributors?: DocContributor[];
 }
 
+function githubUsernameFromEmail(email: string): string | null {
+    const match = email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
+    return match ? match[1].toLowerCase() : null;
+}
+
+function contributorKey(name: string, email: string): string {
+    const githubUsername = githubUsernameFromEmail(email);
+    if (githubUsername) return `github:${githubUsername}`;
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail) return `email:${normalizedEmail}`;
+
+    return `name:${name.trim().toLowerCase()}`;
+}
+
 interface DocCategory {
     name: string;
     docs: DocFile[];
@@ -502,14 +517,14 @@ function buildVersion(
                 if (pipeIdx < 0) continue;
                 const name = line.slice(0, pipeIdx).trim();
                 const email = line.slice(pipeIdx + 1).trim();
-                const key = `${name}|${email}`.toLowerCase();
+                const key = contributorKey(name, email);
                 if (seen.has(key)) continue;
                 seen.add(key);
 
                 let avatar: string | undefined;
-                const ghMatch = email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
-                if (ghMatch) {
-                    avatar = `https://github.com/${ghMatch[1]}.png?size=64`;
+                const githubUsername = githubUsernameFromEmail(email);
+                if (githubUsername) {
+                    avatar = `https://github.com/${githubUsername}.png?size=64`;
                 }
                 contributors.push({ name, email, avatar });
             }

@@ -14,11 +14,35 @@ interface ContributorsProps {
 
 function githubUsername(c: DocContributor): string | null {
   const m = c.email.match(/^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i);
-  return m ? m[1] : null;
+  return m ? m[1].toLowerCase() : null;
+}
+
+function contributorKey(c: DocContributor): string {
+  const handle = githubUsername(c);
+  if (handle) return `github:${handle}`;
+
+  const email = c.email.trim().toLowerCase();
+  if (email) return `email:${email}`;
+
+  return `name:${c.name.trim().toLowerCase()}`;
+}
+
+function uniqueContributors(contributors: DocContributor[]): DocContributor[] {
+  const seen = new Set<string>();
+
+  return contributors.filter(c => {
+    const key = contributorKey(c);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function Contributors({ contributors }: ContributorsProps) {
   if (!contributors || contributors.length === 0) return null;
+
+  const unique = uniqueContributors(contributors);
+  if (unique.length === 0) return null;
 
   return (
     <aside
@@ -32,7 +56,7 @@ export function Contributors({ contributors }: ContributorsProps) {
         Contributors
       </h2>
       <ul className="flex flex-wrap items-center gap-3 list-none p-0 m-0">
-        {contributors.map(c => {
+        {unique.map(c => {
           const handle = githubUsername(c);
           const profile = handle ? `https://github.com/${handle}` : null;
           const content = (
@@ -59,7 +83,7 @@ export function Contributors({ contributors }: ContributorsProps) {
             </span>
           );
           return (
-            <li key={`${c.name}|${c.email}`}>
+            <li key={contributorKey(c)}>
               {profile ? (
                 <a
                   href={profile}
