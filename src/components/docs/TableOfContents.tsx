@@ -12,9 +12,12 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
   // 1. Intersection Observer for Scroll Tracking
   const [activeIds, setActiveIds] = useState<string[]>([]);
   const [highlighterStyle, setHighlighterStyle] = useState({ top: 0, height: 0, opacity: 0 });
+  const [tocOffset, setTocOffset] = useState(0);
   const lastActiveIdRef = useRef<string | null>(null);
-  const intersectingIds = useRef(new Set<string>()).current;
+  const intersectingIdsRef = useRef(new Set<string>());
   const itemsRef = useRef<{ [key: string]: HTMLAnchorElement | null }>({});
+  const navRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const observerOptions = {
@@ -23,6 +26,8 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     };
 
     const handleIntersect = (entries: IntersectionObserverEntry[]) => {
+      const intersectingIds = intersectingIdsRef.current;
+
       // Mutate a stable set so we always work with the true current
       // intersection state, not a potentially stale closure over `prev`.
       entries.forEach((entry) => {
@@ -84,37 +89,26 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     };
   }, [items]);
 
-  // Debug for subagent
-  useEffect(() => {
-    (window as any).__TOC_ACTIVE__ = activeIds;
-  }, [activeIds]);
-
   // 2. Generate SVG Path for the Stepped Marker
   const [coords, setCoords] = useState<{ id: string; x: number; y: number; level: number }[]>([]);
 
   useEffect(() => {
     const firstId = items[0]?.id;
     if (!firstId) return;
-    const navEl = itemsRef.current[firstId]?.closest('nav');
-    if (!navEl) return;
-
-    const navRect = navEl.getBoundingClientRect();
-
     const newCoords = items.map((item) => {
       const el = itemsRef.current[item.id];
       if (!el) return null;
-      const rect = el.getBoundingClientRect();
       return {
         id: item.id,
         x: item.level === 3 ? 11 : 1,
-        y: (rect.top - navRect.top) + (rect.height / 2),
+        y: el.offsetTop + (el.offsetHeight / 2),
         level: item.level
       };
     }).filter((c): c is NonNullable<typeof c> => c !== null);
 
-    if (JSON.stringify(newCoords) !== JSON.stringify(coords)) {
-      setCoords(newCoords);
-    }
+    setCoords(prev => (
+      JSON.stringify(newCoords) === JSON.stringify(prev) ? prev : newCoords
+    ));
   }, [items, activeIds]);
 
   const svgPath = useMemo(() => {
@@ -148,15 +142,10 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     if (activeIds.length > 0) {
       const firstActive = itemsRef.current[activeIds[0]];
       const lastActive = itemsRef.current[activeIds[activeIds.length - 1]];
-      const navEl = firstActive?.closest('nav');
 
-      if (firstActive && lastActive && navEl) {
-        const navRect = navEl.getBoundingClientRect();
-        const firstRect = firstActive.getBoundingClientRect();
-        const lastRect = lastActive.getBoundingClientRect();
-
-        const top = (firstRect.top - navRect.top) + 4;
-        const bottom = (lastRect.bottom - navRect.top) - 4;
+      if (firstActive && lastActive) {
+        const top = firstActive.offsetTop + 4;
+        const bottom = lastActive.offsetTop + lastActive.offsetHeight - 4;
         const h = bottom - top;
 
         setHighlighterStyle({
@@ -169,6 +158,20 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     }
     setHighlighterStyle(s => ({ ...s, opacity: 0 }));
   }, [activeIds, items]);
+
+  useEffect(() => {
+    const activeId = activeIds[activeIds.length - 1];
+    const activeEl = activeId ? itemsRef.current[activeId] : null;
+    const navEl = navRef.current;
+    const contentEl = contentRef.current;
+    if (!activeEl || !navEl || !contentEl) return;
+
+    const activeAnchor = Math.max(36, navEl.clientHeight * 0.28);
+    const activeTop = activeEl.offsetTop;
+    const maxOffset = Math.max(0, contentEl.scrollHeight - navEl.clientHeight);
+
+    setTocOffset(Math.min(Math.max(activeTop - activeAnchor, 0), maxOffset));
+  }, [activeIds]);
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
@@ -191,55 +194,63 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
 
   return (
     <div className={cn('hidden xl:block w-64 shrink-0', className)}>
-      <div className="sticky top-24 pl-4">
+      <div className="sticky top-24 pl-4 max-h-[calc(100vh-7rem)]">
         <div className="flex items-center gap-2 mb-4 text-foreground/80" id="toc-heading">
           <List className="w-4 h-4" aria-hidden="true" />
           <p className="text-sm font-medium">On this page</p>
         </div>
 
-        <nav className="relative" aria-labelledby="toc-heading">
-          {/* The Stepped Masked Track */}
+        <nav
+          ref={navRef}
+          className="relative max-h-[calc(100vh-10rem)] overflow-hidden pr-2"
+          aria-labelledby="toc-heading"
+        >
           <div
-            className="absolute left-0 top-0 bottom-0 w-6 bg-border/40 pointer-events-none transition-all duration-300"
-            style={{
-              maskImage: maskUrl,
-              WebkitMaskImage: maskUrl,
-              maskRepeat: 'no-repeat',
-              WebkitMaskRepeat: 'no-repeat'
-            }}
+            ref={contentRef}
+            className="relative transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateY(-${tocOffset}px)` }}
           >
-            {/* The Highlighter moving within the mask */}
             <div
-              className="absolute w-full bg-primary transition-all duration-300 ease-in-out"
+              className="absolute left-0 top-0 bottom-0 w-6 bg-border/40 pointer-events-none transition-all duration-300"
               style={{
-                top: highlighterStyle.top,
-                height: highlighterStyle.height,
-                opacity: highlighterStyle.opacity,
+                maskImage: maskUrl,
+                WebkitMaskImage: maskUrl,
+                maskRepeat: 'no-repeat',
+                WebkitMaskRepeat: 'no-repeat'
               }}
-            />
-          </div>
+            >
+              <div
+                className="absolute w-full bg-primary transition-all duration-300 ease-in-out"
+                style={{
+                  top: highlighterStyle.top,
+                  height: highlighterStyle.height,
+                  opacity: highlighterStyle.opacity,
+                }}
+              />
+            </div>
 
-          <ul className="flex flex-col">
-            {items.map((item) => (
-              <li key={item.id}>
-                <a
-                  ref={el => { itemsRef.current[item.id] = el; }}
-                  href={`#${item.id}`}
-                  onClick={(e) => handleClick(e, item.id)}
-                  aria-current={activeIds.includes(item.id) ? 'location' : undefined}
-                  className={cn(
-                    'block py-1.5 text-sm transition-colors duration-200',
-                    item.level === 2 ? 'pl-6' : 'pl-9',
-                    activeIds.includes(item.id)
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {item.text}
-                </a>
-              </li>
-            ))}
-          </ul>
+            <ul className="flex flex-col">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <a
+                    ref={el => { itemsRef.current[item.id] = el; }}
+                    href={`#${item.id}`}
+                    onClick={(e) => handleClick(e, item.id)}
+                    aria-current={activeIds.includes(item.id) ? 'location' : undefined}
+                    className={cn(
+                      'block py-1.5 text-sm transition-colors duration-200',
+                      item.level === 2 ? 'pl-6' : 'pl-9',
+                      activeIds.includes(item.id)
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </nav>
       </div>
     </div>
