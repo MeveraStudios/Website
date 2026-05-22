@@ -15,8 +15,24 @@ interface CachedDocsNavData {
   generatedAt?: string;
 }
 
+interface SearchDoc {
+  id: number;
+  title: string;
+  content: string;
+  href: string;
+  project: string;
+  projectId: string;
+  version: string;
+  category: string;
+  slug: string;
+}
+
 // Cached data for content chunks
 const docContentCache = new Map<string, DocFile>();
+
+// Cached search index data
+let searchIndexCache: SearchDoc[] | null = null;
+let searchIndexLoadPromise: Promise<SearchDoc[]> | null = null;
 
 // Cached navigation data
 let cachedDocsNavData: CachedDocsNavData | null = null;
@@ -286,18 +302,7 @@ const DocumentCtor =
   (FlexSearchRuntime.default && (FlexSearchRuntime.default as typeof FlexSearchNS).Document) ||
   FlexSearchRuntime.Document;
 
-interface SearchDoc {
-  id: number;
-  title: string;
-  content: string;
-  href: string;
-  project: string;
-}
-
 type EnrichedHit = { field: string; result: Array<{ id: number; doc: SearchDoc }> };
-
-let searchIndexCache: SearchDoc[] | null = null;
-let isSearchIndexLoading = false;
 let flexIndex: FlexSearchNS.Document<SearchDoc, string[]> | null = null;
 
 function buildFlexIndex(docs: SearchDoc[]) {
@@ -306,59 +311,80 @@ function buildFlexIndex(docs: SearchDoc[]) {
     cache: 100,
     document: {
       id: 'id',
-      index: ['title', 'content'],
-      store: ['title', 'content', 'href', 'project'],
+      index: ['title', 'slug', 'category', 'project', 'projectId', 'version', 'content'],
+      store: ['title', 'content', 'href', 'project', 'projectId', 'version', 'category', 'slug'],
     },
   });
   docs.forEach(d => idx.add(d));
   return idx;
 }
 
+function normalizeSearchQuery(query: string): string {
+  return query.trim().toLowerCase().replace(/[^a-z0-9@#]+/g, ' ');
+}
+
+function tokenizeSearchQuery(query: string): string[] {
+  return normalizeSearchQuery(query).split(/\s+/).filter(Boolean);
+}
+
 export async function fetchSearchIndex(): Promise<SearchDoc[]> {
   if (searchIndexCache) return searchIndexCache;
-  if (isSearchIndexLoading) return [];
+  if (searchIndexLoadPromise) return searchIndexLoadPromise;
 
-  isSearchIndexLoading = true;
-  try {
-    const res = await fetch('/search-index.json');
-    if (res.ok) {
+  searchIndexLoadPromise = (async () => {
+    try {
+      const res = await fetch('/search-index.json');
+      if (!res.ok) {
+        throw new Error(`Failed to load search index: ${res.statusText}`);
+      }
+
       const raw = (await res.json()) as Omit<SearchDoc, 'id'>[];
       searchIndexCache = raw.map((d, i) => ({ ...d, id: i }));
       flexIndex = buildFlexIndex(searchIndexCache);
+      return searchIndexCache;
+    } catch (e) {
+      console.error('Failed to load search index', e);
+      searchIndexCache = [];
+      flexIndex = null;
+      return searchIndexCache;
+    } finally {
+      searchIndexLoadPromise = null;
     }
-  } catch (e) {
-    console.error('Failed to load search index', e);
-  } finally {
-    isSearchIndexLoading = false;
-  }
-  return searchIndexCache || [];
+  })();
+
+  return searchIndexLoadPromise;
 }
 
 function buildExcerpt(content: string, query: string, radius = 80): string {
+  const terms = tokenizeSearchQuery(query);
   const lower = content.toLowerCase();
-  const q = query.toLowerCase();
-  let idx = lower.indexOf(q);
-  if (idx === -1) {
-    // Fall back to first term that matches
-    const firstTerm = q.split(/\s+/).find(t => t && lower.includes(t));
-    idx = firstTerm ? lower.indexOf(firstTerm) : 0;
+  let idx = -1;
+  let matchedTerm = '';
+
+  for (const term of terms) {
+    const termIdx = lower.indexOf(term);
+    if (termIdx !== -1 && (idx === -1 || termIdx < idx)) {
+      idx = termIdx;
+      matchedTerm = term;
+    }
   }
+
+  if (idx === -1) idx = 0;
+
+  const focusLength = matchedTerm.length || terms[0]?.length || query.length;
   const start = Math.max(0, idx - radius);
-  const end = Math.min(content.length, idx + query.length + radius * 2);
+  const end = Math.min(content.length, idx + focusLength + radius * 2);
   const prefix = start > 0 ? '… ' : '';
   const suffix = end < content.length ? ' …' : '';
   return (prefix + content.slice(start, end).replace(/[#*`]/g, '').trim() + suffix);
 }
 
-export async function searchDocs(query: string) {
-  const docs = await fetchSearchIndex();
-  if (!docs.length || !flexIndex || !query.trim()) return [];
+function searchFlexIndex(query: string, limit: number): EnrichedHit[] {
+  if (!flexIndex) return [];
+  return flexIndex.search(query, limit, { enrich: true, suggest: true }) as unknown as EnrichedHit[];
+}
 
-  const limit = 20;
-  const hits = flexIndex.search(query, limit, { enrich: true, suggest: true }) as unknown as EnrichedHit[];
-
-  // Merge + dedupe by id while preserving field-priority ordering
-  // (flexsearch returns one bucket per indexed field — title first).
+function mergeSearchHits(hits: EnrichedHit[], limit: number, query: string) {
   const seen = new Set<number>();
   const results: { title: string; excerpt: string; href: string; project: string }[] = [];
 
@@ -373,9 +399,28 @@ export async function searchDocs(query: string) {
         href: doc.href,
         project: doc.project,
       });
-      if (results.length >= limit) break;
+      if (results.length >= limit) return results;
     }
-    if (results.length >= limit) break;
+  }
+
+  return results;
+}
+
+export async function searchDocs(query: string) {
+  const docs = await fetchSearchIndex();
+  const normalizedQuery = normalizeSearchQuery(query);
+  if (!docs.length || !flexIndex || !normalizedQuery) return [];
+
+  const limit = 20;
+  const primaryHits = searchFlexIndex(normalizedQuery, limit);
+  let results = mergeSearchHits(primaryHits, limit, normalizedQuery);
+
+  if (!results.length) {
+    const terms = tokenizeSearchQuery(normalizedQuery);
+    for (const term of terms) {
+      results = mergeSearchHits(searchFlexIndex(term, limit), limit, term);
+      if (results.length) break;
+    }
   }
 
   return results;

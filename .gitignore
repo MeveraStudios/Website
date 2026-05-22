@@ -40,6 +40,7 @@ coverage
 # Build intermediate files
 build
 .cache
+.lean-ctx
 
 # Generated documentation files (from precompile script)
 public/docs-data.json

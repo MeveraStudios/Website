@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://docs.mevera.studio/</loc>
-    <lastmod>2026-05-22T09:49:12.185Z</lastmod>
+    <lastmod>2026-05-22T11:47:30.621Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -620,19 +620,19 @@
   </url>
   <url>
     <loc>https://docs.mevera.studio/docs/Voxy/v1/Discord-Bot</loc>
-    <lastmod>2026-05-20T14:19:46+03:00</lastmod>
+    <lastmod>2026-05-22T14:11:55+03:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://docs.mevera.studio/docs/Voxy/v1/Management</loc>
-    <lastmod>2026-05-20T14:19:46+03:00</lastmod>
+    <lastmod>2026-05-22T14:11:55+03:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://docs.mevera.studio/docs/Voxy/v1/Moderation</loc>
-    <lastmod>2026-05-20T14:19:46+03:00</lastmod>
+    <lastmod>2026-05-22T14:11:55+03:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -728,7 +728,7 @@
   </url>
   <url>
     <loc>https://docs.mevera.studio/docs/Voxy/v1/Proxy-Setup</loc>
-    <lastmod>2026-05-20T14:19:46+03:00</lastmod>
+    <lastmod>2026-05-21T23:21:46+03:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

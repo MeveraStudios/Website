@@ -252,6 +252,17 @@ interface SearchIndexItem {
     projectId: string;
     version: string;
     category: string;
+    slug: string;
+}
+
+function normalizeSearchText(text: string): string {
+    return text
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 $2')
+        .replace(/[>#*_~\[\]{}()|]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 interface GitDocMetadata {
@@ -585,12 +596,13 @@ function buildVersion(
         if (!indexLatestOnlyForSearch || versionMeta.latest) {
             searchIndex.push({
                 title: frontmatter.title,
-                content: body.replace(/[#*`]/g, '').substring(0, 500),
+                content: normalizeSearchText(body),
                 href: `/docs/${projectId}/${versionMeta.id}/${slug}`,
                 project: projectName,
                 projectId,
                 version: versionMeta.id,
                 category: categoryName,
+                slug,
             });
         }
 
