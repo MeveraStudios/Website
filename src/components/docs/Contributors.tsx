@@ -47,11 +47,11 @@ export function Contributors({ contributors }: ContributorsProps) {
   return (
     <aside
       aria-labelledby="contributors-heading"
-      className="mt-10 pt-6 border-t"
+      className="mt-6 pt-4 border-t border-border"
     >
       <h2
         id="contributors-heading"
-        className="text-sm font-semibold text-muted-foreground mb-3"
+        className="text-sm font-semibold text-muted-foreground mb-2"
       >
         Contributors
       </h2>

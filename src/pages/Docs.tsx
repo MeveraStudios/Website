@@ -269,9 +269,6 @@ export function Docs() {
                   docPath={doc.path}
                 />
 
-                {/* Contributors */}
-                <Contributors contributors={doc.contributors} />
-
                 {/* Document Navigation */}
                 <DocNavigation
                   prev={prev}
@@ -279,6 +276,9 @@ export function Docs() {
                   projectId={project.id}
                   version={activeVersion.id}
                 />
+
+                {/* Contributors */}
+                <Contributors contributors={doc.contributors} />
               </div>
             )}
           </main>

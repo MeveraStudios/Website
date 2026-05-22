@@ -18,6 +18,8 @@ interface DocNavigationProps {
 }
 
 export function DocNavigation({ prev, next, projectId, version, className }: DocNavigationProps) {
+  if (!prev && !next) return null;
+
   return (
     <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-4 mt-12 pt-8 border-t border-border', className)}>
       {/* Previous Link */}
