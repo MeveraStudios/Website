@@ -24,12 +24,12 @@ Common flags available on ban, mute, and blacklist:
 
 **Permission:** `voxy.ban` - `voxy.unban`
 
-```
-/ban <player> [-t <duration>] [-s] [--extend] <reason>
-/unban <player>
-```
-
 Bans the player from joining the network.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `ban` | `/ban <player> [-t <duration>] [-s] [--extend] <reason>` | Bans a player from the network |
+| `unban` | `/unban <player>` | Removes an active ban |
 
 ---
 
@@ -37,12 +37,12 @@ Bans the player from joining the network.
 
 **Permission:** `voxy.mute` - `voxy.unmute`
 
-```
-/mute <player> [-t <duration>] [-s] [--extend] <reason>
-/unmute <player>
-```
-
 Prevents the player from sending chat messages.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `mute` | `/mute <player> [-t <duration>] [-s] [--extend] <reason>` | Mutes a player |
+| `unmute` | `/unmute <player>` | Removes an active mute |
 
 ---
 
@@ -50,12 +50,12 @@ Prevents the player from sending chat messages.
 
 **Permission:** `voxy.blacklist` - `voxy.unblacklist`
 
-```
-/blacklist <player> [-t <duration>] [-s] [--extend] <reason>
-/unblacklist <player>
-```
-
 Like a ban, but also applies to detected alt accounts.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `blacklist` | `/blacklist <player> [-t <duration>] [-s] [--extend] <reason>` | Blacklists a player and detected alts |
+| `unblacklist` | `/unblacklist <player>` | Removes an active blacklist |
 
 ---
 
@@ -63,12 +63,12 @@ Like a ban, but also applies to detected alt accounts.
 
 **Permission:** `voxy.warn` - `voxy.unwarn`
 
-```
-/warn <player> [-s] <reason>
-/unwarn <player>
-```
-
 Issues a warning tracked in the player's history. `/unwarn` removes the most recent warning.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `warn` | `/warn <player> [-s] <reason>` | Issues a warning |
+| `unwarn` | `/unwarn <player>` | Removes the most recent warning |
 
 ---
 
@@ -76,11 +76,11 @@ Issues a warning tracked in the player's history. `/unwarn` removes the most rec
 
 **Permission:** `voxy.kick`
 
-```
-/kick <player> [-s] <reason>
-```
-
 Removes the player from the server immediately.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `kick` | `/kick <player> [-s] <reason>` | Kicks a player from the server |
 
 ---
 
@@ -88,11 +88,11 @@ Removes the player from the server immediately.
 
 **Permission:** `voxy.punish`
 
-```
-/punish <player> <ladder> [-s] <reason>
-```
-
 Applies the next step of the named punishment ladder to the player.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `punish` | `/punish <player> <ladder> [-s] <reason>` | Applies the next ladder step |
 
 ---
 
@@ -102,20 +102,20 @@ Applies the next step of the named punishment ladder to the player.
 
 **Permission:** `voxy.grant`
 
-```
-/grant [player]     — Opens rank selection GUI for granting a rank
-/grants [player]    — Shows active grants on the player
-```
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `grant` | `/grant [player]` | Opens rank selection GUI for granting a rank |
+| `grants` | `/grants [player]` | Shows active grants on the player |
 
 ### /setrank
 
 **Permission:** `voxy.grant`
 
-```
-/setrank <player> <rank> <duration> [--extend] [reason]
-```
-
 Directly assigns a rank to a player. Duration: `permanent`, `7d`, `30d`, etc.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `setrank` | `/setrank <player> <rank> <duration> [--extend] [reason]` | Assigns a rank to a player |
 
 ---
 
@@ -125,61 +125,61 @@ Directly assigns a rank to a player. Duration: `permanent`, `7d`, `30d`, etc.
 
 **Permission:** `voxy.history`
 
-```
-/history [player]
-```
-
 Opens a GUI showing the player's full punishment history.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `history` | `/history [player]` | Opens the player's punishment history |
 
 ### /staffhistory
 
 **Permission:** `voxy.staffhistory`
 
-```
-/staffhistory <staff> [-t <duration>]
-```
-
 Shows all punishments issued by the specified staff member within the given time window.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `staffhistory` | `/staffhistory <staff> [-t <duration>]` | Shows punishments issued by a staff member |
 
 ### /chatlogs
 
 **Permission:** `voxy.chatlogs`
 
-```
-/chatlogs <player> <duration> [page]
-```
-
 Shows the player's recent chat messages with word-diff highlighting. Paginated.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `chatlogs` | `/chatlogs <player> <duration> [page]` | Shows recent chat messages |
 
 ### /commandlogs
 
 **Permission:** `voxy.commandlogs`
 
-```
-/commandlogs <player> <duration> [page]
-```
-
 Shows the player's recent command usage. Paginated.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `commandlogs` | `/commandlogs <player> <duration> [page]` | Shows recent command usage |
 
 ### /clearviolations
 
 **Permission:** `voxy.clearviolations`
 
-```
-/clearviolations [player]
-```
-
 Removes all active punishments and resets ladder progression for the player.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `clearviolations` | `/clearviolations [player]` | Clears all violations and resets ladders |
 
 ### /staffrollback
 
 **Permission:** `voxy.staffrollback`
 
-```
-/staffrollback <staff> [-t <duration>=1h]
-```
-
 Reverts all punishment actions issued by the staff member in the given time window.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `staffrollback` | `/staffrollback <staff> [-t <duration>=1h]` | Reverts a staff member's actions |
 
 ---
 
@@ -187,7 +187,7 @@ Reverts all punishment actions issued by the staff member in the given time wind
 
 **Permission:** `voxy.menu.reports`
 
-```
-/reports             — Opens all pending reports
-/reports <player>   — Shows reports filed against this player
-```
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `reports` | `/reports` | Opens all pending reports |
+| `reports` | `/reports <player>` | Shows reports filed against a player |

@@ -90,7 +90,39 @@ The bot exits with an error if MongoDB or Redis is unreachable.
 | `/disassociate <rank>` | Admin | Removes a rank-role binding |
 
 All responses are ephemeral (visible only to the invoking user).
+## UI Scripting (YAML)
 
+The Discord bot can render rich interactive messages using YAML definitions. These definitions are placed in `messages.yml` and support a variety of components:
+
+- **SECTION** – a heading with optional thumbnail or image.
+- **ACTION_ROW** – a horizontal container for buttons, selects, or other interactive elements.
+- **BUTTON** – clickable actions that trigger bot commands or open URLs.
+- **STRING_SELECT** – dropdown menus for choosing from textual options.
+- **ENTITY_SELECT** – dropdowns for selecting users, roles, or channels.
+- **MEDIA_GALLERY** – displays a grid of images.
+- **FILE_DISPLAY** – shows downloadable files.
+
+### Example YAML snippet
+```yaml
+link-request:
+  type: SECTION
+  title: "Link Request"
+  description: "A player wants to link their Discord account."
+  thumbnail: "https://example.com/icon.png"
+  components:
+    - type: ACTION_ROW
+      components:
+        - type: BUTTON
+          style: SUCCESS
+          label: "Approve"
+          custom_id: "link-approve"
+        - type: BUTTON
+          style: DANGER
+          label: "Deny"
+          custom_id: "link-deny"
+```
+
+When the bot receives this definition, it builds a Discord message with the specified layout. Pressing **Approve** links the accounts, while **Deny** rejects the request. The bot automatically handles component interactions and updates the message state.
 ## Account Linking
 
 1. Player runs `/linkdiscord` in-game
