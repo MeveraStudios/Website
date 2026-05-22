@@ -1,0 +1,68 @@
+---
+title: Leveling
+description: Player experience, levels, and progress bars
+order: 13
+---
+
+# Leveling
+
+Voxy includes a complete leveling system that awards players experience (XP), levels them up, displays configurable progress bars, and executes rewards upon reaching specific levels.
+
+## Overview
+
+The leveling model manages each player's level and their current XP towards the next level. 
+A player's progression is calculated dynamically based on an experience formula. 
+Server administrators can also configure how the progress is displayed using **Bar Styles** and **Level Formats**.
+
+### Experience Formula
+
+The experience required to reach the next level is calculated using a mathematical expression.
+By default, the formula is:
+```text
+1250 * (<level> ^ 2) + (6250 * <level>) - 7500
+```
+*(Where `<level>` is the player's current level).*
+
+You can modify this formula via the settings, along with defining the server's **max level** (default `500`).
+
+## Bar Styles
+
+Progress bars visually represent a player's XP progress. You can define multiple bar styles and choose which one to display.
+A bar style consists of:
+- **Size**: Total length of the progress bar (e.g., 20 characters).
+- **Bar Character**: The symbol used to draw the bar (e.g., `❘` or `■`).
+- **Done Prefix**: The formatting (color/style) applied to the completed portion.
+- **Progress Prefix**: The formatting applied to the single character representing current progress.
+- **Remaining Prefix**: The formatting applied to the unfilled portion of the bar.
+
+### Default Styles
+Voxy provides two default styles out of the box:
+- `bar`: Uses the `❘` character (Size: 20).
+- `box`: Uses the `■` character (Size: 10).
+
+## Level Formats
+
+You can customize how a level is displayed in text or chat by setting **Level Formats**.
+A format allows you to define a `displayFormat` and a `chatDisplayFormat` (e.g., `&7[☆ {level}]`). 
+
+Formats are tied to specific levels. When displaying a player's level, Voxy finds the format assigned to their current level or the nearest format below it.
+
+## Level Rewards
+
+Rewards can be configured to trigger automatically when a player reaches a specific level.
+A single `LevelReward` consists of multiple actions, which can include giving items, executing commands, sending messages, or granting currency.
+
+## Commands
+
+Staff can manage a player's levels and XP, as well as configure the entire system through an in-game GUI.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `setlevel` | `/level setlevel <player> <amount>` | Sets player level |
+| `addlevel` | `/level addlevel <player> <amount>` | Adds levels to player |
+| `setexp` | `/level setexp <player> <amount>` | Sets exact experience |
+| `addexp` | `/level addexp <player> <amount>` | Adds experience |
+| `addrandomexp` | `/level addrandomexp <player> <min> <max>` | Adds random experience |
+| `settings` | `/level settings` | Opens the leveling settings GUI |
+
+*(Requires the `voxy.admin` permission).*
