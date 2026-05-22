@@ -47,6 +47,7 @@ public/docs-data.json
 public/docs-nav.json
 public/docs-content/
 public/search-index.json
+public/sitemap.xml
 
 # Optional: TypeScript build info
 *.tsbuildinfo

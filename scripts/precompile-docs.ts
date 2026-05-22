@@ -245,6 +245,7 @@ interface TocItem {
 }
 
 interface SearchIndexItem {
+    kind: 'doc' | 'section';
     title: string;
     content: string;
     href: string;
@@ -253,6 +254,7 @@ interface SearchIndexItem {
     version: string;
     category: string;
     slug: string;
+    anchor?: string;
 }
 
 function normalizeSearchText(text: string): string {
@@ -263,6 +265,57 @@ function normalizeSearchText(text: string): string {
         .replace(/[>#*_~\[\]{}()|]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function extractSearchSections(
+    content: string,
+    projectName: string,
+    projectId: string,
+    versionId: string,
+    categoryName: string,
+    slug: string,
+): SearchIndexItem[] {
+    const lines = content.split(/\r?\n/);
+    const headings: Array<{ lineIndex: number; level: number; text: string; id: string }> = [];
+    const idCounts = new Map<string, number>();
+
+    lines.forEach((line, lineIndex) => {
+        const match = line.match(/^(#{2,3})\s+(.+?)\s*$/);
+        if (!match) return;
+
+        const level = match[1].length;
+        const text = match[2].trim();
+        const baseId = slugify(text);
+        const count = idCounts.get(baseId) || 0;
+        const id = count > 0 ? `${baseId}-${count}` : baseId;
+        idCounts.set(baseId, count + 1);
+
+        headings.push({ lineIndex, level, text, id });
+    });
+
+    const sectionEntries: SearchIndexItem[] = [];
+
+    for (let i = 0; i < headings.length; i += 1) {
+        const heading = headings[i];
+        const nextBoundary = headings.slice(i + 1).find(next => next.level <= heading.level);
+        const endLine = nextBoundary ? nextBoundary.lineIndex : lines.length;
+        const sectionContent = normalizeSearchText(lines.slice(heading.lineIndex, endLine).join('\n'));
+
+        sectionEntries.push({
+            kind: 'section',
+            title: heading.text,
+            content: sectionContent,
+            href: `/docs/${projectId}/${versionId}/${slug}#${heading.id}`,
+            project: projectName,
+            projectId,
+            version: versionId,
+            category: categoryName,
+            slug,
+            anchor: heading.id,
+        });
+    }
+
+    return sectionEntries;
 }
 
 interface GitDocMetadata {
@@ -595,6 +648,7 @@ function buildVersion(
         // results free of duplicates while content is mirrored across versions.
         if (!indexLatestOnlyForSearch || versionMeta.latest) {
             searchIndex.push({
+                kind: 'doc',
                 title: frontmatter.title,
                 content: normalizeSearchText(body),
                 href: `/docs/${projectId}/${versionMeta.id}/${slug}`,
@@ -604,6 +658,15 @@ function buildVersion(
                 category: categoryName,
                 slug,
             });
+
+            searchIndex.push(...extractSearchSections(
+                body,
+                projectName,
+                projectId,
+                versionMeta.id,
+                categoryName,
+                slug,
+            ));
         }
 
         if (VERBOSE_DOCS) {
