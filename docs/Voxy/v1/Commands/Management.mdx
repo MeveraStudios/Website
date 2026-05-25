@@ -56,9 +56,10 @@ Core plugin management.
 
 | Subcommand | Description |
 |-----------|-------------|
-| `reload` | Reloads all config files |
+| `reload` | Reloads all config files, messages, and ladders |
 | `debug` | Toggles debug logging |
 | `migrate` | Runs pending permission migrations (e.g. from LuckPerms) |
+| `logs` | Uploads latest.log to pastes.dev |
 
 ## /rank
 
@@ -101,7 +102,7 @@ Player data and permission management.
 | `remperm` | `/user remperm <player> <permission>` | Removes permission from player |
 | `editperms` | `/user editperms [player]` | Opens permission editor GUI |
 | `delete` | `/user delete <player>` | Deletes all data for a player |
-| `deleteall` | `/user deleteall [confirm]` | Deletes ALL player data (requires confirmation token) |
+| `deleteall` | `/user deleteall [confirm]` | Deletes ALL player data — kicks all players across the network and blocks logins until complete (requires confirmation token) |
 
 ## /currencies
 

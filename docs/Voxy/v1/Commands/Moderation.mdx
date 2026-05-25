@@ -145,11 +145,12 @@ Shows all punishments issued by the specified staff member within the given time
 
 **Permission:** `voxy.chatlogs`
 
-Shows the player's recent chat messages with word-diff highlighting. Paginated.
+Shows the player's recent chat messages with word-diff highlighting, including server names and filtered content diffs. Paginated.
 
 | Command | Syntax | Description |
 |---------|--------|-------------|
 | `chatlogs` | `/chatlogs <player> <duration> [page]` | Shows recent chat messages |
+| `chatlogs` | `/chatlogs <player> <duration> --upload` | Uploads logs to pastes.dev |
 
 ### /commandlogs
 
@@ -160,6 +161,17 @@ Shows the player's recent command usage. Paginated.
 | Command | Syntax | Description |
 |---------|--------|-------------|
 | `commandlogs` | `/commandlogs <player> <duration> [page]` | Shows recent command usage |
+| `commandlogs` | `/commandlogs <player> <duration> --upload` | Uploads logs to pastes.dev |
+
+### /alts
+
+**Permission:** `voxy.alts`
+
+Opens a paginated GUI showing all accounts that have shared an IP with the target player. Displays online status, last seen, first login, and last login for each alt.
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `alts` | `/alts <player>` | Shows all linked accounts |
 
 ### /clearviolations
 
