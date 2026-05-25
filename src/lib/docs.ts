@@ -386,7 +386,7 @@ function searchFlexIndex(query: string, limit: number): EnrichedHit[] {
 
 function mergeSearchHits(hits: EnrichedHit[], limit: number, query: string) {
   const seen = new Set<number>();
-  const results: { title: string; excerpt: string; href: string; project: string }[] = [];
+  const results: { title: string; excerpt: string; href: string; project: string; projectId: string }[] = [];
 
   for (const bucket of hits) {
     for (const item of bucket.result) {
@@ -398,6 +398,7 @@ function mergeSearchHits(hits: EnrichedHit[], limit: number, query: string) {
         excerpt: buildExcerpt(doc.content, query),
         href: doc.href,
         project: doc.project,
+        projectId: doc.projectId,
       });
       if (results.length >= limit) return results;
     }
@@ -406,7 +407,7 @@ function mergeSearchHits(hits: EnrichedHit[], limit: number, query: string) {
   return results;
 }
 
-export async function searchDocs(query: string) {
+export async function searchDocs(query: string, projectId?: string) {
   const docs = await fetchSearchIndex();
   const normalizedQuery = normalizeSearchQuery(query);
   if (!docs.length || !flexIndex || !normalizedQuery) return [];
@@ -421,6 +422,10 @@ export async function searchDocs(query: string) {
       results = mergeSearchHits(searchFlexIndex(term, limit), limit, term);
       if (results.length) break;
     }
+  }
+
+  if (projectId) {
+    results = results.filter(r => r.projectId === projectId);
   }
 
   return results;

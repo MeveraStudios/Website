@@ -169,12 +169,12 @@ export function Docs() {
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center justify-between mb-6">
               <MobileSidebar project={project} version={activeVersion} />
-              <SearchDialog />
+              <SearchDialog projectId={project.id} />
             </div>
 
             {/* Desktop Search */}
             <div className="hidden lg:flex justify-end mb-6">
-              <SearchDialog />
+              <SearchDialog projectId={project.id} />
             </div>
 
             {isLoading ? (

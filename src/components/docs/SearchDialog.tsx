@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { searchDocs, fetchSearchIndex } from '@/lib/docs';
 import type { SearchResult } from '@/types/docs';
 
-export function SearchDialog() {
+export function SearchDialog({ projectId }: { projectId?: string }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -55,7 +55,7 @@ export function SearchDialog() {
   useEffect(() => {
     let isActive = true;
     if (query.trim()) {
-      searchDocs(query).then((searchResults) => {
+      searchDocs(query, projectId).then((searchResults) => {
         if (isActive) {
           setResults(searchResults);
           setSelectedIndex(0);
@@ -67,7 +67,7 @@ export function SearchDialog() {
     return () => {
       isActive = false;
     };
-  }, [query]);
+  }, [query, projectId]);
 
   const handleSelect = useCallback((result: SearchResult) => {
     navigate(result.href);
