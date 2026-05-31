@@ -1,0 +1,82 @@
+---
+title: Anti-VPN
+description: Block VPN, proxy, and Tor connections from joining the network
+order: 12
+---
+
+# Anti-VPN
+
+Voxy can detect and block players connecting through VPNs, proxies, or Tor exit nodes. Checks run on the proxy at login time before the player is fully connected.
+
+## How It Works
+
+When a player joins, Voxy checks their IP address against one or more external detection services. If the IP is flagged, the player is disconnected with a configurable message. Results are cached to avoid re-checking the same IP on every login.
+
+## Bypass Permission
+
+Players with **`voxy.antivpn.bypass`** are never checked.
+
+## Configuration
+
+The feature is configured in `vpn.yml` on the proxy:
+
+```yaml
+enabled: true
+
+# How long to cache IP check results before rechecking
+cache-ttl: 1h
+
+# IP addresses that are never checked
+whitelisted-ips:
+  - "127.0.0.1"
+
+# Which detection types should trigger a block
+block:
+  vpn: true
+  proxy: true
+  tor: true
+  hosting: false
+  api-failure: false
+
+services:
+  ip-api:
+    enabled: true
+    pro-key: ""
+  proxycheck:
+    enabled: false
+    api-key: ""
+```
+
+### Detection Types
+
+| Type | What it detects | Default |
+|------|----------------|---------|
+| `vpn` | VPN connections | Blocked |
+| `proxy` | Open proxy servers | Blocked |
+| `tor` | Tor exit nodes | Blocked |
+| `hosting` | Datacenter/hosting IPs | Allowed (may cause false positives for mobile carriers) |
+| `api-failure` | When the check API returns an error | Allowed |
+
+### Services
+
+| Service | Config key | Key required | Notes |
+|---------|-----------|-------------|-------|
+| IP-API.com | `services.ip-api` | Only for pro tier | Free tier works over HTTP |
+| ProxyCheck | `services.proxycheck` | Yes | Requires an API key |
+
+## Cache
+
+Results are cached per IP for the duration of `cache-ttl` (default 1 hour). The cache is cleared when the VPN manager is reloaded.
+
+## Messages
+
+The disconnect message is configured in `messages.yml`:
+
+```yaml
+system:
+  antivpn-kick: "<red>A VPN or proxy was detected on your connection. Please disable it and try again."
+```
+
+## Commands
+
+There are no player-facing commands for this feature. The VPN manager reloads automatically when `/voxy reload` is run.

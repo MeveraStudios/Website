@@ -43,17 +43,25 @@ interface MarkdownRendererProps {
  */
 function rewriteDocHref(href: string | undefined, projectId?: string, version?: string): string | undefined {
   if (!href || !projectId || !version) return href;
-  if (!href.startsWith('/docs/')) return href;
+
+  if (!href.startsWith('/docs/')) {
+    if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return href;
+    try {
+      const resolved = new URL(href, window.location.href);
+      href = resolved.pathname + resolved.hash;
+    } catch {
+      return href;
+    }
+  }
 
   const parts = href.split('#');
   const pathPart = parts[0];
   const hashPart = parts[1] !== undefined ? `#${parts[1]}` : '';
 
-  const segments = pathPart.split('/').filter(Boolean); // ['docs', '<project>', ...rest]
+  const segments = pathPart.split('/').filter(Boolean);
   if (segments.length < 2) return href;
   if (segments[1] !== projectId) return href;
 
-  // Already versioned (`/docs/<project>/v\d+/...`) — leave it alone.
   if (segments.length >= 3 && /^v\d+$/i.test(segments[2])) return href;
 
   const rest = segments.slice(2).join('/');

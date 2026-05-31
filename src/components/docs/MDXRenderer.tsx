@@ -43,7 +43,16 @@ interface MDXRendererProps {
  */
 function rewriteDocHref(href: string | undefined, projectId?: string, version?: string): string | undefined {
   if (!href || !projectId || !version) return href;
-  if (!href.startsWith('/docs/')) return href;
+
+  if (!href.startsWith('/docs/')) {
+    if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return href;
+    try {
+      const resolved = new URL(href, window.location.href);
+      href = resolved.pathname + resolved.hash;
+    } catch {
+      return href;
+    }
+  }
 
   const parts = href.split('#');
   const pathPart = parts[0];
