@@ -185,7 +185,7 @@ function buildComponents(projectId?: string, version?: string) {
   ),
 
   blockquote: ({ children, ...props }: any) => (
-    <blockquote className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground" {...props}>
+    <blockquote className="bg-muted/30 rounded-lg px-5 py-4 italic my-4 text-muted-foreground" {...props}>
       {children}
     </blockquote>
   ),

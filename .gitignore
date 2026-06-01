@@ -41,6 +41,7 @@ coverage
 build
 .cache
 .lean-ctx
+.impeccable
 
 # Generated documentation files (from precompile script)
 public/docs-data.json
@@ -48,6 +49,13 @@ public/docs-nav.json
 public/docs-content/
 public/search-index.json
 public/sitemap.xml
+public/robots.txt
+
+# Generated stats & image manifest (from build scripts)
+public/stats.json
+public/image-manifest.json
+public/site-version.json
+public/assets/
 
 # Optional: TypeScript build info
 *.tsbuildinfo

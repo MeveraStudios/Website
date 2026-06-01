@@ -5,14 +5,11 @@ import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
 import { fetchDocContent } from '@/lib/docs';
 import { FadeInUp } from '@/components/animators/FadeInUp';
+import { HeroCodeBlock } from '@/components/HeroCodeBlock';
 
-// Expose a way to preload the Docs chunk and initial data.
-// SITE_CONFIG.getStartedUrl is now `/docs/<projectId>/<version>/<slug>` so we
-// peel off three trailing segments to feed the version-aware fetcher.
 const preloadDocsRoute = () => {
   import('@/pages/Docs').then(m => m.Docs);
   const parts = SITE_CONFIG.getStartedUrl.split('/').filter(Boolean);
-  // ['docs', projectId, version, slug]
   if (parts.length >= 4 && parts[1] && parts[2] && parts[3]) {
     fetchDocContent(parts[1], parts[2], parts[3]);
   }
@@ -20,61 +17,61 @@ const preloadDocsRoute = () => {
 
 export function Hero() {
   return (
-    <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-32 overflow-hidden">
+    <section className="relative pt-28 pb-24 lg:pt-36 lg:pb-32 overflow-hidden min-h-[85vh] flex items-center">
 
-      {/* Content Container */}
-      <div className="container px-4 mx-auto relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
+      <div className="container px-4 mx-auto relative z-10 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
+          {/* Left: Text Content */}
+          <div className="text-center lg:text-left">
 
-          {/* Badge / Label */}
-          <FadeInUp delay={0.1}>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            <FadeInUp delay={0.2}>
+              <h1 className="text-left mb-4">
+                <img
+                  src="/brand-mark.png"
+                  alt="Mevera Studios"
+                  className="w-full max-w-xl h-auto inline-block"
+                />
+              </h1>
+              <span className="text-xl md:text-2xl text-primary block mt-2 font-normal tracking-normal">
+                Plugin development, reimagined
               </span>
-              v2.0 Documentation Live
-            </div>
-          </FadeInUp>
+            </FadeInUp>
 
-          {/* Main Heading */}
-          <FadeInUp delay={0.2}>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8">
-              Mevera Studios <br />
-              <span className="text-2xl md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-blue-600 animate-pulse block mt-4 font-normal tracking-wide">
-                Where ideas becomes reality
-              </span>
-            </h1>
-          </FadeInUp>
+            <FadeInUp delay={0.3}>
+              <p className="text-lg text-muted-foreground mb-10 mt-6 leading-relaxed text-pretty">
+                {SITE_CONFIG.description}. Guides, API references, and tools for Minecraft plugin development and beyond.
+              </p>
+            </FadeInUp>
 
-          {/* Subheading */}
-          <FadeInUp delay={0.3}>
-            <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
-              {SITE_CONFIG.description}. Access comprehensive guides, API references, and tools designed for the next generation of development.
-            </p>
-          </FadeInUp>
+            <FadeInUp delay={0.4}>
+              <div className="flex flex-col sm:flex-row items-center lg:justify-start gap-4">
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_12px_rgba(0,240,255,0.25)] hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all"
+                  asChild
+                  onMouseEnter={preloadDocsRoute}
+                >
+                  <Link to={SITE_CONFIG.getStartedUrl}>
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in [animation-delay:600ms]">
-            <Button 
-              size="lg" 
-              className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all" 
-              asChild
-              onMouseEnter={preloadDocsRoute}
-            >
-              <Link to={SITE_CONFIG.getStartedUrl}>
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-primary/30 hover:border-primary/60 hover:bg-primary/5 backdrop-blur-sm" asChild>
+                  <a href={SITE_CONFIG.githubUrl} target="_blank" rel="noopener noreferrer">
+                    <Terminal className="mr-2 h-4 w-4" />
+                    View on GitHub
+                  </a>
+                </Button>
+              </div>
+            </FadeInUp>
 
-            <Button size="lg" variant="outline" className="h-12 px-8 text-base border-primary/30 hover:border-primary/60 hover:bg-primary/5 backdrop-blur-sm" asChild>
-              <a href={SITE_CONFIG.githubUrl} target="_blank" rel="noopener noreferrer">
-                <Terminal className="mr-2 h-4 w-4" />
-                View on GitHub
-              </a>
-            </Button>
+          </div>
+
+          {/* Right: Code Block */}
+          <div className="hidden lg:block">
+            <HeroCodeBlock />
           </div>
 
         </div>

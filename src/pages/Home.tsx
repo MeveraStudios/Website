@@ -10,7 +10,10 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/sections/Hero';
+import { Features } from '@/sections/Features';
+import { Stats } from '@/sections/Stats';
 import { Projects } from '@/sections/Projects';
+import { Community } from '@/sections/Community';
 import { Team } from '@/sections/Team';
 import LightRays from '@/components/LightRays';
 import { Seo } from '@/components/Seo';
@@ -22,19 +25,19 @@ export function Home() {
       {/* Background Effect */}
       <div className="absolute inset-0 h-full pointer-events-none z-0">
         <LightRays
-          raysOrigin="top-center"
+          raysOrigin="right"
           raysColor="#ffffff"
-          raysSpeed={1}
-          lightSpread={0.5}
-          rayLength={3}
+          raysSpeed={0.8}
+          lightSpread={0.6}
+          rayLength={2.5}
           followMouse={true}
-          mouseInfluence={0.1}
+          mouseInfluence={0.08}
           noiseAmount={0}
           distortion={0}
-          className="opacity-40"
+          className="opacity-50"
           pulsating={false}
-          fadeDistance={1}
-          saturation={1}
+          fadeDistance={1.2}
+          saturation={0.8}
         />
       </div>
 
@@ -42,7 +45,10 @@ export function Home() {
 
       <main id="main-content" tabIndex={-1} className="flex-1 relative z-10">
         <Hero />
+        <Stats />
+        <Features />
         <Projects />
+        <Community />
         <Team />
       </main>
 

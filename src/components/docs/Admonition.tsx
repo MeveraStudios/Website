@@ -97,11 +97,11 @@ export function Admonition({
   return (
     <div 
       className={cn(
-        'my-6 rounded-lg border-l-4 p-4',
+        'my-6 rounded-lg border p-4',
         className
       )}
       style={{
-        borderLeftColor: finalSideColor,
+        borderColor: finalSideColor,
         backgroundColor: finalBgColor
       }}
     >
