@@ -78,7 +78,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full glass">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         {/* Logo */}
         <Logo />
 
@@ -125,7 +125,7 @@ export function Header() {
                 }
               }}
             >
-              <Link to={item.href}>{item.label}</Link>
+              <Link to={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</Link>
             </Button>
           ))}
         </nav>
@@ -136,7 +136,7 @@ export function Header() {
           <ThemeToggle />
           {onDocs && <CodeThemeToggle />}
           {SITE_CONFIG.discordUrl && (
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild className="touch-target">
               <a
                 href={SITE_CONFIG.discordUrl}
                 target="_blank"
@@ -147,7 +147,7 @@ export function Header() {
               </a>
             </Button>
           )}
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild className="touch-target">
             <a
               href={SITE_CONFIG.githubUrl}
               target="_blank"
@@ -165,7 +165,7 @@ export function Header() {
             <ThemeToggle />
             {onDocs && <CodeThemeToggle />}
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="touch-target" aria-label="Open menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>

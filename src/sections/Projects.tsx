@@ -117,7 +117,7 @@ function FeaturedProjectCard({ project }: { project: typeof PROJECTS[number] }) 
                       variant="ghost"
                       size="icon"
                       asChild
-                      className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full"
+                      className="touch-target text-muted-foreground hover:text-foreground hover:bg-accent rounded-full"
                     >
                       <a
                         href={project.githubRepo}
@@ -233,7 +233,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
                   variant="ghost"
                   size="icon"
                   asChild
-                  className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full"
+                  className="touch-target text-muted-foreground hover:text-foreground hover:bg-accent rounded-full"
                 >
                   <a
                     href={project.githubRepo}

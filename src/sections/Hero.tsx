@@ -30,6 +30,8 @@ export function Hero() {
                 <img
                   src="/brand-mark.png"
                   alt="Mevera Studios"
+                  width="2749"
+                  height="858"
                   className="w-full max-w-xl h-auto inline-block"
                 />
               </h1>
@@ -48,7 +50,7 @@ export function Hero() {
               <div className="flex flex-col sm:flex-row items-center lg:justify-start gap-4">
                 <Button
                   size="lg"
-                  className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_12px_rgba(0,240,255,0.25)] hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all"
+                  className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_12px_hsl(var(--primary)/0.25)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.4)] transition-all"
                   asChild
                   onMouseEnter={preloadDocsRoute}
                 >

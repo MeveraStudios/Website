@@ -106,6 +106,9 @@ const LightRays: React.FC<LightRaysProps> = ({
   const cleanupFunctionRef = useRef<(() => void) | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const reduceMotionRef = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -129,18 +132,14 @@ const LightRays: React.FC<LightRaysProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!isVisible || !containerRef.current) return;
+    if (!isVisible || !containerRef.current || reduceMotionRef.current) return;
 
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
     }
 
-    const initializeWebGL = async () => {
-      if (!containerRef.current) return;
-
-      await new Promise(resolve => setTimeout(resolve, 10));
-
+    const initializeWebGL = () => {
       if (!containerRef.current) return;
 
       const renderer = new Renderer({

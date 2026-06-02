@@ -99,9 +99,22 @@
     scrollbar-gutter: stable;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  @media (pointer: coarse) {
+    .touch-target {
+      min-width: 48px;
+      min-height: 48px;
+    }
   }
 }
 
@@ -269,15 +282,15 @@
   .project-card-depth {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, #111, #000);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--background)));
+    border: 1px solid hsl(var(--border) / 0.3);
     border-radius: inherit;
     transform: translateZ(-20px) translateY(10px);
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
   }
 
   .light .project-card-depth {
-    background: linear-gradient(to bottom, hsl(214 32% 92%), hsl(214 20% 85%));
+    background: linear-gradient(to bottom, hsl(var(--muted)), hsl(var(--border)));
     border-color: hsl(var(--border));
   }
 
@@ -336,6 +349,15 @@
   .light .code-inline {
     background: rgba(0, 0, 0, 0.08);
     color: hsl(var(--foreground));
+  }
+
+  /* Touch target minimum for interactive elements (WCAG 2.5.8) */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Hide scrollbar but keep functionality */

@@ -43,7 +43,7 @@ export function Footer() {
                 href={SITE_CONFIG.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                className="touch-target rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                 aria-label="GitHub"
               >
                 <Github className="h-5 w-5" />
@@ -53,7 +53,7 @@ export function Footer() {
                   href={SITE_CONFIG.discordUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                  className="touch-target rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Discord"
                 >
                   <MessageCircle className="h-5 w-5" />
@@ -133,7 +133,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground text-center sm:text-left">
             Made by {SITE_CONFIG.copyright.holder} with{' '}
-            <Heart className="h-4 w-4 inline text-red-500 fill-red-500" />
+            <Heart className="h-4 w-4 inline text-destructive fill-destructive" />
           </p>
           <p className="text-sm text-muted-foreground">
             Copyright &copy; {yearRange} {SITE_CONFIG.copyright.holder}

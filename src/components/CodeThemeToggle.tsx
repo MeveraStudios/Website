@@ -29,7 +29,7 @@ export function CodeThemeToggle({ className }: { className?: string }) {
         <Button
           variant="ghost"
           size="icon"
-          className={className}
+          className={`touch-target ${className ?? ''}`}
           aria-label="Select code block theme"
           title="Code block theme"
         >

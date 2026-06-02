@@ -42,7 +42,7 @@ function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number]
             variant="ghost"
             size="sm"
             asChild
-            className="rounded-full h-8 w-8 p-0 hover:bg-accent transition-colors"
+            className="touch-target rounded-full hover:bg-accent transition-colors"
             style={{ color: member.electricColor }}
           >
             <a
@@ -60,7 +60,7 @@ function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number]
             variant="ghost"
             size="sm"
             asChild
-            className="rounded-full h-8 w-8 p-0 hover:bg-accent transition-colors"
+            className="touch-target rounded-full hover:bg-accent transition-colors"
             style={{ color: member.electricColor }}
           >
             <a

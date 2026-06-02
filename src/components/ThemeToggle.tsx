@@ -16,7 +16,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       variant="ghost"
       size="icon"
       aria-label="Toggle theme"
-      className={className}
+      className={`touch-target ${className ?? ''}`}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
     >
       <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

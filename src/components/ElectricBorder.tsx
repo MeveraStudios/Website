@@ -41,6 +41,9 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
   const animationRef = useRef<number | null>(null);
   const timeRef = useRef(0);
   const lastFrameTimeRef = useRef(0);
+  const reduceMotionRef = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   const random = useCallback((x: number): number => {
     return (Math.sin(x * 12.9898) * 43758.5453) % 1;
@@ -177,6 +180,8 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
+
+    if (reduceMotionRef.current) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
