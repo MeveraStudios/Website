@@ -12,12 +12,10 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
   // 1. Intersection Observer for Scroll Tracking
   const [activeIds, setActiveIds] = useState<string[]>([]);
   const [highlighterStyle, setHighlighterStyle] = useState({ top: 0, height: 0, opacity: 0 });
-  const [tocOffset, setTocOffset] = useState(0);
   const lastActiveIdRef = useRef<string | null>(null);
   const intersectingIdsRef = useRef(new Set<string>());
   const itemsRef = useRef<{ [key: string]: HTMLAnchorElement | null }>({});
   const navRef = useRef<HTMLElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const observerOptions = {
@@ -159,20 +157,6 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     setHighlighterStyle(s => ({ ...s, opacity: 0 }));
   }, [activeIds, items]);
 
-  useEffect(() => {
-    const activeId = activeIds[activeIds.length - 1];
-    const activeEl = activeId ? itemsRef.current[activeId] : null;
-    const navEl = navRef.current;
-    const contentEl = contentRef.current;
-    if (!activeEl || !navEl || !contentEl) return;
-
-    const activeAnchor = Math.max(36, navEl.clientHeight * 0.28);
-    const activeTop = activeEl.offsetTop;
-    const maxOffset = Math.max(0, contentEl.scrollHeight - navEl.clientHeight);
-
-    setTocOffset(Math.min(Math.max(activeTop - activeAnchor, 0), maxOffset));
-  }, [activeIds]);
-
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const element = document.getElementById(id);
@@ -205,11 +189,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
           className="relative max-h-[calc(100vh-10rem)] overflow-hidden pr-2"
           aria-labelledby="toc-heading"
         >
-          <div
-            ref={contentRef}
-            className="relative transition-transform duration-300 ease-in-out"
-            style={{ transform: `translateY(-${tocOffset}px)` }}
-          >
+          <div className="relative">
             <div
               className="absolute left-0 top-0 bottom-0 w-6 bg-border/40 pointer-events-none transition-all duration-300"
               style={{

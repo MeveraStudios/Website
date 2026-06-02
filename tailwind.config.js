@@ -83,7 +83,7 @@ export default {
         "accordion-down": "accordion-down 0.3s ease-out",
         "accordion-up": "accordion-up 0.3s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
-        "fadein": "fadein 0.3s ease-out both",
+        "fadein": "fadein 0.15s ease-out both",
       },
     },
   },

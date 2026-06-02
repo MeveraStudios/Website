@@ -57,10 +57,22 @@ export function Docs() {
       <div className="min-h-screen flex flex-col bg-docs">
         <Header />
         <div className="flex-1 container mx-auto px-4 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading documentation...</p>
-          </div>
+            <div className="w-full max-w-4xl mx-auto py-12">
+              <div className="flex gap-8 mb-10">
+                <div className="hidden lg:block w-64 shrink-0 space-y-3">
+                    {[75, 55, 65, 45, 60].map((w, i) => (
+                    <div key={i} className="h-4 bg-muted rounded animate-pulse" style={{ width: `${w}%` }} />
+                  ))}
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div className="h-6 bg-muted rounded w-48 animate-pulse mb-2" />
+                  <div className="h-10 bg-muted rounded w-3/4 animate-pulse" />
+                  <div className="h-4 bg-muted rounded w-full animate-pulse" />
+                  <div className="h-4 bg-muted rounded w-5/6 animate-pulse" />
+                  <div className="h-4 bg-muted rounded w-4/6 animate-pulse" />
+                </div>
+              </div>
+            </div>
         </div>
         <Footer />
       </div>
@@ -178,9 +190,15 @@ export function Docs() {
             </div>
 
             {isLoading ? (
-              <div className="py-20 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading page...</p>
+              <div className="py-12 space-y-4">
+                <div className="h-4 bg-muted rounded w-40 animate-pulse mb-6" />
+                <div className="h-10 bg-muted rounded w-3/5 animate-pulse mb-4" />
+                <div className="h-4 bg-muted rounded w-full animate-pulse" />
+                <div className="h-4 bg-muted rounded w-11/12 animate-pulse" />
+                <div className="h-4 bg-muted rounded w-4/5 animate-pulse" />
+                <div className="h-4 bg-muted rounded w-full animate-pulse" />
+                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
+                <div className="h-4 bg-muted rounded w-5/6 animate-pulse" />
               </div>
             ) : !doc ? (
               <div className="py-20 text-center">
@@ -188,7 +206,7 @@ export function Docs() {
                 <p className="text-muted-foreground">This page doesn&apos;t exist.</p>
               </div>
             ) : (
-              <div key={slug} className="animate-fadein">
+              <div key={slug} className="animate-fadein mx-auto max-w-4xl">
                 {/* Document Header */}
                 <div className="mb-8">
                   {breadcrumbs && <Breadcrumbs items={breadcrumbs} className="mb-4" />}

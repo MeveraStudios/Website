@@ -11,7 +11,7 @@
  *  - Defaults to `loading="lazy"` + `decoding="async"`.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface ImageMeta {
   width?: number;
@@ -73,16 +73,13 @@ export function SmartImg({
   ...rest
 }: Props) {
   const resolved = src ? normalizeAssetPath(src) : src;
+  const [erroredImages, setErroredImages] = useState<Set<string>>(new Set());
   const [meta, setMeta] = useState<ImageMeta | undefined>(() =>
     resolved && manifestCache ? manifestCache[resolved] : undefined
   );
 
   useEffect(() => {
     if (!resolved) return;
-    if (manifestCache) {
-      setMeta(manifestCache[resolved]);
-      return;
-    }
     let alive = true;
     loadManifest().then(m => {
       if (alive) setMeta(m[resolved]);
@@ -92,18 +89,42 @@ export function SmartImg({
     };
   }, [resolved]);
 
+  const handleError = useCallback(() => {
+    setErroredImages(prev => {
+      if (!resolved) return prev;
+      const next = new Set(prev);
+      next.add(resolved);
+      return next;
+    });
+  }, [resolved]);
+
   // Explicit width/height props always win; fall back to manifest.
   const finalWidth = width ?? meta?.width;
   const finalHeight = height ?? meta?.height;
 
+  if (!resolved || (resolved && erroredImages.has(resolved))) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground ${className ?? ''}`}
+        role="img"
+        aria-label={alt ?? 'Image failed to load'}
+      >
+        <span aria-hidden="true">&#x1F5BC;</span>
+        {alt || 'Image'}
+      </span>
+    );
+  }
+
   return (
     <img
+      key={resolved}
       src={resolved}
       alt={alt ?? ''}
       width={finalWidth}
       height={finalHeight}
       loading={loading}
       decoding={decoding}
+      onError={handleError}
       className={className}
       {...rest}
     />

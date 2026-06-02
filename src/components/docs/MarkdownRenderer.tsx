@@ -101,7 +101,7 @@ function buildComponents(projectId?: string, version?: string) {
     if (inline || !className) {
       return (
         <code
-          className="bg-white/10 text-white px-1.5 py-0.5 rounded font-mono text-[0.9em]"
+          className="code-inline"
           {...props}
         >
           {children}
@@ -209,7 +209,7 @@ export const MarkdownRenderer = memo(({ content, className, projectId, version }
   const components = useMemo(() => buildComponents(projectId, version), [projectId, version]);
 
   return (
-    <div className={cn('prose prose-invert max-w-none', className)}>
+    <div className={cn('prose prose-invert', className)}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}

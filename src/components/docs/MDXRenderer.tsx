@@ -120,7 +120,7 @@ function buildMdxComponents(projectId?: string, version?: string) {
     if (!className) {
       return (
         <code
-          className="bg-white/10 text-white px-1.5 py-0.5 rounded font-mono text-[0.9em]"
+          className="code-inline"
           {...props}
         >
           {children}
@@ -264,7 +264,7 @@ export const MDXRenderer = memo(({ content, className, projectId, version }: MDX
 
   if (error) {
     return (
-      <div className={cn('prose prose-invert max-w-none', className)}>
+      <div className={cn('prose prose-invert', className)}>
         <div className="p-4 border border-red-500/50 bg-red-500/10 rounded-lg">
           <h3 className="text-red-400 mb-2">MDX Compilation Error</h3>
           <pre className="text-sm text-red-300 overflow-auto">
@@ -277,16 +277,19 @@ export const MDXRenderer = memo(({ content, className, projectId, version }: MDX
 
   if (!MDXContent) {
     return (
-      <div className={cn('prose prose-invert max-w-none', className)}>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className={cn('prose prose-invert', className)}>
+        <div className="space-y-3 py-8">
+          <div className="h-4 bg-muted rounded w-full animate-pulse" />
+          <div className="h-4 bg-muted rounded w-11/12 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-4/5 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('prose prose-invert max-w-none', className)}>
+    <div className={cn('prose prose-invert', className)}>
       <MDXContent components={mdxComponents} />
     </div>
   );

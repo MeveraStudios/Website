@@ -86,9 +86,31 @@ interface CategorySectionProps {
   versionId: string;
 }
 
+const CATEGORY_COLORS = [
+  'bg-sky-500',
+  'bg-emerald-500',
+  'bg-violet-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-lime-500',
+  'bg-fuchsia-500',
+  'bg-orange-500',
+  'bg-teal-500',
+];
+
+function categoryColorIndex(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+  }
+  return Math.abs(hash) % CATEGORY_COLORS.length;
+}
+
 function CategorySection({ category, currentSlug, projectId, versionId }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(true);
   const regionId = `cat-${projectId}-${versionId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
+  const dotColor = CATEGORY_COLORS[categoryColorIndex(category.name)];
 
   return (
     <div className="mb-4">
@@ -98,6 +120,7 @@ function CategorySection({ category, currentSlug, projectId, versionId }: Catego
         aria-controls={regionId}
         className="flex items-center gap-1 w-full px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
       >
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} aria-hidden="true" />
         {expanded ? (
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
         ) : (
@@ -228,7 +251,8 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
             <nav aria-label="Documentation sections">
               {version.categories.map((category) => (
                 <div key={category.name} className="mb-4">
-                  <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
+                  <p className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-muted-foreground">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${CATEGORY_COLORS[categoryColorIndex(category.name)]}`} aria-hidden="true" />
                     {category.name}
                   </p>
                   <ul className="ml-4 space-y-1">

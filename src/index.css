@@ -68,14 +68,14 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 190 95% 36%;
+    --primary: 190 95% 28%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 221 83% 53%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 214 32% 94%;
-    --muted-foreground: 215 16% 40%;
+    --muted-foreground: 215 16% 35%;
 
     --accent: 210 40% 94%;
     --accent-foreground: 222 47% 11%;
@@ -218,16 +218,25 @@
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    to {
-      opacity: 1;
-      transform: translateY(0);
+    @media (prefers-reduced-motion: reduce) {
+      .fade-in {
+        animation: none;
+      }
+      .animate-fadein {
+        animation: none;
+      }
     }
-  }
 
   .animate-lightning {
     stroke-dasharray: 400;
@@ -313,6 +322,20 @@
   /* Text balance for better typography */
   .text-balance {
     text-wrap: balance;
+  }
+
+  .code-inline {
+    background: rgba(255, 255, 255, 0.1);
+    color: hsl(var(--foreground));
+    padding: 0.15em 0.4em;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+    font-size: 0.9em;
+  }
+
+  .light .code-inline {
+    background: rgba(0, 0, 0, 0.08);
+    color: hsl(var(--foreground));
   }
 
   /* Hide scrollbar but keep functionality */
