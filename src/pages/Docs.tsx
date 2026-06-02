@@ -8,8 +8,8 @@
  * - Previous/next navigation
  */
 
-import { useParams, Navigate } from 'react-router-dom';
-import { Edit, Calendar, AlertCircle } from 'lucide-react';
+import { Link, useParams, Navigate } from 'react-router-dom';
+import { Edit, Calendar, AlertCircle, ChevronRight } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
@@ -92,7 +92,21 @@ export function Docs() {
         return <Navigate to={`/docs/${firstProject.id}/${latest.id}/${firstDoc.slug}`} replace />;
       }
     }
-    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found</div><Footer /></div>;
+    return (
+      <div className="min-h-screen flex flex-col bg-docs">
+        <Header />
+        <div className="flex-1 container mx-auto px-4 py-20 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <p className="text-5xl font-bold text-muted-foreground/20 mb-4">404</p>
+            <h1 className="text-2xl font-bold mb-2">Page not found</h1>
+            <p className="text-muted-foreground">
+              The page you&apos;re looking for doesn&apos;t exist or has been moved.
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   // Resolve the active version: use the URL segment when valid, otherwise
@@ -103,7 +117,20 @@ export function Docs() {
     (version && project.versions.find(v => v.id === version)) || latestVersion;
 
   if (!activeVersion) {
-    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
+    return (
+      <div className="min-h-screen flex flex-col bg-docs">
+        <Header />
+        <div className="flex-1 container mx-auto px-4 py-20 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <h1 className="text-2xl font-bold mb-2">Nothing here yet</h1>
+            <p className="text-muted-foreground">
+              The documentation you&apos;re looking for hasn&apos;t been written yet.
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   if (!version || version !== activeVersion.id) {
@@ -112,7 +139,20 @@ export function Docs() {
     if (targetSlug) {
       return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${targetSlug}`} replace />;
     }
-    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
+    return (
+      <div className="min-h-screen flex flex-col bg-docs">
+        <Header />
+        <div className="flex-1 container mx-auto px-4 py-20 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <h1 className="text-2xl font-bold mb-2">Nothing here yet</h1>
+            <p className="text-muted-foreground">
+              The documentation you&apos;re looking for hasn&apos;t been written yet.
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   // Redirect to first doc in version if no slug provided.
@@ -121,7 +161,20 @@ export function Docs() {
     if (firstDoc) {
       return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${firstDoc.slug}`} replace />;
     }
-    return <div className="min-h-screen flex flex-col bg-docs"><Header /><div className="flex-1 flex items-center justify-center">No documentation found for this project</div><Footer /></div>;
+    return (
+      <div className="min-h-screen flex flex-col bg-docs">
+        <Header />
+        <div className="flex-1 container mx-auto px-4 py-20 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <h1 className="text-2xl font-bold mb-2">Nothing here yet</h1>
+            <p className="text-muted-foreground">
+              The documentation you&apos;re looking for hasn&apos;t been written yet.
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   // Get prev/next navigation within the active version.
@@ -201,9 +254,38 @@ export function Docs() {
                 <div className="h-4 bg-muted rounded w-5/6 animate-pulse" />
               </div>
             ) : !doc ? (
-              <div className="py-20 text-center">
-                <p className="text-4xl font-bold mb-4">404</p>
-                <p className="text-muted-foreground">This page doesn&apos;t exist.</p>
+              <div className="py-16">
+                <div className="text-center mb-10">
+                  <p className="text-6xl font-bold text-muted-foreground/20 mb-4">404</p>
+                  <h2 className="text-2xl font-bold mb-2">Page not found</h2>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    This documentation page doesn&apos;t exist. Try searching with <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-xs">&larr;&#x2325;K</kbd> or browse the sections below.
+                  </p>
+                </div>
+                <div className="max-w-lg mx-auto">
+                  <p className="text-sm font-medium text-muted-foreground mb-4 text-center">
+                    Browse {project.name} documentation
+                  </p>
+                  <div className="space-y-2">
+                    {activeVersion.categories.map(cat => {
+                      const firstDoc = cat.docs[0];
+                      if (!firstDoc) return null;
+                      return (
+                        <Link
+                          key={cat.name}
+                          to={`/docs/${project.id}/${activeVersion.id}/${firstDoc.slug}`}
+                          className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm group-hover:text-primary transition-colors">{cat.name}</p>
+                            <p className="text-xs text-muted-foreground">{cat.docs.length} {cat.docs.length === 1 ? 'doc' : 'docs'}</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ) : (
               <div key={slug} className="animate-fadein mx-auto max-w-4xl">
