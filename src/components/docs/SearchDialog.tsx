@@ -5,7 +5,7 @@
  * with keyboard shortcut (Cmd/Ctrl + K)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, FileText, Command } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,59 +21,134 @@ import { cn } from '@/lib/utils';
 import { searchDocs, fetchSearchIndex } from '@/lib/docs';
 import type { SearchResult } from '@/types/docs';
 
-export function SearchDialog({ projectId }: { projectId?: string }) {
-  const [open, setOpen] = useState(false);
+// Module-level ref synchronizes state across all mounted instances.
+// When two instances are mounted (responsive triggers), clicking one opens only
+// that instance, leaving the other closed. A global Ctrl+K toggle would then
+// open the closed one while closing the open one. This shared ref prevents
+// that by letting every instance know "some dialog is already open."
+const sharedOpenRef = { current: false };
+
+export function SearchDialog({
+  projectId,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  projectId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = useCallback(
+    (value: boolean) => {
+      if (isControlled) {
+        onOpenChange?.(value);
+      } else {
+        setInternalOpen(value);
+      }
+    },
+    [isControlled, onOpenChange],
+  );
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
 
-  // Keyboard shortcut: Cmd/Ctrl + K
+  // Sync both refs so the global listener can check cross-instance state
+  sharedOpenRef.current = open;
+
+  // Global shortcut: Cmd/Ctrl + K toggles using the shared ref.
+  // When ANY instance's dialog is open we close all; when none is open we open.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen(true);
-      }
-      if (e.key === 'Escape') {
-        setOpen(false);
+        if (sharedOpenRef.current) {
+          setOpen(false);
+        } else {
+          setOpen(true);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setOpen]);
 
-  // Preload search index when dialog opens
+  // Preload search index + reset when dialog opens/closes
   useEffect(() => {
     if (open) {
-      fetchSearchIndex().catch(console.error);
+      fetchSearchIndex().catch(() => {});
+      setQuery('');
+      setResults([]);
+      setSelectedIndex(0);
+      setIsSearching(false);
+      setSearchError(null);
     }
   }, [open]);
 
-  // Search when query changes
+  // Lock scroll directly on <html> rather than relying on react-remove-scroll-bar's
+  // body overflow: hidden which causes a ~1px layout shift. Since html already has
+  // scrollbar-gutter: stable, the space stays reserved even with overflow: hidden.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const saved = html.style.overflow;
+    html.style.overflow = 'hidden';
+    document.body.style.setProperty('padding-right', '0px', 'important');
+    return () => {
+      html.style.overflow = saved;
+      document.body.style.removeProperty('padding-right');
+    };
+  }, [open]);
+
+  // Search with 150ms debounce + AbortController for request dedup
   useEffect(() => {
-    let isActive = true;
-    if (query.trim()) {
-      searchDocs(query, projectId).then((searchResults) => {
-        if (isActive) {
+    if (!query.trim()) {
+      setResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const searchResults = await searchDocs(query, projectId);
+        if (!controller.signal.aborted) {
           setResults(searchResults);
           setSelectedIndex(0);
         }
-      }).catch(console.error);
-    } else {
-      setResults([]);
-    }
+      } catch {
+        if (!controller.signal.aborted) {
+          setSearchError('Search failed. Check your connection and try again.');
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
+      }
+    }, 150);
+
     return () => {
-      isActive = false;
+      clearTimeout(timer);
     };
   }, [query, projectId]);
 
   const handleSelect = useCallback((result: SearchResult) => {
     navigate(result.href);
     setOpen(false);
-    setQuery('');
-  }, [navigate]);
+  }, [navigate, setOpen]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -93,35 +168,47 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
 
   return (
     <>
-      {/* Search Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="h-4 w-4" />
-        <span className="text-sm">Search</span>
-        <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
-          <Command className="h-3 w-3" />
-          <span>K</span>
-        </kbd>
-      </Button>
+      {!isControlled && (
+        <>
+          {/* Search Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setOpen(true)}
+          >
+            <Search className="h-4 w-4" />
+            <span className="text-sm">Search</span>
+            <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+              <Command className="h-3 w-3" />
+              <span>K</span>
+            </kbd>
+          </Button>
 
-      {/* Mobile Search Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="md:hidden"
-        onClick={() => setOpen(true)}
-        aria-label="Search"
-      >
-        <Search className="h-5 w-5" />
-      </Button>
+          {/* Mobile Search Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setOpen(true)}
+            aria-label="Search"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+        </>
+      )}
 
       {/* Search Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl p-0 gap-0">
+        <DialogContent
+          className="max-w-2xl p-0 gap-0 shadow-none [box-shadow:0_0_24px_hsl(var(--primary)/0.08)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90"
+          style={{
+            '--tw-enter-translate-x': '-50%',
+            '--tw-enter-translate-y': '-50%',
+            '--tw-exit-translate-x': '-50%',
+            '--tw-exit-translate-y': '-50%',
+          } as React.CSSProperties}
+        >
           <DialogHeader className="p-4 pb-0">
             <DialogTitle className="sr-only">Search Documentation</DialogTitle>
             <div className="relative">
@@ -131,7 +218,10 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
               />
               <Input
                 placeholder="Search documentation..."
-                className="pl-10 h-12 text-lg"
+                className={cn(
+                  'pl-10 h-12 text-lg',
+                  isSearching && 'pr-10'
+                )}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -139,6 +229,7 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
                 role="combobox"
                 aria-label="Search documentation"
                 aria-expanded={results.length > 0}
+                aria-busy={isSearching}
                 aria-controls="search-results-listbox"
                 aria-activedescendant={
                   results[selectedIndex]
@@ -146,11 +237,28 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
                     : undefined
                 }
               />
+              {isSearching && (
+                <div
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <span className="sr-only">Searching...</span>
+                </div>
+              )}
             </div>
           </DialogHeader>
 
           <div className="p-4 pt-2">
-            {query.trim() && results.length === 0 ? (
+            {searchError ? (
+              <div
+                className="text-center py-8 text-muted-foreground"
+                role="alert"
+              >
+                <p>{searchError}</p>
+              </div>
+            ) : query.trim() && results.length === 0 && !isSearching ? (
               <div
                 className="text-center py-8 text-muted-foreground"
                 role="status"
@@ -159,7 +267,7 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
                 <p>No results found for &quot;{query}&quot;</p>
                 <p className="text-sm mt-1">Try a different search term</p>
               </div>
-            ) : (
+            ) : results.length > 0 ? (
               <ScrollArea className="max-h-[60vh]">
                 <ul
                   id="search-results-listbox"
@@ -181,7 +289,9 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
                           onClick={() => handleSelect(result)}
                           className={cn(
                             'w-full text-left p-3 rounded-lg transition-colors',
-                            isSelected ? 'bg-primary/10' : 'hover:bg-muted'
+                            isSelected
+                              ? 'bg-primary/10 ring-1 ring-primary/20'
+                              : 'hover:bg-muted'
                           )}
                         >
                           <div className="flex items-start gap-3">
@@ -207,29 +317,31 @@ export function SearchDialog({ projectId }: { projectId?: string }) {
                   })}
                 </ul>
               </ScrollArea>
-            )}
+            ) : null}
 
             {/* Keyboard shortcuts hint */}
-            <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
-                  ↑↓
-                </kbd>
-                to navigate
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
-                  ↵
-                </kbd>
-                to select
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
-                  esc
-                </kbd>
-                to close
-              </span>
-            </div>
+            {results.length > 0 && (
+              <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
+                    ↑↓
+                  </kbd>
+                  to navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
+                    ↵
+                  </kbd>
+                  to select
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
+                    esc
+                  </kbd>
+                  to close
+                </span>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

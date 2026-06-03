@@ -9,7 +9,8 @@
  */
 
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { Edit, Calendar, AlertCircle, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Edit, Calendar, AlertCircle, ChevronRight, Search, Command } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
@@ -33,6 +34,8 @@ export function Docs() {
     version: string;
     slug: string;
   }>();
+
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Use the hook to get documentation data
   const { projects, isLoaded } = useDocs();
@@ -234,13 +237,38 @@ export function Docs() {
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center justify-between mb-6">
               <MobileSidebar project={project} version={activeVersion} />
-              <SearchDialog projectId={project.id} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
             </div>
 
-            {/* Desktop Search */}
+            {/* Desktop Search Trigger */}
             <div className="hidden lg:flex justify-end mb-6">
-              <SearchDialog projectId={project.id} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="h-4 w-4" />
+                <span className="text-sm">Search</span>
+                <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+                  <Command className="h-3 w-3" />
+                  <span>K</span>
+                </kbd>
+              </Button>
             </div>
+
+            <SearchDialog
+              projectId={project.id}
+              open={searchOpen}
+              onOpenChange={setSearchOpen}
+            />
 
             {isLoading ? (
               <div className="py-12 space-y-4">
