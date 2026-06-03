@@ -1,6 +1,7 @@
 
 import { Link } from 'react-router-dom';
 import { ArrowRight, Terminal } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
 import { fetchDocContent } from '@/lib/docs';
@@ -16,6 +17,7 @@ const preloadDocsRoute = () => {
 };
 
 export function Hero() {
+  const { resolvedTheme } = useTheme();
   return (
     <section className="relative pt-28 pb-24 lg:pt-36 lg:pb-32 overflow-hidden min-h-[85vh] flex items-center">
 
@@ -28,7 +30,7 @@ export function Hero() {
             <FadeInUp delay={0.2}>
               <h1 className="text-left mb-4">
                 <img
-                  src="/brand-mark.png"
+                  src={resolvedTheme === 'dark' ? '/brand-mark-light.png' : '/brand-mark-dark.png'}
                   alt="Mevera Studios"
                   width="2749"
                   height="858"
