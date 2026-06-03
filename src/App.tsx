@@ -20,7 +20,6 @@ import {
   Navigate,
   Link
 } from 'react-router-dom';
-import { SITE_CONFIG } from '@/config/site';
 import { preloadDocs } from '@/lib/docs';
 import { Helmet } from 'react-helmet-async';
 import { Seo } from '@/components/Seo';
@@ -30,6 +29,7 @@ import { lookupRedirect } from '@/lib/redirects';
 // Lazy loading the main route pages to split bundles
 const Home = lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
 const Docs = lazy(() => import('@/pages/Docs').then(m => ({ default: m.Docs })));
+const DocsHome = lazy(() => import('@/pages/DocsHome').then(m => ({ default: m.DocsHome })));
 import './App.css';
 
 // Preload documentation data
@@ -122,7 +122,7 @@ function NotFound() {
           Go home
         </Link>
         <Link
-          to={SITE_CONFIG.getStartedUrl}
+          to="/docs"
           className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
         >
           Browse docs
@@ -155,7 +155,7 @@ function AppRoutes() {
             <Route path="/docs/:projectId/:version/:slug" element={<Docs />} />
             <Route path="/docs/:projectId/:version" element={<Docs />} />
             <Route path="/docs/:projectId" element={<Docs />} />
-            <Route path="/docs" element={<Navigate to={SITE_CONFIG.getStartedUrl} replace />} />
+            <Route path="/docs" element={<DocsHome />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

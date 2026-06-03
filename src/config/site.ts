@@ -50,7 +50,7 @@ export const SITE_CONFIG = {
   locale: 'en_US',
 
   // URL for the "Get Started" button on homepage
-  getStartedUrl: '/docs/Imperat/v3/getting-started',
+  getStartedUrl: '/docs',
 
   // URL for the GitHub button on homepage
   githubUrl: 'https://github.com/MeveraStudios/Website',

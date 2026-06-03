@@ -4,16 +4,12 @@ import { ArrowRight, Terminal } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
-import { fetchDocContent } from '@/lib/docs';
 import { FadeInUp } from '@/components/animators/FadeInUp';
 import { HeroCodeBlock } from '@/components/HeroCodeBlock';
 
 const preloadDocsRoute = () => {
   import('@/pages/Docs').then(m => m.Docs);
-  const parts = SITE_CONFIG.getStartedUrl.split('/').filter(Boolean);
-  if (parts.length >= 4 && parts[1] && parts[2] && parts[3]) {
-    fetchDocContent(parts[1], parts[2], parts[3]);
-  }
+  import('@/pages/DocsHome').then(m => m.DocsHome);
 };
 
 export function Hero() {
