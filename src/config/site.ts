@@ -29,7 +29,7 @@ export const SITE_CONFIG = {
   brandName: 'Mevera Studios',
 
   // Full site title used in browser tab and SEO
-  siteTitle: 'Mevera Studios | Documentation',
+  siteTitle: 'Mevera Studios | Home',
 
   // Tagline shown in the hero section
   tagline: 'projects documentation',
@@ -38,7 +38,7 @@ export const SITE_CONFIG = {
   description: 'Documentation for Mevera Studio development libraries and tools',
 
   // Canonical public URL of the site (no trailing slash). Used for SEO, OG, sitemap.
-  siteUrl: 'https://docs.mevera.studio',
+  siteUrl: 'https://mevera.studio',
 
   // Default social share image (relative to siteUrl or absolute)
   ogImage: '/icon-1024.png',

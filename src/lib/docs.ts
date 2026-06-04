@@ -154,13 +154,25 @@ export function useDocContent(projectId: string, version: string, slug: string) 
   const cacheKey = `${projectId}/${version}/${slug}`;
   const cached = docContentCache.get(cacheKey) ?? null;
 
-  const [doc, setDoc] = useState<DocFile | null>(cached);
-  const [isLoading, setIsLoading] = useState(cached === null);
+  const [doc, setDoc] = useState<DocFile | null>(() => {
+    if (cached) return cached;
+    // Prerendered data from static HTML (populated by scripts/prerender-pages.ts)
+    if (typeof window !== 'undefined') {
+      const data = (window as any).__INITIAL_DATA__ as DocFile | undefined;
+      if (data) {
+        delete (window as any).__INITIAL_DATA__;
+        docContentCache.set(cacheKey, data);
+        return data;
+      }
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(doc === null);
 
   useEffect(() => {
     if (!projectId || !version || !slug) return;
 
-    // Already in cache — nothing to do
+    // Already in cache (including from prerender init above)
     const cacheKey = `${projectId}/${version}/${slug}`;
     if (docContentCache.has(cacheKey)) {
       setDoc(docContentCache.get(cacheKey)!);

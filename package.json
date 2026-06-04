@@ -8,7 +8,7 @@
     "images": "tsx scripts/build-image-manifest.ts",
     "javadoc": "tsx scripts/javadoc-to-mdx.ts",
     "dev": "npm run precompile && npm run images && vite",
-    "build": "npm run precompile && npm run images && tsc -b && vite build",
+    "build": "npm run precompile && npm run images && tsc -b && vite build && tsx scripts/prerender-pages.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

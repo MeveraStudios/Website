@@ -21,7 +21,7 @@ import { Seo } from '@/components/Seo';
 export function Home() {
   return (
     <div className="min-h-screen flex flex-col relative bg-background overflow-x-hidden">
-      <Seo path="/" type="website" />
+      <Seo path="/" title="Home" type="website" />
       {/* Background Effect */}
       <div className="absolute inset-0 h-full pointer-events-none z-0">
         <LightRays

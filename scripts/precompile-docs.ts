@@ -32,7 +32,7 @@ const PUBLIC_DIR = join(ROOT_DIR, 'public');
 const CONFIG_PATH = join(ROOT_DIR, 'src', 'data', 'projects.json');
 
 // Canonical public URL (override via SITE_URL env var for staging builds).
-const SITE_URL = (process.env.SITE_URL || 'https://docs.mevera.studio').replace(/\/$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://mevera.studio').replace(/\/$/, '');
 const VERBOSE_DOCS = process.env.PRECOMPILE_VERBOSE === '1';
 
 type YamlValue = string | number | boolean;
