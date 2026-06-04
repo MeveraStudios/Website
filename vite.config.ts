@@ -58,8 +58,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,xml}'],
         globIgnores: ['**/site-version.json'],
+        navigateFallbackDenylist: [/\.xml$/],
         maximumFileSizeToCacheInBytes: 4000000, // 4MB to allow React/UI vendor chunks
         runtimeCaching: [
           {
