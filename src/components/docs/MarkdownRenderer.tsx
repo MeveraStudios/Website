@@ -147,8 +147,8 @@ function buildComponents(projectId?: string, version?: string) {
     return <div className={className} {...props}>{children}</div>;
   },
 
-  Tabs: ({ defaultValue, children, className }: any) => (
-    <TabsComponent defaultValue={defaultValue} className={className}>{children}</TabsComponent>
+  Tabs: ({ defaultValue, children, className, group }: any) => (
+    <TabsComponent defaultValue={defaultValue} className={className} group={group}>{children}</TabsComponent>
   ),
   TabItem: ({ value, label, icon, children }: any) => (
     <TabItemComponent value={value} label={label} icon={icon}>{children}</TabItemComponent>
@@ -163,8 +163,8 @@ function buildComponents(projectId?: string, version?: string) {
   snapshotrepoblock: () => <SnapshotRepoBlockComponent />,
   ShadingBlock: () => <ShadingBlockComponent />,
   shadingblock: () => <ShadingBlockComponent />,
-  tabs: ({ defaultvalue, children, className }: any) => (
-    <TabsComponent defaultValue={defaultvalue} className={className}>{children}</TabsComponent>
+  tabs: ({ defaultvalue, children, className, group }: any) => (
+    <TabsComponent defaultValue={defaultvalue} className={className} group={group}>{children}</TabsComponent>
   ),
   tabitem: ({ value, label, icon, children }: any) => (
     <TabItemComponent value={value} label={label} icon={icon}>{children}</TabItemComponent>
