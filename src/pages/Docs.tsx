@@ -228,7 +228,7 @@ export function Docs() {
         <div className="flex gap-8 py-8">
           {/* Sidebar Navigation */}
           <Sidebar project={project} version={activeVersion} className="-ml-24" />
-          <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
+          <main id="main-content" className="flex-1 min-w-0 outline-none focus-visible:outline-none" tabIndex={-1}>
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center mb-6">
               <MobileSidebar project={project} version={activeVersion} />

@@ -43,7 +43,7 @@ export function Home() {
 
       <Header />
 
-      <main id="main-content" tabIndex={-1} className="flex-1 relative z-10">
+      <main id="main-content" tabIndex={-1} className="flex-1 relative z-10 outline-none focus-visible:outline-none">
         <Hero />
         <Stats />
         <Features />
