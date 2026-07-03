@@ -15,7 +15,7 @@ const preloadDocsRoute = () => {
 export function Hero() {
   const { resolvedTheme } = useTheme();
   return (
-    <section className="relative pt-28 pb-24 lg:pt-36 lg:pb-32 overflow-hidden min-h-[85vh] flex items-center">
+    <section className="relative pt-28 pb-24 lg:pt-36 lg:pb-32 overflow-hidden min-h-[calc(100vh-4rem)] flex items-center">
 
       <div className="container px-4 mx-auto relative z-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
