@@ -228,11 +228,19 @@ export function Docs() {
 
   const versionedBase = `/docs/${project.id}/${activeVersion.id}`;
   const fullDocUrl = doc ? docUrl(project.id, activeVersion.id, doc) : versionedBase;
+  const projectFirstDoc = activeVersion.categories[0]?.docs[0];
+  const projectUrl = projectFirstDoc ? docUrl(project.id, activeVersion.id, projectFirstDoc) : versionedBase;
+  const categoryFirstDoc = doc?.category
+    ? activeVersion.categories.find(c => c.name === doc.category)?.docs[0]
+    : undefined;
+  const categoryUrl = categoryFirstDoc
+    ? docUrl(project.id, activeVersion.id, categoryFirstDoc)
+    : versionedBase;
   const breadcrumbs: Breadcrumb[] | undefined = doc
     ? [
         { name: 'Home', url: '/' },
-        { name: project.name, url: versionedBase },
-        ...(doc.category ? [{ name: doc.category, url: versionedBase }] : []),
+        { name: project.name, url: projectUrl },
+        ...(doc.category ? [{ name: doc.category, url: categoryUrl }] : []),
         { name: doc.frontmatter.title, url: fullDocUrl },
       ]
     : undefined;
