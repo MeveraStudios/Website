@@ -21,6 +21,38 @@ import { cn } from '@/lib/utils';
 import { searchDocs, fetchSearchIndex } from '@/lib/docs';
 import type { SearchResult } from '@/types/docs';
 
+const MAX_RECENT = 3;
+
+interface RecentSearch {
+  title: string;
+  href: string;
+}
+
+function storageKey(projectId?: string) {
+  return projectId
+    ? `mevera-recent-searches-${projectId}`
+    : 'mevera-recent-searches';
+}
+
+function getRecentSearches(projectId?: string): RecentSearch[] {
+  try {
+    const stored = localStorage.getItem(storageKey(projectId));
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addRecentSearch(projectId: string | undefined, title: string, href: string) {
+  const recent = getRecentSearches(projectId).filter(s => s.href !== href);
+  recent.unshift({ title, href });
+  localStorage.setItem(storageKey(projectId), JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+function clearRecentSearches(projectId?: string) {
+  localStorage.removeItem(storageKey(projectId));
+}
+
 // Module-level ref synchronizes state across all mounted instances.
 // When two instances are mounted (responsive triggers), clicking one opens only
 // that instance, leaving the other closed. A global Ctrl+K toggle would then
@@ -56,6 +88,7 @@ export function SearchDialog({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
 
@@ -89,6 +122,7 @@ export function SearchDialog({
       setSelectedIndex(0);
       setIsSearching(false);
       setSearchError(null);
+      setRecentSearches(getRecentSearches(projectId));
     }
   }, [open]);
 
@@ -112,6 +146,7 @@ export function SearchDialog({
     if (!query.trim()) {
       setResults([]);
       setSearchError(null);
+      setSelectedIndex(0);
       return;
     }
 
@@ -146,25 +181,37 @@ export function SearchDialog({
   }, [query, projectId]);
 
   const handleSelect = useCallback((result: SearchResult) => {
+    addRecentSearch(projectId, result.title, result.href);
     navigate(result.href);
+    setOpen(false);
+  }, [navigate, setOpen, projectId]);
+
+  const handleRecentClick = useCallback((href: string) => {
+    navigate(href);
     setOpen(false);
   }, [navigate, setOpen]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const listLen = query.trim()
+      ? results.length
+      : recentSearches.length;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => 
-        prev < results.length - 1 ? prev + 1 : prev
-      );
+      setSelectedIndex((prev) => (prev < listLen - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === 'Enter' && results[selectedIndex]) {
-      e.preventDefault();
-      handleSelect(results[selectedIndex]);
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : listLen - 1));
+    } else if (e.key === 'Enter') {
+      if (query.trim() && results[selectedIndex]) {
+        e.preventDefault();
+        handleSelect(results[selectedIndex]);
+      } else if (!query.trim() && recentSearches[selectedIndex]) {
+        e.preventDefault();
+        handleRecentClick(recentSearches[selectedIndex].href);
+      }
     }
-  }, [results, selectedIndex, handleSelect]);
+  }, [results, selectedIndex, handleSelect, query, recentSearches, handleRecentClick]);
 
   return (
     <>
@@ -202,6 +249,7 @@ export function SearchDialog({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           noOverlay
+          showCloseButton={false}
           className="max-w-2xl p-0 gap-0 shadow-none [box-shadow:0_0_24px_hsl(var(--primary)/0.08)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90"
           style={{
             '--tw-enter-translate-x': '-50%',
@@ -268,6 +316,44 @@ export function SearchDialog({
                 <p>No results found for &quot;{query}&quot;</p>
                 <p className="text-sm mt-1">Try a different search term</p>
               </div>
+            ) : !query.trim() && recentSearches.length > 0 ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-muted-foreground">Recent searches</span>
+                  <button
+                    type="button"
+                    onClick={() => { clearRecentSearches(projectId); setRecentSearches([]); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <ul className="space-y-1 list-none m-0 p-0">
+                  {recentSearches.map((s, index) => {
+                    const isSelected = index === selectedIndex;
+                    return (
+                      <li key={s.href}>
+                        <button
+                          type="button"
+                          onClick={() => handleRecentClick(s.href)}
+                          className={cn(
+                            'w-full text-left p-2.5 rounded-lg transition-colors flex items-center gap-3',
+                            isSelected
+                              ? 'bg-primary/10 ring-1 ring-primary/20'
+                              : 'hover:bg-muted'
+                          )}
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-sm text-foreground">{s.title}</span>
+                            <p className="text-xs text-muted-foreground truncate">{s.href}</p>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : results.length > 0 ? (
               <ScrollArea className="max-h-[60vh]">
                 <ul
@@ -321,8 +407,7 @@ export function SearchDialog({
             ) : null}
 
             {/* Keyboard shortcuts hint */}
-            {results.length > 0 && (
-              <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t text-xs text-muted-foreground">
+            <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono">
                     ↑↓
@@ -342,7 +427,6 @@ export function SearchDialog({
                   to close
                 </span>
               </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>
