@@ -201,6 +201,7 @@ export function SearchDialog({
       {/* Search Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          noOverlay
           className="max-w-2xl p-0 gap-0 shadow-none [box-shadow:0_0_24px_hsl(var(--primary)/0.08)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90"
           style={{
             '--tw-enter-translate-x': '-50%',
