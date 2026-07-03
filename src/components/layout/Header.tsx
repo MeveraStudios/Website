@@ -78,12 +78,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full glass">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+      <div className="container mx-auto px-4 h-16 flex items-center" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         {/* Logo */}
-        <Logo />
+        <div className="flex-1 flex justify-start">
+          <Logo />
+        </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex flex-1 items-center justify-center gap-1">
           {/* Projects Dropdown */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
@@ -131,7 +133,7 @@ export function Header() {
         </nav>
 
         {/* External Links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex flex-1 items-center justify-end gap-1">
           <LanguageToggle />
           <ThemeToggle />
           {onDocs && <CodeThemeToggle />}
