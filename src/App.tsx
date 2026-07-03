@@ -153,6 +153,7 @@ function AppRoutes() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/docs/:projectId/:version/:category/:slug" element={<Docs />} />
+            <Route path="/docs/:projectId/:version/:category" element={<Docs />} />
             <Route path="/docs/:projectId/:version/:slug" element={<Docs />} />
             <Route path="/docs/:projectId/:version" element={<Docs />} />
             <Route path="/docs/:projectId" element={<Docs />} />

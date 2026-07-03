@@ -188,9 +188,12 @@ export function Docs() {
     );
   }
 
-  // Redirect to first doc in version if no slug provided.
+  // Redirect to first doc when no slug provided.
   if (!slug) {
-    const firstDoc = activeVersion.categories[0]?.docs[0];
+    const targetCategory = category
+      ? activeVersion.categories.find(c => c.docs[0]?.categoryPath === category)
+      : undefined;
+    const firstDoc = targetCategory?.docs[0] || activeVersion.categories[0]?.docs[0];
     if (firstDoc) {
       return <Navigate to={docUrl(project.id, activeVersion.id, firstDoc)} replace />;
     }
@@ -228,13 +231,9 @@ export function Docs() {
 
   const versionedBase = `/docs/${project.id}/${activeVersion.id}`;
   const fullDocUrl = doc ? docUrl(project.id, activeVersion.id, doc) : versionedBase;
-  const projectFirstDoc = activeVersion.categories[0]?.docs[0];
-  const projectUrl = projectFirstDoc ? docUrl(project.id, activeVersion.id, projectFirstDoc) : versionedBase;
-  const categoryFirstDoc = doc?.category
-    ? activeVersion.categories.find(c => c.name === doc.category)?.docs[0]
-    : undefined;
-  const categoryUrl = categoryFirstDoc
-    ? docUrl(project.id, activeVersion.id, categoryFirstDoc)
+  const projectUrl = versionedBase;
+  const categoryUrl = doc?.categoryPath
+    ? `/docs/${project.id}/${activeVersion.id}/${doc.categoryPath}`
     : versionedBase;
   const breadcrumbs: Breadcrumb[] | undefined = doc
     ? [
