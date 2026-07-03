@@ -18,7 +18,7 @@ import { parseCodeMeta } from './parseCodeMeta';
 import { Admonition } from './Admonition';
 import { SmartImg } from './SmartImg';
 import { MermaidDiagram } from '@lightenna/react-mermaid-diagram';
-import { Tabs, TabItem } from './Tabs';
+import { Tabs, TabItem, CodeTabItem } from './Tabs';
 import LatestVersionBlock from '@/components/LatestVersionBlock';
 import SnapshotRepoBlock from '@/components/SnapshotRepoBlock';
 import ShadingBlock from '@/components/ShadingBlock';
@@ -100,6 +100,7 @@ function buildMdxComponents(projectId?: string, version?: string) {
   // Custom MDX components
   Tabs,
   TabItem,
+  CodeTabItem,
   LatestVersionBlock,
   SnapshotRepoBlock,
   ShadingBlock,

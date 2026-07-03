@@ -52,9 +52,7 @@ The layout defines:
 - decorative content
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -79,12 +77,8 @@ PaperPageLayout<TagEntry> layout = PaperPageLayout.<TagEntry>builder(capacity)
         .fillBorder(Button.of(new ItemStack(Material.GRAY_STAINED_GLASS_PANE)))
         .build())
     .build();
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import studio.mevera.lotus.api.button.Button;
@@ -108,9 +102,7 @@ SpigotPageLayout<TagEntry> layout = SpigotPageLayout.<TagEntry>builder(capacity)
         .fillBorder(Button.of(new ItemStack(Material.STAINED_GLASS_PANE)))
         .build())
     .build();
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 ### 2. `ContentSource<T>`
@@ -220,9 +212,7 @@ ItemRenderer<TagEntry, ?> renderer = (entry, ctx) -> Button.clickable(
 ## A Complete Definition
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 record TagEntry(String id, ItemStack icon) {}
 
 Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
@@ -235,12 +225,8 @@ Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
     .build();
 
 pagination.open(lotus, player);
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 record TagEntry(String id, ItemStack icon) {}
 
 Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
@@ -253,9 +239,7 @@ Pagination<TagEntry> pagination = Pagination.<TagEntry>builder("tags")
     .build();
 
 pagination.open(lotus, player);
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 ## Full End-to-End Example
@@ -269,9 +253,7 @@ This example shows the whole flow in one place:
 - refresh already-open views after data changes
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
@@ -376,12 +358,8 @@ public final class TagsPlugin extends JavaPlugin {
         }
     }
 }
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -481,9 +459,7 @@ public final class TagsPlugin extends JavaPlugin {
         }
     }
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 ## The Session API
@@ -545,11 +521,10 @@ If you want to refresh open views by that ID, use the platform helper.
 
 <Tabs defaultValue="paper">
   <TabItem value="paper" label="Paper 1.21+">
-
-```java
+    <CodeTabItem language="java">{`
 PaperLotus.syncOpenPagination(lotus, "tags", player);
 PaperLotus.syncOpenPagination(lotus, "tags");
-```
+`}</CodeTabItem>
 
 The first overload checks **one player's** currently open view.
 
@@ -557,11 +532,10 @@ The second overload checks **all open views** managed by that `Lotus<Component>`
 
   </TabItem>
   <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+    <CodeTabItem language="java">{`
 SpigotLotus.syncOpenPagination(lotus, "tags", player);
 SpigotLotus.syncOpenPagination(lotus, "tags");
-```
+`}</CodeTabItem>
 
 The first overload checks **one player's** currently open view.
 

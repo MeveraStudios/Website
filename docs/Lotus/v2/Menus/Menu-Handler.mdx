@@ -17,9 +17,7 @@ If you want one type that combines menu layout and lifecycle hooks, implement:
 ## A Simple Guarded Menu
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -76,12 +74,8 @@ public final class ConfirmMenu implements PaperInteractiveMenu {
         view.viewer().sendMessage(Component.text("Menu closed"));
     }
 }
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -138,9 +132,7 @@ public final class ConfirmMenu implements InteractiveMenu<String> {
         view.viewer().sendMessage(ChatColor.YELLOW + "Menu closed");
     }
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 ## The Real Click Flow

@@ -46,8 +46,7 @@ Use `@Named` to give arguments custom names. Without it, the framework assigns d
 To use method parameter names directly, enable the `-parameters` compiler flag:
 
 <Tabs defaultValue="maven" group="java-build-tools">
-    <TabItem value="maven" label="Maven">
-        <CodeBlock className="language-xml">{`
+    <CodeTabItem value="maven" label="Maven" language="xml">{`
 
         <plugins>
             <plugin>
@@ -62,25 +61,20 @@ To use method parameter names directly, enable the `-parameters` compiler flag:
             </plugin>
         </plugins>
         
-        `}</CodeBlock>
-    </TabItem>
-    <TabItem value="gradle-groovy" label="Gradle (Groovy)">
-        <CodeBlock className="language-groovy">{`
+        `}</CodeTabItem>
+    <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{`
 
         tasks.withType(JavaCompile).configureEach {
             options.compilerArgs += '-parameters'
         }
         
-        `}</CodeBlock>
-    </TabItem>
-    <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
-        <CodeBlock className="language-kotlin">{`
+        `}</CodeTabItem>
+    <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{`
         tasks.withType<JavaCompile>().configureEach {
             options.compilerArgs += "-parameters"
         }
 
-        `}</CodeBlock>
-    </TabItem>
+        `}</CodeTabItem>
 </Tabs>
 
 ## Example

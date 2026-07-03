@@ -1,5 +1,4 @@
-import { Tabs, TabItem } from './docs/Tabs.tsx';
-import { CodeBlock } from './docs/CodeBlock.tsx';
+import { Tabs, CodeTabItem } from './docs/Tabs.tsx';
 
 export default function SnapshotRepoBlock() {
   const maven = `<repository>
@@ -17,15 +16,9 @@ export default function SnapshotRepoBlock() {
 
   return (
     <Tabs defaultValue="maven" group="java-build-tools">
-      <TabItem value="maven" label="Maven">
-        <CodeBlock className="language-xml">{maven}</CodeBlock>
-      </TabItem>
-      <TabItem value="gradle-groovy" label="Gradle (Groovy)">
-        <CodeBlock className="language-groovy">{groovy}</CodeBlock>
-      </TabItem>
-      <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
-        <CodeBlock className="language-kotlin">{kotlin}</CodeBlock>
-      </TabItem>
+      <CodeTabItem value="maven" label="Maven" language="xml">{maven}</CodeTabItem>
+      <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{groovy}</CodeTabItem>
+      <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{kotlin}</CodeTabItem>
     </Tabs>
   );
 }

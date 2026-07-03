@@ -34,9 +34,7 @@ Read them back with `lotus.options()`.
 Both platform modules ship an `ItemBuilder` tuned to the platform's text API.
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import studio.mevera.lotus.paper.ItemBuilder;
@@ -50,12 +48,8 @@ ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
     .amount(1)
     .unbreakable(true)
     .build();
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import studio.mevera.lotus.spigot.ItemBuilder;
 
 ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
@@ -64,9 +58,7 @@ ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
     .amount(1)
     .unbreakable(true)
     .build();
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 On Spigot, `ItemBuilder` translates `&` color codes for item names and lore.
@@ -103,9 +95,7 @@ for (MenuView<?, ?> view : lotus.openViews()) {
 If you need a special open path for a specific `InventoryType`, register a custom opener.
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
     Inventory inventory = Bukkit.createInventory(
         view,
@@ -117,12 +107,8 @@ lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
     view.viewer().openInventory(inventory);
     return inventory;
 });
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
     Inventory inventory = Bukkit.createInventory(view, InventoryType.HOPPER, "Quick Actions");
 
@@ -130,9 +116,7 @@ lotus.registerOpener(InventoryType.HOPPER, (framework, view) -> {
     view.viewer().openInventory(inventory);
     return inventory;
 });
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 :::info
@@ -147,22 +131,14 @@ tracking every session yourself.
 Use the pagination definition ID, which is the string passed to `Pagination.builder("...")`.
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 PaperLotus.syncOpenPagination(lotus, "shop", player);
 PaperLotus.syncOpenPagination(lotus, "shop");
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 SpigotLotus.syncOpenPagination(lotus, "shop", player);
 SpigotLotus.syncOpenPagination(lotus, "shop");
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 The one-player overload refreshes a specific player's currently open pagination if it matches the

@@ -61,7 +61,7 @@ for both `imperat-core` and the platform-specific module (e.g., `imperat-bukkit`
 
 To avoid classpath conflicts, shade and relocate Imperat packages in your final artifact.
 
-<ShadingBlock/>
+<ShadingBlock relocateFrom="studio.mevera.imperat" relocateTo="your.package.libs.imperat"/>
 
 ### Snapshots
 v4 itself ships only as a snapshot for now — the install block above already

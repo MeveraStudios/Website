@@ -81,9 +81,26 @@
     padding: 1.25rem;
 }
 
-/* Support for code blocks inside tabs */
+/* Code-tab variant — CodeTabItem children render flush with container */
+.tabs-container-code .tabs-list {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.tabs-container-code .tab-panel {
+    padding: 0;
+}
+
 .tab-panel .code-block {
     margin-top: 0;
+}
+
+.tabs-container-code .tab-panel .code-block {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    margin: 0;
 }
 
 /* Nested tab panels */

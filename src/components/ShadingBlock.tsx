@@ -1,7 +1,27 @@
-import { Tabs, TabItem } from './docs/Tabs.tsx';
-import { CodeBlock } from './docs/CodeBlock.tsx';
+import { Tabs, CodeTabItem } from './docs/Tabs.tsx';
 
-export default function ShadingBlock() {
+interface ShadingBlockProps {
+  relocateFrom: string;
+  relocateTo: string;
+}
+
+function parsePairs(from: string, to: string): { from: string; to: string }[] {
+  const froms = from.split(',').map(s => s.trim());
+  const tos = to.split(',').map(s => s.trim());
+  return froms.map((f, i) => ({ from: f, to: tos[i] || f }));
+}
+
+export default function ShadingBlock({ relocateFrom = 'studio.mevera', relocateTo = 'your.package.libs.mevera' }: Partial<ShadingBlockProps>) {
+  const pairs = parsePairs(relocateFrom, relocateTo);
+
+  const mavenRelocations = pairs.map(p => `          <relocation>
+            <pattern>${p.from}</pattern>
+            <shadedPattern>${p.to}</shadedPattern>
+          </relocation>`).join('\n');
+
+  const groovyRelocations = pairs.map(p => `    relocate '${p.from}', '${p.to}'`).join('\n');
+  const kotlinRelocations = pairs.map(p => `    relocate("${p.from}", "${p.to}")`).join('\n');
+
   const maven = `<plugin>
   <groupId>org.apache.maven.plugins</groupId>
   <artifactId>maven-shade-plugin</artifactId>
@@ -15,17 +35,14 @@ export default function ShadingBlock() {
       <configuration>
         <createDependencyReducedPom>false</createDependencyReducedPom>
         <relocations>
-          <relocation>
-            <pattern>studio.mevera</pattern>
-            <shadedPattern>your.package.libs.mevera</shadedPattern>
-          </relocation>
+${mavenRelocations}
         </relocations>
       </configuration>
     </execution>
   </executions>
 </plugin>`;
 
-    const groovy = `plugins {
+  const groovy = `plugins {
     id 'com.gradleup.shadow' version '8.3.6'
   }
 
@@ -37,12 +54,12 @@ export default function ShadingBlock() {
 
   tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     archiveClassifier.set('')
-    relocate 'studio.mevera', 'your.package.libs.mevera'
+${groovyRelocations}
   }
 
   assemble.dependsOn(tasks.named('shadowJar'))`;
 
-    const kotlin = `plugins {
+  const kotlin = `plugins {
     id("com.gradleup.shadow") version "8.3.6"
   }
 
@@ -54,7 +71,7 @@ export default function ShadingBlock() {
 
   tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
     archiveClassifier.set("")
-    relocate("studio.mevera", "your.package.libs.mevera")
+${kotlinRelocations}
   }
 
   tasks.named("assemble") {
@@ -63,15 +80,9 @@ export default function ShadingBlock() {
 
   return (
     <Tabs defaultValue="maven" group="java-build-tools">
-      <TabItem value="maven" label="Maven">
-        <CodeBlock className="language-xml">{maven}</CodeBlock>
-      </TabItem>
-      <TabItem value="gradle-groovy" label="Gradle (Groovy)">
-        <CodeBlock className="language-groovy">{groovy}</CodeBlock>
-      </TabItem>
-      <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
-        <CodeBlock className="language-kotlin">{kotlin}</CodeBlock>
-      </TabItem>
+      <CodeTabItem value="maven" label="Maven" language="xml">{maven}</CodeTabItem>
+      <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{groovy}</CodeTabItem>
+      <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{kotlin}</CodeTabItem>
     </Tabs>
   );
 }

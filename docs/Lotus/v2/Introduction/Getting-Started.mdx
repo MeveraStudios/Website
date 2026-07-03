@@ -77,7 +77,7 @@ Add **one** platform artifact, not both. `lotus-commons` is pulled in transitive
 
 Lotus is a **library**, not a standalone plugin. Your final JAR needs to include it.
 
-<ShadingBlock/>
+<ShadingBlock relocateFrom="studio.mevera.lotus" relocateTo="your.package.libs.lotus"/>
 
 :::tip
 Relocating `studio.mevera` is strongly recommended, especially if your plugin ships with several
@@ -90,9 +90,7 @@ Construct **one** `Lotus` instance in `onEnable()`. The platform factory also re
 framework listener for you.
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import studio.mevera.lotus.Lotus;
 import studio.mevera.lotus.paper.PaperLotus;
@@ -110,12 +108,8 @@ public final class MyPlugin extends JavaPlugin {
         return lotus;
     }
 }
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import studio.mevera.lotus.Lotus;
 import studio.mevera.lotus.spigot.SpigotLotus;
 
@@ -132,9 +126,7 @@ public final class MyPlugin extends JavaPlugin {
         return lotus;
     }
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 :::note

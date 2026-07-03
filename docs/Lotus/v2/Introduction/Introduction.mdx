@@ -58,39 +58,26 @@ When the state changes, Lotus can repaint what the player sees.
 
 Add the repository configuration that matches your build tool:
 <Tabs defaultValue="maven" group="java-build-tools">
-
-  <TabItem value="maven" label="Maven">
-
-```xml
+  <CodeTabItem value="maven" label="Maven" language="xml">{`
 <repositories>
   <repository>
     <id>papermc-repo</id>
     <url>https://repo.papermc.io/repository/maven-public/</url>
   </repository>
 </repositories>
-```
-
-  </TabItem>
-  <TabItem value="gradle-groovy" label="Gradle (Groovy)">
-
-```groovy
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{`
 repositories {
     maven { url = 'https://repo.papermc.io/repository/maven-public/' }
     mavenCentral()
 }
-```
-
-  </TabItem>
-  <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
-
-```kotlin
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{`
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     mavenCentral()
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 Then add the Paper artifact:
@@ -162,10 +149,7 @@ final class WelcomeMenu implements PaperMenu {
 
 Add the repository configuration that matches your build tool:
 <Tabs defaultValue="maven" group="java-build-tools">
-
-  <TabItem value="maven" label="Maven">
-
-```xml
+  <CodeTabItem value="maven" label="Maven" language="xml">{`
 <repositories>
   <repository>
     <id>spigotmc-repo</id>
@@ -176,31 +160,21 @@ Add the repository configuration that matches your build tool:
     <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
   </repository>
 </repositories>
-```
-
-  </TabItem>
-  <TabItem value="gradle-groovy" label="Gradle (Groovy)">
-
-```groovy
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{`
 repositories {
     maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
     maven { url = 'https://oss.sonatype.org/content/repositories/snapshots/' }
     mavenCentral()
 }
-```
-
-  </TabItem>
-  <TabItem value="gradle-kotlin" label="Gradle (Kotlin)">
-
-```kotlin
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{`
 repositories {
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
     mavenCentral()
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 Then add the Spigot artifact:

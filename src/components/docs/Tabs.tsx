@@ -1,6 +1,7 @@
 import { useState, Children, isValidElement, useSyncExternalStore, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { CodeBlock } from './CodeBlock';
 
 const STORAGE_PREFIX = 'tabs-group-';
 
@@ -44,11 +45,51 @@ interface TabsProps {
   group?: string;
 }
 
+type TabChild = TabItemProps & { value: string; label: ReactNode; icon?: string; children: ReactNode };
+
 /**
  * TabItem component - represents a single tab
  */
 export function TabItem({ children }: TabItemProps) {
   return <>{children}</>;
+}
+
+interface CodeTabItemProps {
+  value: string;
+  label: ReactNode;
+  icon?: string;
+  language?: string;
+  title?: string;
+  highlight?: string;
+  focus?: string;
+  numbered?: boolean;
+  wrap?: boolean;
+  noCopy?: boolean;
+  children: string;
+}
+
+/**
+ * CodeTabItem - tab item that renders children as a CodeBlock directly,
+ * without extra padding or wrappers.
+ */
+export function CodeTabItem({ children, language, title, highlight, focus, numbered, wrap, noCopy }: CodeTabItemProps) {
+  return (
+    <CodeBlock
+      className={`language-${language || 'text'}`}
+      title={title}
+      highlight={highlight}
+      focus={focus}
+      numbered={numbered}
+      wrap={wrap}
+      noCopy={noCopy}
+    >
+      {String(children).replace(/^\n+/, '').replace(/\n+\s*$/, '')}
+    </CodeBlock>
+  );
+}
+
+function isTabElement(child: unknown): child is React.ReactElement<TabChild> {
+  return isValidElement(child) && (child.type === TabItem || child.type === CodeTabItem || child.type === 'TabItem');
 }
 
 /**
@@ -59,12 +100,13 @@ export function TabItem({ children }: TabItemProps) {
  * - Cross-instance group sync (via `group` prop + localStorage)
  */
 export function Tabs({ defaultValue, children, className, group }: TabsProps) {
-  // Extract TabItem children
-  const tabs = Children.toArray(children).filter(
-    (child) => isValidElement(child) && (child.type === TabItem || child.type === 'TabItem')
-  );
+  // Extract TabItem/CodeTabItem children
+  const tabs = Children.toArray(children).filter(isTabElement);
 
-  const firstTabValue = isValidElement(tabs[0]) ? (tabs[0].props as TabItemProps).value : '';
+  const firstTabValue = tabs.length > 0 ? tabs[0].props.value : '';
+
+  // All tabs are CodeTabItem ⇒ code-only variant
+  const allCodeTabs = tabs.length > 0 && tabs.every(t => t.type === CodeTabItem);
 
   // External snapshot for group-synced tabs
   const groupSnapshot = group
@@ -102,12 +144,11 @@ export function Tabs({ defaultValue, children, className, group }: TabsProps) {
   }
 
   return (
-    <div className={cn('tabs-container my-6', className)}>
+    <div className={cn('tabs-container my-6', allCodeTabs && 'tabs-container-code', className)}>
       {/* Tab headers */}
       <div className="tabs-list flex flex-wrap gap-1 mb-4">
         {tabs.map((tab) => {
-          if (!isValidElement(tab)) return null;
-          const { value, label, icon } = tab.props as TabItemProps;
+          const { value, label, icon } = tab.props;
 
           return (
             <button
@@ -137,18 +178,19 @@ export function Tabs({ defaultValue, children, className, group }: TabsProps) {
       {/* Tab content */}
       <div className="tabs-content">
         {tabs.map((tab) => {
-          if (!isValidElement(tab)) return null;
-          const { value, children: tabChildren } = tab.props as TabItemProps;
+          const value = tab.props.value;
+          const isCode = tab.type === CodeTabItem || tab.type === 'CodeTabItem';
 
           return (
             <div
               key={value}
               className={cn(
                 'tab-panel',
+                allCodeTabs && 'tab-panel-code',
                 activeTab === value ? 'block animate-in fade-in duration-300' : 'hidden'
               )}
             >
-              {tabChildren}
+              {isCode ? tab : tab.props.children}
             </div>
           );
         })}

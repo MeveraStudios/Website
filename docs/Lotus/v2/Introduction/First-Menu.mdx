@@ -21,9 +21,7 @@ Every Lotus menu is just a class that answers **three** questions:
 ## Step 1 — Create The Menu Class
 
 <Tabs defaultValue="paper">
-  <TabItem value="paper" label="Paper 1.21+">
-
-```java
+  <CodeTabItem value="paper" label="Paper 1.21+" language="java">{`
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -62,12 +60,8 @@ public final class WelcomeMenu implements PaperMenu {
             .build();
     }
 }
-```
-
-  </TabItem>
-  <TabItem value="spigot" label="Spigot 1.8.8">
-
-```java
+`}</CodeTabItem>
+  <CodeTabItem value="spigot" label="Spigot 1.8.8" language="java">{`
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -106,9 +100,7 @@ public final class WelcomeMenu implements Menu<String> {
             .build();
     }
 }
-```
-
-  </TabItem>
+`}</CodeTabItem>
 </Tabs>
 
 :::note
