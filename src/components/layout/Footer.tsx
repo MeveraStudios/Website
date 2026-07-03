@@ -9,7 +9,8 @@
  */
 
 import { Link } from 'react-router-dom';
-import { Github, Heart, MessageCircle, ExternalLink } from 'lucide-react';
+import { Github, Heart, ExternalLink } from 'lucide-react';
+import { DiscordIcon } from '@/components/DiscordIcon';
 import { SITE_CONFIG, PROJECTS, NAVIGATION } from '@/config/site';
 import faviconUrl from '@/assets/favicon.ico';
 
@@ -56,7 +57,7 @@ export function Footer() {
                   className="touch-target rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Discord"
                 >
-                  <MessageCircle className="h-5 w-5" />
+                  <DiscordIcon className="h-5 w-5" />
                 </a>
               )}
             </div>
@@ -125,6 +126,19 @@ export function Footer() {
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
+              {SITE_CONFIG.discordUrl && (
+                <li>
+                  <a
+                    href={SITE_CONFIG.discordUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                  >
+                    Discord
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>

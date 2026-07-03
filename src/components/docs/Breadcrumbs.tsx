@@ -8,7 +8,7 @@
 
 import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, House } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Breadcrumb } from '@/components/Seo';
 
@@ -33,14 +33,14 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
                     aria-current="page"
                     className="font-medium text-foreground"
                   >
-                    {item.name}
+                    {item.name === 'Home' ? <House className="h-4 w-4" /> : item.name}
                   </span>
                 ) : (
                   <Link
                     to={item.url}
                     className="hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                   >
-                    {item.name}
+                    {item.name === 'Home' ? <House className="h-4 w-4" /> : item.name}
                   </Link>
                 )}
               </li>

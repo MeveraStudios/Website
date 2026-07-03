@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown, Github, MessageCircle } from 'lucide-react';
+import { Menu, ChevronDown, Github, Search, Command } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,6 +25,8 @@ import faviconUrl from '@/assets/favicon.ico';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CodeThemeToggle } from '@/components/CodeThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { SearchDialog } from '@/components/docs/SearchDialog';
+import { DiscordIcon } from '@/components/DiscordIcon';
 
 /**
  * =============================================================================
@@ -66,6 +68,7 @@ function Logo() {
 export function Header() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const getProjectHref = (project: typeof PROJECTS[number]) => project.docLink || `/docs/${project.id}`;
 
   const isActive = (path: string) => {
@@ -75,12 +78,15 @@ export function Header() {
 
   // Code-theme picker only makes sense on doc routes.
   const onDocs = location.pathname.startsWith('/docs');
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const onProjectDoc = onDocs && pathParts.length >= 3;
+  const projectId = onProjectDoc ? pathParts[1] : undefined;
 
   return (
     <header className="sticky top-0 z-50 w-full glass">
       <div className="container mx-auto px-4 h-16 flex items-center" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         {/* Logo */}
-        <div className="flex-1 flex justify-start">
+        <div className="flex-1 flex justify-start -ml-24">
           <Logo />
         </div>
 
@@ -133,7 +139,20 @@ export function Header() {
         </nav>
 
         {/* External Links */}
-        <div className="hidden md:flex flex-1 items-center justify-end gap-1">
+        <div className="hidden md:flex flex-1 items-center justify-end gap-1 mr-[-6rem]">
+          {onProjectDoc && (
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 h-8 w-48 rounded-md border border-border/60 bg-muted/40 px-2.5 text-sm text-muted-foreground hover:bg-muted/80 hover:border-border transition-colors"
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">Search docs...</span>
+              <kbd className="hidden lg:inline-flex h-5 items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium">
+                <Command className="h-3 w-3" />
+                <span>K</span>
+              </kbd>
+            </button>
+          )}
           <LanguageToggle />
           <ThemeToggle />
           {onDocs && <CodeThemeToggle />}
@@ -145,7 +164,7 @@ export function Header() {
                 rel="noopener noreferrer"
                 aria-label="Discord"
               >
-                <MessageCircle className="h-5 w-5" />
+                <DiscordIcon className="h-5 w-5" />
               </a>
             </Button>
           )}
@@ -164,6 +183,11 @@ export function Header() {
         {/* Mobile Menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <div className="md:hidden flex items-center">
+            {onProjectDoc && (
+              <Button variant="ghost" size="icon" className="touch-target" onClick={() => setSearchOpen(true)} aria-label="Search">
+                <Search className="h-5 w-5" />
+              </Button>
+            )}
             <ThemeToggle />
             {onDocs && <CodeThemeToggle />}
             <SheetTrigger asChild>
@@ -251,7 +275,7 @@ export function Header() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <MessageCircle className="h-4 w-4" />
+                      <DiscordIcon className="h-4 w-4" />
                       Discord
                     </a>
                   </Button>
@@ -261,6 +285,8 @@ export function Header() {
           </SheetContent>
         </Sheet>
       </div>
+
+      <SearchDialog projectId={projectId} open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

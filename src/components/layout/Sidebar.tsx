@@ -10,11 +10,18 @@
 
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, BookOpen, Menu } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronsUpDown, BookOpen, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { PROJECTS } from '@/config/site';
 import type { DocCategory, DocProject, DocVersion } from '@/types/docs';
 
 /**
@@ -48,13 +55,7 @@ function VersionSwitcher({ project, version }: { project: DocProject; version: D
   };
 
   return (
-    <div className="mb-4 px-3">
-      <label
-        htmlFor={`version-${project.id}`}
-        className="block text-xs uppercase tracking-wider text-muted-foreground mb-1"
-      >
-        Version
-      </label>
+    <div className="mb-2 px-4">
       <select
         id={`version-${project.id}`}
         value={version.id}
@@ -156,14 +157,14 @@ function CategorySection({ category, currentSlug, projectId, versionId }: Catego
   );
 }
 
-function projectHomeHref(project: DocProject, version: DocVersion): string {
-  const firstDoc = version.categories[0]?.docs[0];
-  return firstDoc ? `/docs/${project.id}/${version.id}/${firstDoc.slug}` : `/docs/${project.id}/${version.id}`;
-}
-
 export function Sidebar({ project, version, className }: SidebarProps) {
   const location = useLocation();
   const currentSlug = location.pathname.split('/').pop() || '';
+  const navigate = useNavigate();
+
+  const navigateToProject = (target: typeof PROJECTS[number]) => {
+    navigate(target.docLink || `/docs/${target.id}`);
+  };
 
   return (
     <aside
@@ -171,38 +172,47 @@ export function Sidebar({ project, version, className }: SidebarProps) {
       className={cn('hidden lg:block w-64 shrink-0', className)}
     >
       <div className="sticky top-24">
-        <ScrollArea className="h-[calc(100vh-8rem)]">
-          <div className="py-2 pr-4">
-            {/* Project Header */}
-            <div className="mb-6 px-3">
-              <Link
-                to={projectHomeHref(project, version)}
-                className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors"
-              >
-                <span className="text-2xl" aria-hidden="true">{project.meta.emoji}</span>
-                <span>{project.name}</span>
-              </Link>
-              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                {project.description}
-              </p>
-            </div>
-
-            <VersionSwitcher project={project} version={version} />
-
-            {/* Categories */}
-            <nav aria-label="Documentation sections">
-              {version.categories.map((category) => (
-                <CategorySection
-                  key={category.name}
-                  category={category}
-                  currentSlug={currentSlug}
-                  projectId={project.id}
-                  versionId={version.id}
-                />
-              ))}
-            </nav>
+        <div className="h-[calc(100vh-8rem)] overflow-y-scroll py-2 pr-4">
+          {/* Project Header */}
+          <div className="mb-6 px-3">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 w-full rounded-lg border border-border/50 bg-card/30 hover:bg-card/60 hover:border-border transition-colors pl-2 pr-3 py-2 text-left">
+                  <span className="text-2xl" aria-hidden="true">{project.meta.emoji}</span>
+                  <span className="font-semibold truncate flex-1">{project.name}</span>
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {PROJECTS.map(p => (
+                  <DropdownMenuItem
+                    key={p.id}
+                    onClick={() => navigateToProject(p)}
+                    className={p.id === project.id ? 'bg-muted' : ''}
+                  >
+                    <span className="mr-2">{p.emoji}</span>
+                    {p.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </ScrollArea>
+
+          <VersionSwitcher project={project} version={version} />
+
+          {/* Categories */}
+          <nav aria-label="Documentation sections">
+            {version.categories.map((category) => (
+              <CategorySection
+                key={category.name}
+                category={category}
+                currentSlug={currentSlug}
+                projectId={project.id}
+                versionId={version.id}
+              />
+            ))}
+          </nav>
+        </div>
       </div>
     </aside>
   );
@@ -213,6 +223,16 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const currentSlug = location.pathname.split('/').pop() || '';
+  const navigate = useNavigate();
+
+  const projectIndex = PROJECTS.findIndex(p => p.id === project.id);
+  const prevProject = projectIndex > 0 ? PROJECTS[projectIndex - 1] : null;
+  const nextProject = projectIndex < PROJECTS.length - 1 ? PROJECTS[projectIndex + 1] : null;
+
+  const navigateToProject = (target: typeof PROJECTS[number]) => {
+    setOpen(false);
+    navigate(target.docLink || `/docs/${target.id}`);
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -228,21 +248,30 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-80 p-0">
-        <ScrollArea className="h-full">
-          <div className="p-6">
+        <div className="h-full overflow-y-scroll p-6">
             {/* Project Header */}
             <div className="mb-6">
-              <Link
-                to={projectHomeHref(project, version)}
-                className="flex items-center gap-2 text-lg font-semibold"
-                onClick={() => setOpen(false)}
-              >
-                <span className="text-2xl" aria-hidden="true">{project.meta.emoji}</span>
-                <span>{project.name}</span>
-              </Link>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {project.description}
-              </p>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 w-full rounded-lg border border-border/50 bg-card/30 hover:bg-card/60 hover:border-border transition-colors px-3 py-2 text-left">
+                    <span className="text-2xl" aria-hidden="true">{project.meta.emoji}</span>
+                    <span className="font-semibold truncate flex-1">{project.name}</span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {PROJECTS.map(p => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => { setOpen(false); navigateToProject(p); }}
+                      className={p.id === project.id ? 'bg-muted' : ''}
+                    >
+                      <span className="mr-2">{p.emoji}</span>
+                      {p.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <VersionSwitcher project={project} version={version} />
@@ -280,8 +309,7 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
                 </div>
               ))}
             </nav>
-          </div>
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

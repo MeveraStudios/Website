@@ -9,8 +9,7 @@
  */
 
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { useState } from 'react';
-import { Edit, Calendar, AlertCircle, ChevronRight, Search, Command } from 'lucide-react';
+import { Edit, Calendar, AlertCircle, ChevronRight, Info } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
@@ -21,8 +20,8 @@ import { DocNavigation } from '@/components/docs/DocNavigation';
 import { DocFeedback } from '@/components/docs/DocFeedback';
 import { Contributors } from '@/components/docs/Contributors';
 import { Breadcrumbs } from '@/components/docs/Breadcrumbs';
-import { SearchDialog } from '@/components/docs/SearchDialog';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
@@ -34,8 +33,6 @@ export function Docs() {
     version: string;
     slug: string;
   }>();
-
-  const [searchOpen, setSearchOpen] = useState(false);
 
   // Use the hook to get documentation data
   const { projects, isLoaded } = useDocs();
@@ -230,45 +227,12 @@ export function Docs() {
       <div className="flex-1 container mx-auto px-4">
         <div className="flex gap-8 py-8">
           {/* Sidebar Navigation */}
-          <Sidebar project={project} version={activeVersion} />
-
-          {/* Main Content */}
+          <Sidebar project={project} version={activeVersion} className="-ml-24" />
           <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
             {/* Mobile Header */}
-            <div className="lg:hidden flex items-center justify-between mb-6">
+            <div className="lg:hidden flex items-center mb-6">
               <MobileSidebar project={project} version={activeVersion} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSearchOpen(true)}
-                aria-label="Search"
-              >
-                <Search className="h-5 w-5" />
-              </Button>
             </div>
-
-            {/* Desktop Search Trigger */}
-            <div className="hidden lg:flex justify-end mb-6">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                onClick={() => setSearchOpen(true)}
-              >
-                <Search className="h-4 w-4" />
-                <span className="text-sm">Search</span>
-                <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
-                  <Command className="h-3 w-3" />
-                  <span>K</span>
-                </kbd>
-              </Button>
-            </div>
-
-            <SearchDialog
-              projectId={project.id}
-              open={searchOpen}
-              onOpenChange={setSearchOpen}
-            />
 
             {isLoading ? (
               <div className="py-12 space-y-4">
@@ -319,26 +283,62 @@ export function Docs() {
               <div key={slug} className="animate-fadein mx-auto max-w-4xl">
                 {/* Document Header */}
                 <div className="mb-8">
-                  {breadcrumbs && <Breadcrumbs items={breadcrumbs} className="mb-4" />}
-                  <h1 className="text-4xl font-bold tracking-tight mb-4">
-                    {doc.frontmatter.title}
-                  </h1>
+                  {breadcrumbs && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Breadcrumbs items={breadcrumbs} className="flex-1" />
+                      {doc.frontmatter.description && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" align="end" className="max-w-xs">
+                            {doc.frontmatter.description}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                  {doc.frontmatter.description && (
-                    <p className="text-xl text-muted-foreground">
-                      {doc.frontmatter.description}
-                    </p>
+                <Separator className="mb-8" />
+
+                {/* Document Content */}
+                {doc.extension === '.mdx' ? (
+                  <MDXRenderer
+                    content={doc.content || ''}
+                    projectId={project.id}
+                    version={activeVersion.id}
+                  />
+                ) : (
+                  <MarkdownRenderer
+                    content={doc.content || ''}
+                    projectId={project.id}
+                    version={activeVersion.id}
+                  />
+                )}
+
+                {/* Feedback */}
+                <DocFeedback
+                  key={`${project.id}/${activeVersion.id}/${doc.slug}`}
+                  projectId={project.id}
+                  version={activeVersion.id}
+                  slug={doc.slug}
+                  docTitle={doc.frontmatter.title}
+                  docPath={doc.path}
+                />
+
+                {/* Meta info */}
+                <div className="flex flex-wrap items-center gap-4 mt-6 text-sm text-muted-foreground">
+                  {FEATURES.lastUpdated && doc.lastUpdatedAt && (
+                    <div className="flex items-center gap-1 mr-auto">
+                      <Calendar className="h-4 w-4" />
+                      <span>Last updated: {new Date(doc.lastUpdatedAt).toLocaleDateString()}</span>
+                    </div>
                   )}
 
-                  {/* Meta info */}
-                  <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
-                    {FEATURES.lastUpdated && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>Last updated: {doc.lastUpdatedAt ? new Date(doc.lastUpdatedAt).toLocaleDateString() : 'Unknown'}</span>
-                      </div>
-                    )}
-
+                  <div className="flex items-center gap-4 ml-auto">
                     {FEATURES.editPageLinks && editUrl && (
                       <Button variant="link" size="sm" asChild className="h-auto p-0">
                         <a
@@ -369,33 +369,6 @@ export function Docs() {
                     )}
                   </div>
                 </div>
-
-                <Separator className="mb-8" />
-
-                {/* Document Content */}
-                {doc.extension === '.mdx' ? (
-                  <MDXRenderer
-                    content={doc.content || ''}
-                    projectId={project.id}
-                    version={activeVersion.id}
-                  />
-                ) : (
-                  <MarkdownRenderer
-                    content={doc.content || ''}
-                    projectId={project.id}
-                    version={activeVersion.id}
-                  />
-                )}
-
-                {/* Feedback */}
-                <DocFeedback
-                  key={`${project.id}/${activeVersion.id}/${doc.slug}`}
-                  projectId={project.id}
-                  version={activeVersion.id}
-                  slug={doc.slug}
-                  docTitle={doc.frontmatter.title}
-                  docPath={doc.path}
-                />
 
                 {/* Document Navigation */}
                 <DocNavigation

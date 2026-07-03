@@ -9,7 +9,8 @@ order: 1
 Imperat is a powerful general-purpose command framework designed for modern application development.
 It provides a modern API and annotations to create command hierarchies.
 
-:::caution v4 is snapshot-only
+:::caution
+v4 is snapshot-only
 Imperat v4 has not been released to a stable Maven coordinate yet — it is currently published **only as `4.0.0-SNAPSHOT`**. To pull v4 into your project you MUST add the Sonatype snapshots repository (see [Snapshots](#snapshots) below) BEFORE the install blocks resolve.
 
 If you need a tagged release for production, stay on the latest v3 line until v4 graduates from snapshot.
@@ -19,7 +20,8 @@ If you need a tagged release for production, stay on the latest v3 line until v4
 
 Imperat is a multi-modular project, you must install the core module as a starter.
 
-:::danger Snapshot repo required
+:::danger
+Snapshot repo required
 The version blocks below resolve against `4.0.0-SNAPSHOT`. They will fail to resolve unless your build script declares the snapshots repository — jump to [Snapshots](#snapshots) and add the `<SnapshotRepoBlock/>` snippet first, then come back.
 :::
 

@@ -157,6 +157,20 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     setHighlighterStyle(s => ({ ...s, opacity: 0 }));
   }, [activeIds, items]);
 
+  // 4. Auto-scroll nav to keep active item centered
+  useEffect(() => {
+    if (!navRef.current || activeIds.length === 0) return;
+    const el = itemsRef.current[activeIds[0]];
+    if (!el) return;
+
+    const nav = navRef.current;
+    const navRect = nav.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const center = nav.scrollTop + elRect.top - navRect.top + elRect.height / 2 - navRect.height / 2;
+    const max = nav.scrollHeight - navRect.height;
+    nav.scrollTop = Math.max(0, Math.min(center, max));
+  }, [activeIds]);
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     const element = document.getElementById(id);
@@ -177,7 +191,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
   const maskUrl = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' stroke='black' stroke-width='1.5' fill='none' %3E%3Cpath d='${encodedPath}' /%3E%3C/svg%3E")`;
 
   return (
-    <div className={cn('hidden xl:block w-64 shrink-0', className)}>
+    <div className={cn('hidden xl:block w-64 shrink-0 -mr-32', className)}>
       <div className="sticky top-24 pl-4 max-h-[calc(100vh-7rem)]">
         <div className="flex items-center gap-2 mb-4 text-foreground/80" id="toc-heading">
           <List className="w-4 h-4" aria-hidden="true" />
