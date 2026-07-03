@@ -225,9 +225,7 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
   const currentSlug = location.pathname.split('/').pop() || '';
   const navigate = useNavigate();
 
-  const projectIndex = PROJECTS.findIndex(p => p.id === project.id);
-  const prevProject = projectIndex > 0 ? PROJECTS[projectIndex - 1] : null;
-  const nextProject = projectIndex < PROJECTS.length - 1 ? PROJECTS[projectIndex + 1] : null;
+
 
   const navigateToProject = (target: typeof PROJECTS[number]) => {
     setOpen(false);
