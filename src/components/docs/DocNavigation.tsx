@@ -26,7 +26,7 @@ function NavCard({
 
   return (
     <Link
-      to={`/docs/${projectId}/${version}/${doc.slug}`}
+      to={doc.categoryPath ? `/docs/${projectId}/${version}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${version}/${doc.slug}`}
       className={cn(
         'group flex flex-col w-full h-full p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all',
         isPrev ? 'items-start text-left' : 'items-end text-right',

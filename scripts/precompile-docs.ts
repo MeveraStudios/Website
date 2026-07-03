@@ -90,6 +90,9 @@ interface DocFile {
     project: string;
     version: string;
     category: string;
+    categoryPath?: string;
+    /** Raw folder path for content file storage (unaffected by slug override) */
+    categoryFsPath?: string;
     extension: string;
     lastUpdatedAt?: string;
     contributors?: DocContributor[];
@@ -211,6 +214,8 @@ interface NavDocFile {
         order?: number;
     };
     category: string;
+    categoryPath?: string;
+    categoryFsPath?: string;
 }
 
 interface NavDocCategory {
@@ -272,6 +277,7 @@ function extractSearchSections(
     projectName: string,
     projectId: string,
     versionId: string,
+    categoryPath: string,
     categoryName: string,
     slug: string,
 ): SearchIndexItem[] {
@@ -301,11 +307,15 @@ function extractSearchSections(
         const endLine = nextBoundary ? nextBoundary.lineIndex : lines.length;
         const sectionContent = normalizeSearchText(lines.slice(heading.lineIndex, endLine).join('\n'));
 
+        const secHref = categoryPath
+            ? `/docs/${projectId}/${versionId}/${categoryPath}/${slug}#${heading.id}`
+            : `/docs/${projectId}/${versionId}/${slug}#${heading.id}`;
+
         sectionEntries.push({
             kind: 'section',
             title: heading.text,
             content: sectionContent,
-            href: `/docs/${projectId}/${versionId}/${slug}#${heading.id}`,
+            href: secHref,
             project: projectName,
             projectId,
             version: versionId,
@@ -423,7 +433,7 @@ function parseFrontmatter(content: string): { frontmatter: DocFrontmatter; body:
 /**
  * Get category metadata from a `_category_.yml` file inside a version folder.
  */
-function getCategoryMetadata(versionDir: string, categoryPath: string): { label?: string; position?: number } | null {
+function getCategoryMetadata(versionDir: string, categoryPath: string): { label?: string; position?: number; slug?: string } | null {
     const categoryFilePath = join(versionDir, categoryPath, '_category_.yml');
 
     if (!existsSync(categoryFilePath)) {
@@ -435,7 +445,8 @@ function getCategoryMetadata(versionDir: string, categoryPath: string): { label?
 
     return {
         label: metadata.label as string | undefined,
-        position: (metadata.order || metadata.position) as number | undefined
+        position: (metadata.order || metadata.position) as number | undefined,
+        slug: metadata.slug as string | undefined
     };
 }
 
@@ -565,7 +576,7 @@ function buildVersion(
     indexLatestOnlyForSearch: boolean
 ): DocVersion {
     const allDocs: DocFile[] = [];
-    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string }>();
+    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string; slug?: string }>();
 
     // Top-level _category_.yml inside the version folder, e.g. docs/Imperat/v4/_category_.yml.
     const rootCategoryMetadata = getCategoryMetadata(versionDir, '');
@@ -588,7 +599,8 @@ function buildVersion(
                 categoryMetadataMap.set(categoryKey, {
                     label: metadata?.label || categoryName,
                     position: metadata?.position ?? 999,
-                    path: categoryPath
+                    path: categoryPath,
+                    slug: metadata?.slug
                 });
             }
         }
@@ -610,14 +622,19 @@ function buildVersion(
 
         // Determine category
         let categoryName = frontmatter.category || rootCategoryName;
+        const rawCategoryPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+        let categoryPath = rawCategoryPath
+            .split('/').map(s => s.replace(/\s+/g, '-').toLowerCase()).join('/');
 
         if (parts.length > 1) {
-            const categoryPath = parts.slice(0, -1).join('/');
-            const categoryKey = `${projectId}/${versionMeta.id}/${categoryPath}`;
+            const categoryKey = `${projectId}/${versionMeta.id}/${rawCategoryPath}`;
             const metadata = categoryMetadataMap.get(categoryKey);
 
             if (metadata) {
                 categoryName = metadata.label;
+                if (metadata.slug) {
+                    categoryPath = metadata.slug;
+                }
             }
         } else if (frontmatter.category) {
             categoryName = frontmatter.category;
@@ -633,6 +650,8 @@ function buildVersion(
             project: projectId,
             version: versionMeta.id,
             category: categoryName,
+            categoryPath: categoryPath || undefined,
+            categoryFsPath: rawCategoryPath || undefined,
             extension,
             lastUpdatedAt: gitMetadata?.lastUpdatedAt,
             contributors: gitMetadata?.contributors,
@@ -647,11 +666,15 @@ function buildVersion(
         // Search index — include only the latest version per project to keep
         // results free of duplicates while content is mirrored across versions.
         if (!indexLatestOnlyForSearch || versionMeta.latest) {
+            const docHref = categoryPath
+                ? `/docs/${projectId}/${versionMeta.id}/${categoryPath}/${slug}`
+                : `/docs/${projectId}/${versionMeta.id}/${slug}`;
+
             searchIndex.push({
                 kind: 'doc',
                 title: frontmatter.title,
                 content: normalizeSearchText(body),
-                href: `/docs/${projectId}/${versionMeta.id}/${slug}`,
+                href: docHref,
                 project: projectName,
                 projectId,
                 version: versionMeta.id,
@@ -664,6 +687,7 @@ function buildVersion(
                 projectName,
                 projectId,
                 versionMeta.id,
+                categoryPath,
                 categoryName,
                 slug,
             ));
@@ -792,6 +816,8 @@ function precompileDocs() {
                     slug: doc.slug,
                     path: doc.path,
                     category: doc.category,
+                    categoryPath: doc.categoryPath,
+                    categoryFsPath: doc.categoryFsPath,
                     frontmatter: {
                         title: doc.frontmatter.title,
                         sidebarLabel: doc.frontmatter.sidebarLabel,
@@ -837,7 +863,13 @@ function precompileDocs() {
                     ...doc,
                     toc: tocMap[`${project.id}/${version.id}/${doc.slug}`] || [],
                 };
-                const docPath = join(versionContentDir, `${doc.slug}.json`);
+                const contentDir = doc.categoryPath
+                    ? join(versionContentDir, doc.categoryPath)
+                    : versionContentDir;
+                if (!existsSync(contentDir)) {
+                    mkdirSync(contentDir, { recursive: true });
+                }
+                const docPath = join(contentDir, `${doc.slug}.json`);
                 writeFileSync(docPath, JSON.stringify(docContentData), 'utf-8');
                 contentFilesWritten++;
             });
@@ -865,8 +897,11 @@ function precompileDocs() {
         }
         project.versions.forEach(version => {
             version.allDocs.forEach(doc => {
+                const docUrl = doc.categoryPath
+                    ? `/docs/${project.id}/${version.id}/${doc.categoryPath}/${doc.slug}`
+                    : `/docs/${project.id}/${version.id}/${doc.slug}`;
                 urlEntries.push({
-                    loc: `${SITE_URL}${encodePath(`/docs/${project.id}/${version.id}/${doc.slug}`)}`,
+                    loc: `${SITE_URL}${encodePath(docUrl)}`,
                     lastmod: doc.lastUpdatedAt || nowIso,
                     priority: version.latest ? '0.8' : '0.5',
                     changefreq: 'weekly',

@@ -18,6 +18,8 @@ export interface DocFile {
   version?: string;
   /** Category within the project */
   category: string;
+  /** Category folder path for URL generation (e.g. "Introduction" or "Guides/Basic") */
+  categoryPath?: string;
   /** File extension (.md or .mdx) */
   extension?: string;
   /** Precompiled table of contents */

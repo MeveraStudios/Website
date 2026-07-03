@@ -48,10 +48,13 @@ function VersionSwitcher({ project, version }: { project: DocProject; version: D
     const sameSlug = next.categories
       .flatMap(c => c.docs)
       .find(d => d.slug === currentSlug);
-    const targetSlug = sameSlug?.slug || next.categories[0]?.docs[0]?.slug;
-    if (!targetSlug) return;
+    const targetDoc = sameSlug || next.categories[0]?.docs[0];
+    if (!targetDoc) return;
 
-    navigate(`/docs/${project.id}/${next.id}/${targetSlug}`);
+    const targetUrl = targetDoc.categoryPath
+      ? `/docs/${project.id}/${next.id}/${targetDoc.categoryPath}/${targetDoc.slug}`
+      : `/docs/${project.id}/${next.id}/${targetDoc.slug}`;
+    navigate(targetUrl);
   };
 
   return (
@@ -137,7 +140,7 @@ function CategorySection({ category, currentSlug, projectId, versionId }: Catego
             return (
               <li key={doc.slug}>
                 <Link
-                  to={`/docs/${projectId}/${versionId}/${doc.slug}`}
+                  to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'block px-3 py-1.5 text-sm rounded-md transition-colors',
@@ -288,7 +291,7 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
                       return (
                         <li key={doc.slug}>
                           <Link
-                            to={`/docs/${project.id}/${version.id}/${doc.slug}`}
+                            to={doc.categoryPath ? `/docs/${project.id}/${version.id}/${doc.categoryPath}/${doc.slug}` : `/docs/${project.id}/${version.id}/${doc.slug}`}
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
                               'block px-3 py-1.5 text-sm rounded-md transition-colors',

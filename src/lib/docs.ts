@@ -96,14 +96,17 @@ async function loadDocsNavData(): Promise<CachedDocsNavData> {
 /**
  * Fetch a specific document's detailed content for a given project version.
  */
-export async function fetchDocContent(projectId: string, version: string, slug: string): Promise<DocFile | null> {
-  const cacheKey = `${projectId}/${version}/${slug}`;
+export async function fetchDocContent(projectId: string, version: string, category: string, slug: string): Promise<DocFile | null> {
+  const cacheKey = `${projectId}/${version}/${category ? category + '/' : ''}${slug}`;
   if (docContentCache.has(cacheKey)) {
     return docContentCache.get(cacheKey)!;
   }
 
   try {
-    const response = await fetch(`/docs-content/${projectId}/${version}/${slug}.json`);
+    const contentPath = category
+      ? `/docs-content/${projectId}/${version}/${category}/${slug}.json`
+      : `/docs-content/${projectId}/${version}/${slug}.json`;
+    const response = await fetch(contentPath);
     if (!response.ok) {
       throw new Error(`Failed to load document content for ${slug}`);
     }
@@ -111,7 +114,7 @@ export async function fetchDocContent(projectId: string, version: string, slug: 
     docContentCache.set(cacheKey, docData);
     return docData;
   } catch (error) {
-    console.error(`Error fetching document ${projectId}/${version}/${slug}:`, error);
+    console.error(`Error fetching document ${projectId}/${version}/${category ? category + '/' : ''}${slug}:`, error);
     return null;
   }
 }
@@ -150,13 +153,12 @@ export function useDocs() {
 /**
  * React hook to fetch and provide a specific document's content
  */
-export function useDocContent(projectId: string, version: string, slug: string) {
-  const cacheKey = `${projectId}/${version}/${slug}`;
+export function useDocContent(projectId: string, version: string, category: string, slug: string) {
+  const cacheKey = `${projectId}/${version}/${category ? category + '/' : ''}${slug}`;
   const cached = docContentCache.get(cacheKey) ?? null;
 
   const [doc, setDoc] = useState<DocFile | null>(() => {
     if (cached) return cached;
-    // Prerendered data from static HTML (populated by scripts/prerender-pages.ts)
     if (typeof window !== 'undefined') {
       const data = (window as any).__INITIAL_DATA__ as DocFile | undefined;
       if (data) {
@@ -172,8 +174,7 @@ export function useDocContent(projectId: string, version: string, slug: string) 
   useEffect(() => {
     if (!projectId || !version || !slug) return;
 
-    // Already in cache (including from prerender init above)
-    const cacheKey = `${projectId}/${version}/${slug}`;
+    const cacheKey = `${projectId}/${version}/${category ? category + '/' : ''}${slug}`;
     if (docContentCache.has(cacheKey)) {
       setDoc(docContentCache.get(cacheKey)!);
       setIsLoading(false);
@@ -183,7 +184,7 @@ export function useDocContent(projectId: string, version: string, slug: string) 
     setIsLoading(true);
     let isMounted = true;
 
-    fetchDocContent(projectId, version, slug).then((content) => {
+    fetchDocContent(projectId, version, category, slug).then((content) => {
       if (isMounted) {
         setDoc(content);
         setIsLoading(false);
@@ -193,7 +194,7 @@ export function useDocContent(projectId: string, version: string, slug: string) 
     return () => {
       isMounted = false;
     };
-  }, [projectId, version, slug]);
+  }, [projectId, version, category, slug]);
 
   return { doc, isLoading };
 }
@@ -286,9 +287,12 @@ export function getProjectNav(project: DocProject, version: DocVersion): { label
 
   version.categories.forEach(category => {
     category.docs.forEach(doc => {
+      const href = doc.categoryPath
+        ? `/docs/${project.id}/${version.id}/${doc.categoryPath}/${doc.slug}`
+        : `/docs/${project.id}/${version.id}/${doc.slug}`;
       nav.push({
         label: doc.frontmatter.sidebarLabel || doc.frontmatter.title,
-        href: `/docs/${project.id}/${version.id}/${doc.slug}`,
+        href,
         category: category.name
       });
     });

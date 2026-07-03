@@ -26,11 +26,29 @@ import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
+import type { DocFile } from '@/types/docs';
+
+/** Build a doc URL, including category path when present. */
+function docUrl(projectId: string, version: string, doc: DocFile): string;
+function docUrl(projectId: string, version: string, slug: string, categoryPath?: string): string;
+function docUrl(projectId: string, version: string, slugOrDoc: string | DocFile, categoryPath?: string): string {
+  if (typeof slugOrDoc === 'object') {
+    const doc = slugOrDoc;
+    return doc.categoryPath
+      ? `/docs/${projectId}/${version}/${doc.categoryPath}/${doc.slug}`
+      : `/docs/${projectId}/${version}/${doc.slug}`;
+  }
+  const slug = slugOrDoc;
+  return categoryPath
+    ? `/docs/${projectId}/${version}/${categoryPath}/${slug}`
+    : `/docs/${projectId}/${version}/${slug}`;
+}
 
 export function Docs() {
-  const { projectId, version, slug } = useParams<{
+  const { projectId, version, category, slug } = useParams<{
     projectId: string;
     version: string;
+    category: string;
     slug: string;
   }>();
 
@@ -49,7 +67,7 @@ export function Docs() {
   })();
 
   // Fetch the current document content (unconditionally call hooks)
-  const { doc, isLoading } = useDocContent(projectId || '', resolvedVersionId, slug || '');
+  const { doc, isLoading } = useDocContent(projectId || '', resolvedVersionId, category || '', slug || '');
 
   // Show loading state while data is being fetched
   if (!isLoaded) {
@@ -89,7 +107,7 @@ export function Docs() {
       const latest = getLatestVersion(firstProject);
       const firstDoc = latest?.categories[0]?.docs[0];
       if (latest && firstDoc) {
-        return <Navigate to={`/docs/${firstProject.id}/${latest.id}/${firstDoc.slug}`} replace />;
+        return <Navigate to={docUrl(firstProject.id, latest.id, firstDoc)} replace />;
       }
     }
     return (
@@ -116,6 +134,17 @@ export function Docs() {
   const activeVersion =
     (version && project.versions.find(v => v.id === version)) || latestVersion;
 
+  // Redirect old flat URLs (/docs/:projectId/:version/:slug) to new
+  // categorized URLs when the doc is found in the nav data.
+  if (!category && slug && activeVersion) {
+    const matchedDoc = activeVersion.categories
+      .flatMap(c => c.docs)
+      .find(d => d.slug === slug);
+    if (matchedDoc && matchedDoc.categoryPath) {
+      return <Navigate to={docUrl(project.id, activeVersion.id, matchedDoc)} replace />;
+    }
+  }
+
   if (!activeVersion) {
     return (
       <div className="min-h-screen flex flex-col bg-docs">
@@ -137,6 +166,10 @@ export function Docs() {
     const firstDoc = activeVersion.categories[0]?.docs[0];
     const targetSlug = slug || firstDoc?.slug;
     if (targetSlug) {
+      const matchedDoc = firstDoc?.slug === targetSlug ? firstDoc : undefined;
+      if (matchedDoc) {
+        return <Navigate to={docUrl(project.id, activeVersion.id, matchedDoc)} replace />;
+      }
       return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${targetSlug}`} replace />;
     }
     return (
@@ -159,7 +192,7 @@ export function Docs() {
   if (!slug) {
     const firstDoc = activeVersion.categories[0]?.docs[0];
     if (firstDoc) {
-      return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${firstDoc.slug}`} replace />;
+      return <Navigate to={docUrl(project.id, activeVersion.id, firstDoc)} replace />;
     }
     return (
       <div className="min-h-screen flex flex-col bg-docs">
@@ -194,12 +227,13 @@ export function Docs() {
     : null;
 
   const versionedBase = `/docs/${project.id}/${activeVersion.id}`;
+  const fullDocUrl = doc ? docUrl(project.id, activeVersion.id, doc) : versionedBase;
   const breadcrumbs: Breadcrumb[] | undefined = doc
     ? [
         { name: 'Home', url: '/' },
         { name: project.name, url: versionedBase },
         ...(doc.category ? [{ name: doc.category, url: versionedBase }] : []),
-        { name: doc.frontmatter.title, url: `${versionedBase}/${doc.slug}` },
+        { name: doc.frontmatter.title, url: fullDocUrl },
       ]
     : undefined;
 
@@ -209,7 +243,7 @@ export function Docs() {
         <Seo
           title={`${doc.frontmatter.title} – ${project.name}`}
           description={doc.frontmatter.description || project.description}
-          path={`${versionedBase}/${doc.slug}`}
+          path={fullDocUrl}
           type="article"
           isArticle
           lastUpdated={doc.lastUpdatedAt}
@@ -265,7 +299,7 @@ export function Docs() {
                       return (
                         <Link
                           key={cat.name}
-                          to={`/docs/${project.id}/${activeVersion.id}/${firstDoc.slug}`}
+                          to={docUrl(project.id, activeVersion.id, firstDoc)}
                           className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group"
                         >
                           <div className="flex-1 min-w-0">
