@@ -8,14 +8,14 @@ order: 2
 # Supported platforms
 Imperat supports various platforms as shown in the table below:
 
-| Platform Name            | Compatible Platforms           | Supported Versions           |
-|-------------------|-------------------------------|-----------------------------|
+| Platform Name     | Compatible Platforms           | Supported Versions          |
+|-------------------|--------------------------------|-----------------------------|
 | imperat-bukkit    | Bukkit / Spigot / Paper        | 1.8.8 - 1.21.11             |
 | imperat-bungee    | BungeeCord / Waterfall         | 1.21-R0.2                   |
-| imperat-velocity  | Velocity                      | 3.5.0                       |
-| imperat-minestom  | Minestom                      | 1.21.11                     |
+| imperat-velocity  | Velocity                       | 3.5.0                       |
+| imperat-minestom  | Minestom                       | 1.21.11                     |
 | imperat-jda       | JDA (Java Discord API)         | 6.1.1                       |
-| imperat-hytale    | Hytale Game                    | 2026.02.18-f3b8fff95        |
+| imperat-hytale    | Hytale Game                    | 0.5.6                       |
 | imperat-cli       | Any OS / Console               | Any version                 |
 
 
