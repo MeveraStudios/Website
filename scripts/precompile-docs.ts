@@ -178,6 +178,9 @@ interface DocCategory {
     name: string;
     docs: DocFile[];
     order: number;
+    categoryPath?: string;
+    collapsed?: boolean;
+    children?: DocCategory[];
 }
 
 /** A discovered version folder under `docs/<project>/`. */
@@ -222,6 +225,9 @@ interface NavDocCategory {
     name: string;
     docs: NavDocFile[];
     order: number;
+    categoryPath?: string;
+    collapsed?: boolean;
+    children?: NavDocCategory[];
 }
 
 interface NavDocVersion {
@@ -433,7 +439,7 @@ function parseFrontmatter(content: string): { frontmatter: DocFrontmatter; body:
 /**
  * Get category metadata from a `_category_.yml` file inside a version folder.
  */
-function getCategoryMetadata(versionDir: string, categoryPath: string): { label?: string; position?: number; slug?: string } | null {
+function getCategoryMetadata(versionDir: string, categoryPath: string): { label?: string; position?: number; slug?: string; collapsed?: boolean } | null {
     const categoryFilePath = join(versionDir, categoryPath, '_category_.yml');
 
     if (!existsSync(categoryFilePath)) {
@@ -446,7 +452,8 @@ function getCategoryMetadata(versionDir: string, categoryPath: string): { label?
     return {
         label: metadata.label as string | undefined,
         position: (metadata.order || metadata.position) as number | undefined,
-        slug: metadata.slug as string | undefined
+        slug: metadata.slug as string | undefined,
+        collapsed: metadata.collapsed as boolean | undefined,
     };
 }
 
@@ -576,7 +583,7 @@ function buildVersion(
     indexLatestOnlyForSearch: boolean
 ): DocVersion {
     const allDocs: DocFile[] = [];
-    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string; slug?: string }>();
+    const categoryMetadataMap = new Map<string, { label: string; position: number; path: string; slug?: string; collapsed?: boolean }>();
 
     // Top-level _category_.yml inside the version folder, e.g. docs/Imperat/v4/_category_.yml.
     const rootCategoryMetadata = getCategoryMetadata(versionDir, '');
@@ -600,7 +607,8 @@ function buildVersion(
                     label: metadata?.label || categoryName,
                     position: metadata?.position ?? 999,
                     path: categoryPath,
-                    slug: metadata?.slug
+                    slug: metadata?.slug,
+                    collapsed: metadata?.collapsed,
                 });
             }
         }
@@ -698,13 +706,13 @@ function buildVersion(
         }
     });
 
-    // Group docs into categories.
-    const categoriesMap = new Map<string, DocCategory>();
+    // Group docs into categories (flat map by label, used for tree doc assignment).
+    const flatCategoryMap = new Map<string, DocCategory>();
 
     allDocs.forEach(doc => {
         const categoryName = doc.category;
 
-        if (!categoriesMap.has(categoryName)) {
+        if (!flatCategoryMap.has(categoryName)) {
             let categoryOrder = 999;
             for (const [key, metadata] of categoryMetadataMap) {
                 if (key.startsWith(`${projectId}/${versionMeta.id}/`) && metadata.label === categoryName) {
@@ -713,29 +721,149 @@ function buildVersion(
                 }
             }
 
-            categoriesMap.set(categoryName, {
+            flatCategoryMap.set(categoryName, {
                 name: categoryName,
                 docs: [],
                 order: categoryOrder,
             });
         }
 
-        categoriesMap.get(categoryName)!.docs.push(doc);
+        flatCategoryMap.get(categoryName)!.docs.push(doc);
     });
 
-    categoriesMap.forEach(category => {
+    flatCategoryMap.forEach(category => {
         category.docs.sort((a, b) =>
             (a.frontmatter.order || 999) - (b.frontmatter.order || 999)
         );
     });
 
-    const categories = Array.from(categoriesMap.values()).sort((a, b) => a.order - b.order);
+    // Build category tree from `categoryMetadataMap` paths.
+    // Ensure all intermediate paths have entries (e.g. if "Guides/Basic" exists
+    // but "Guides" doesn't, create a synthetic entry for "Guides").
+    const existingPaths = new Set<string>();
+    for (const [, meta] of categoryMetadataMap) {
+        if (meta.path) existingPaths.add(meta.path);
+    }
+    const syntheticPaths: string[] = [];
+    for (const [, meta] of categoryMetadataMap) {
+        if (!meta.path) continue;
+        const segments = meta.path.split('/');
+        for (let i = 1; i < segments.length; i++) {
+            const parentPath = segments.slice(0, i).join('/');
+            if (!existingPaths.has(parentPath)) {
+                syntheticPaths.push(parentPath);
+                existingPaths.add(parentPath);
+            }
+        }
+    }
+    for (const p of syntheticPaths) {
+        const folderName = p.split('/').pop() || p;
+        const labelName = folderName
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+        const synKey = `${projectId}/${versionMeta.id}/${p}`;
+        categoryMetadataMap.set(synKey, {
+            label: labelName,
+            position: 999,
+            path: p,
+        });
+    }
+
+    // Build tree nodes sorted by path length (parents before children).
+    interface CatNode {
+        name: string;
+        order: number;
+        path: string;
+        slug?: string;
+        collapsed?: boolean;
+        docs: DocFile[];
+        children: CatNode[];
+    }
+
+    const metaEntries = Array.from(categoryMetadataMap.entries())
+        .filter(([k]) => k.startsWith(`${projectId}/${versionMeta.id}/`))
+        .map(([, v]) => v)
+        .sort((a, b) => a.path.length - b.path.length);
+
+    const nodeByPath = new Map<string, CatNode>();
+    const rootNodes: CatNode[] = [];
+
+    for (const meta of metaEntries) {
+        const node: CatNode = {
+            name: meta.label,
+            order: meta.position,
+            path: meta.path,
+            slug: meta.slug,
+            collapsed: meta.collapsed,
+            docs: [],
+            children: [],
+        };
+        nodeByPath.set(meta.path, node);
+
+        const segments = meta.path.split('/');
+        if (segments.length === 1) {
+            rootNodes.push(node);
+        } else {
+            const parentPath = segments.slice(0, -1).join('/');
+            const parent = nodeByPath.get(parentPath);
+            if (parent) {
+                parent.children.push(node);
+            } else {
+                rootNodes.push(node);
+            }
+        }
+    }
+
+    // Assign docs to tree nodes by matching categoryFsPath prefix.
+    // Leaf nodes get the docs; intermediate nodes only get docs placed
+    // directly in their folder (no deeper _category_.yml override).
+    allDocs.forEach(doc => {
+        const rawPath = doc.categoryFsPath || '';
+        if (!rawPath) return;
+        const node = nodeByPath.get(rawPath) || nodeByPath.get(doc.category);
+        if (node) {
+            node.docs.push(doc);
+        }
+    });
+
+    // Sort tree nodes recursively by order.
+    function sortTree(nodes: CatNode[]): CatNode[] {
+        nodes.sort((a, b) => a.order - b.order);
+        for (const n of nodes) {
+            n.children = sortTree(n.children);
+            n.docs.sort((a, b) =>
+                (a.frontmatter.order || 999) - (b.frontmatter.order || 999)
+            );
+        }
+        return nodes;
+    }
+
+    sortTree(rootNodes);
+
+    // Convert CatNode tree to DocCategory tree for return value.
+    function toDocCategory(node: CatNode): DocCategory {
+        const slugPath = node.path.split('/')
+            .map(seg => seg.toLowerCase().replace(/\s+/g, '-'))
+            .join('/');
+        return {
+            name: node.name,
+            docs: node.docs,
+            order: node.order,
+            categoryPath: slugPath,
+            collapsed: node.collapsed,
+            children: node.children.length > 0
+                ? node.children.map(toDocCategory)
+                : undefined,
+        };
+    }
+
+    const categoryTree = rootNodes.map(toDocCategory);
 
     return {
         id: versionMeta.id,
         label: versionMeta.label,
         latest: versionMeta.latest,
-        categories,
+        categories: categoryTree,
         allDocs,
     };
 }
@@ -799,6 +927,29 @@ function precompileDocs() {
 
     // Write output files
 
+    // Helper: recursively convert DocCategory tree to NavDocCategory tree.
+    function toNavCategory(cat: DocCategory): NavDocCategory {
+        return {
+            name: cat.name,
+            order: cat.order,
+            categoryPath: cat.categoryPath,
+            collapsed: cat.collapsed,
+            docs: cat.docs.map(doc => ({
+                slug: doc.slug,
+                path: doc.path,
+                category: doc.category,
+                categoryPath: doc.categoryPath,
+                categoryFsPath: doc.categoryFsPath,
+                frontmatter: {
+                    title: doc.frontmatter.title,
+                    sidebarLabel: doc.frontmatter.sidebarLabel,
+                    order: doc.frontmatter.order,
+                },
+            })),
+            children: cat.children ? cat.children.map(toNavCategory) : undefined,
+        };
+    }
+
     // 1. Generate Navigation Data (lightweight)
     const navProjects: NavDocProject[] = Array.from(projectsMap.values()).map(project => ({
         id: project.id,
@@ -809,22 +960,7 @@ function precompileDocs() {
             id: version.id,
             label: version.label,
             latest: version.latest,
-            categories: version.categories.map(category => ({
-                name: category.name,
-                order: category.order,
-                docs: category.docs.map(doc => ({
-                    slug: doc.slug,
-                    path: doc.path,
-                    category: doc.category,
-                    categoryPath: doc.categoryPath,
-                    categoryFsPath: doc.categoryFsPath,
-                    frontmatter: {
-                        title: doc.frontmatter.title,
-                        sidebarLabel: doc.frontmatter.sidebarLabel,
-                        order: doc.frontmatter.order,
-                    },
-                })),
-            })),
+            categories: version.categories.map(toNavCategory),
         })),
     }));
 

@@ -62,6 +62,12 @@ export interface DocCategory {
   docs: DocFile[];
   /** Order in sidebar */
   order: number;
+  /** Slugified category path for URL segments (e.g. "guides/basic") */
+  categoryPath?: string;
+  /** Whether this category starts collapsed */
+  collapsed?: boolean;
+  /** Nested sub-categories */
+  children?: DocCategory[];
 }
 
 // Represents a project with its documentation

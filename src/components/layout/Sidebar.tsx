@@ -22,7 +22,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { PROJECTS } from '@/config/site';
-import type { DocCategory, DocProject, DocVersion } from '@/types/docs';
+import type { DocCategory, DocFile, DocProject, DocVersion } from '@/types/docs';
 
 /**
  * Version switcher — shown only when the project has detected version
@@ -45,10 +45,15 @@ function VersionSwitcher({ project, version }: { project: DocProject; version: D
     const next = versions.find(v => v.id === nextId);
     if (!next) return;
 
-    const sameSlug = next.categories
-      .flatMap(c => c.docs)
-      .find(d => d.slug === currentSlug);
-    const targetDoc = sameSlug || next.categories[0]?.docs[0];
+    function flattenDocs(cats: DocCategory[]): DocFile[] {
+      return cats.flatMap(c => [
+        ...(c.docs || []),
+        ...(c.children ? flattenDocs(c.children) : []),
+      ]);
+    }
+    const allNextDocs = flattenDocs(next.categories);
+    const sameSlug = allNextDocs.find(d => d.slug === currentSlug);
+    const targetDoc = sameSlug || allNextDocs[0];
     if (!targetDoc) return;
 
     const targetUrl = targetDoc.categoryPath
@@ -88,6 +93,8 @@ interface CategorySectionProps {
   currentSlug: string;
   projectId: string;
   versionId: string;
+  depth?: number;
+  onNavigate?: () => void;
 }
 
 const CATEGORY_COLORS = [
@@ -101,6 +108,47 @@ const CATEGORY_COLORS = [
   'bg-fuchsia-500',
   'bg-orange-500',
   'bg-teal-500',
+  'bg-indigo-500',
+  'bg-pink-500',
+  'bg-yellow-500',
+  'bg-red-500',
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-sky-400',
+  'bg-rose-400',
+  'bg-violet-400',
+  'bg-amber-400',
+  'bg-cyan-400',
+  'bg-lime-400',
+  'bg-fuchsia-400',
+  'bg-orange-400',
+  'bg-teal-400',
+  'bg-indigo-400',
+  'bg-pink-400',
+  'bg-yellow-400',
+  'bg-red-400',
+  'bg-blue-400',
+  'bg-green-400',
+  'bg-purple-400',
+  'bg-emerald-400',
+  'bg-sky-600',
+  'bg-rose-600',
+  'bg-violet-600',
+  'bg-amber-600',
+  'bg-cyan-600',
+  'bg-lime-600',
+  'bg-fuchsia-600',
+  'bg-orange-600',
+  'bg-teal-600',
+  'bg-indigo-600',
+  'bg-pink-600',
+  'bg-yellow-600',
+  'bg-red-600',
+  'bg-blue-600',
+  'bg-green-600',
+  'bg-purple-600',
+  'bg-emerald-600',
 ];
 
 function categoryColorIndex(name: string): number {
@@ -111,50 +159,84 @@ function categoryColorIndex(name: string): number {
   return Math.abs(hash) % CATEGORY_COLORS.length;
 }
 
-function CategorySection({ category, currentSlug, projectId, versionId }: CategorySectionProps) {
-  const [expanded, setExpanded] = useState(true);
+function CategorySection({ category, currentSlug, projectId, versionId, depth = 0, onNavigate }: CategorySectionProps) {
+  const [expanded, setExpanded] = useState(category.collapsed !== true);
   const regionId = `cat-${projectId}-${versionId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
   const dotColor = CATEGORY_COLORS[categoryColorIndex(category.name)];
+  const hasChildren = category.children && category.children.length > 0;
+  const hasDocs = category.docs && category.docs.length > 0;
+  const isBranch = hasChildren || hasDocs;
+
+  if (!hasDocs && !hasChildren) return null;
 
   return (
-    <div className="mb-4">
+    <div className={depth > 0 ? '' : 'mb-4'}>
+      {/* Category header — only show if it has a name worth showing */}
       <button
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-controls={regionId}
-        className="flex items-center gap-1 w-full px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        className={cn(
+          'flex items-center gap-1 w-full text-left px-3 py-2 rounded-md transition-colors',
+          depth === 0
+            ? 'text-sm font-semibold text-muted-foreground hover:text-foreground'
+            : 'text-xs font-medium text-muted-foreground/70 hover:text-foreground',
+        )}
+        style={{ paddingLeft: `${12 + depth * 16}px` }}
       >
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} aria-hidden="true" />
-        {expanded ? (
-          <ChevronDown className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        {depth === 0 && (
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} aria-hidden="true" />
+        )}
+        {isBranch && (
+          expanded ? (
+            <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          )
         )}
         {category.name}
       </button>
 
       {expanded && (
-        <ul id={regionId} className="ml-4 space-y-1">
-          {category.docs.map((doc) => {
-            const isActive = doc.slug === currentSlug;
-            return (
-              <li key={doc.slug}>
-                <Link
-                  to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'block px-3 py-1.5 text-sm rounded-md transition-colors',
-                    isActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  )}
-                >
-                  {doc.frontmatter.sidebarLabel || doc.frontmatter.title}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div id={regionId}>
+          {/* Recursively render child categories */}
+          {hasChildren && category.children!.map(child => (
+            <CategorySection
+              key={child.name}
+              category={child}
+              currentSlug={currentSlug}
+              projectId={projectId}
+              versionId={versionId}
+              depth={depth + 1}
+              onNavigate={onNavigate}
+            />
+          ))}
+          {/* Render docs in this category */}
+          {hasDocs && (
+            <ul className="space-y-1" style={{ marginLeft: `${16 + depth * 16}px` }}>
+              {category.docs.map((doc) => {
+                const isActive = doc.slug === currentSlug;
+                return (
+                  <li key={doc.slug}>
+                    <Link
+                      to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      onClick={onNavigate}
+                      className={cn(
+                        'block px-3 py-1.5 rounded-md transition-colors',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium text-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted text-sm',
+                      )}
+                    >
+                      {doc.frontmatter.sidebarLabel || doc.frontmatter.title}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
@@ -280,34 +362,15 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
             {/* Categories */}
             <nav aria-label="Documentation sections">
               {version.categories.map((category) => (
-                <div key={category.name} className="mb-4">
-                  <p className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-muted-foreground">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${CATEGORY_COLORS[categoryColorIndex(category.name)]}`} aria-hidden="true" />
-                    {category.name}
-                  </p>
-                  <ul className="ml-4 space-y-1">
-                    {category.docs.map((doc) => {
-                      const isActive = doc.slug === currentSlug;
-                      return (
-                        <li key={doc.slug}>
-                          <Link
-                            to={doc.categoryPath ? `/docs/${project.id}/${version.id}/${doc.categoryPath}/${doc.slug}` : `/docs/${project.id}/${version.id}/${doc.slug}`}
-                            aria-current={isActive ? 'page' : undefined}
-                            className={cn(
-                              'block px-3 py-1.5 text-sm rounded-md transition-colors',
-                              isActive
-                                ? 'bg-primary/10 text-primary font-medium'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                            )}
-                            onClick={() => setOpen(false)}
-                          >
-                            {doc.frontmatter.sidebarLabel || doc.frontmatter.title}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                <CategorySection
+                  key={category.name}
+                  category={category}
+                  currentSlug={currentSlug}
+                  projectId={project.id}
+                  versionId={version.id}
+                  depth={0}
+                  onNavigate={() => setOpen(false)}
+                />
               ))}
             </nav>
         </div>

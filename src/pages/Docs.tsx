@@ -26,7 +26,41 @@ import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
-import type { DocFile } from '@/types/docs';
+import type { DocCategory, DocFile } from '@/types/docs';
+
+/** Recursively flatten all docs from nested category tree. */
+function allDocsFromCategories(cats: DocCategory[]): DocFile[] {
+  return cats.flatMap(c => [
+    ...(c.docs || []),
+    ...(c.children ? allDocsFromCategories(c.children) : []),
+  ]);
+}
+
+/** Walk category tree to find a category by its path segments. */
+function findCategory(cats: DocCategory[], pathParts: string[]): DocCategory | undefined {
+  if (pathParts.length === 0) return undefined;
+  const [first, ...rest] = pathParts;
+  for (const c of cats) {
+    const seg = c.categoryPath?.split('/').pop();
+    if (seg === first) {
+      return rest.length === 0 ? c : findCategory(c.children || [], rest);
+    }
+  }
+  return undefined;
+}
+
+/** Build flat path→name map from nested category tree (for breadcrumbs). */
+function buildPathNameMap(cats: DocCategory[]): Map<string, string> {
+  const map = new Map<string, string>();
+  function walk(list: DocCategory[]) {
+    for (const c of list) {
+      if (c.categoryPath) map.set(c.categoryPath, c.name);
+      if (c.children) walk(c.children);
+    }
+  }
+  walk(cats);
+  return map;
+}
 
 /** Build a doc URL, including category path when present. */
 function docUrl(projectId: string, version: string, doc: DocFile): string;
@@ -137,8 +171,7 @@ export function Docs() {
   // Redirect old flat URLs (/docs/:projectId/:version/:slug) to new
   // categorized URLs when the doc is found in the nav data.
   if (!category && slug && activeVersion) {
-    const matchedDoc = activeVersion.categories
-      .flatMap(c => c.docs)
+    const matchedDoc = allDocsFromCategories(activeVersion.categories)
       .find(d => d.slug === slug);
     if (matchedDoc && matchedDoc.categoryPath) {
       return <Navigate to={docUrl(project.id, activeVersion.id, matchedDoc)} replace />;
@@ -191,9 +224,12 @@ export function Docs() {
   // Redirect to first doc when no slug provided.
   if (!slug) {
     const targetCategory = category
-      ? activeVersion.categories.find(c => c.docs[0]?.categoryPath === category)
+      ? findCategory(activeVersion.categories, category.split('/'))
       : undefined;
-    const firstDoc = targetCategory?.docs[0] || activeVersion.categories[0]?.docs[0];
+    const allDocList = targetCategory
+      ? allDocsFromCategories([targetCategory])
+      : allDocsFromCategories(activeVersion.categories);
+    const firstDoc = allDocList[0];
     if (firstDoc) {
       return <Navigate to={docUrl(project.id, activeVersion.id, firstDoc)} replace />;
     }
@@ -232,14 +268,21 @@ export function Docs() {
   const versionedBase = `/docs/${project.id}/${activeVersion.id}`;
   const fullDocUrl = doc ? docUrl(project.id, activeVersion.id, doc) : versionedBase;
   const projectUrl = versionedBase;
-  const categoryUrl = doc?.categoryPath
-    ? `/docs/${project.id}/${activeVersion.id}/${doc.categoryPath}`
-    : versionedBase;
+  const pathNameMap = doc ? buildPathNameMap(activeVersion.categories) : new Map<string, string>();
+  const categoryCrumbs: Breadcrumb[] = doc?.categoryPath
+    ? doc.categoryPath.split('/').map((_, i, arr) => {
+        const partial = arr.slice(0, i + 1).join('/');
+        return {
+          name: pathNameMap.get(partial) || partial.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          url: `/docs/${project.id}/${activeVersion.id}/${partial}`,
+        };
+      })
+    : [];
   const breadcrumbs: Breadcrumb[] | undefined = doc
     ? [
         { name: 'Home', url: '/' },
         { name: project.name, url: projectUrl },
-        ...(doc.category ? [{ name: doc.category, url: categoryUrl }] : []),
+        ...categoryCrumbs,
         { name: doc.frontmatter.title, url: fullDocUrl },
       ]
     : undefined;
@@ -301,7 +344,8 @@ export function Docs() {
                   </p>
                   <div className="space-y-2">
                     {activeVersion.categories.map(cat => {
-                      const firstDoc = cat.docs[0];
+                      const flatDocs = allDocsFromCategories([cat]);
+                      const firstDoc = flatDocs[0];
                       if (!firstDoc) return null;
                       return (
                         <Link
@@ -311,7 +355,7 @@ export function Docs() {
                         >
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm group-hover:text-primary transition-colors">{cat.name}</p>
-                            <p className="text-xs text-muted-foreground">{cat.docs.length} {cat.docs.length === 1 ? 'doc' : 'docs'}</p>
+                            <p className="text-xs text-muted-foreground">{flatDocs.length} {flatDocs.length === 1 ? 'doc' : 'docs'}</p>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
                         </Link>
