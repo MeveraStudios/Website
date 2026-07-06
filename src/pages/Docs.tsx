@@ -9,7 +9,7 @@
  */
 
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { Edit, Calendar, AlertCircle, ChevronRight, Info } from 'lucide-react';
+import { ChevronRight, Edit, Calendar, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Sidebar, MobileSidebar } from '@/components/layout/Sidebar';
@@ -21,8 +21,6 @@ import { DocFeedback } from '@/components/docs/DocFeedback';
 import { Contributors } from '@/components/docs/Contributors';
 import { Breadcrumbs } from '@/components/docs/Breadcrumbs';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
@@ -319,15 +317,11 @@ export function Docs() {
             </div>
 
             {isLoading ? (
-              <div className="py-12 space-y-4">
-                <div className="h-4 bg-muted rounded w-40 animate-pulse mb-6" />
-                <div className="h-10 bg-muted rounded w-3/5 animate-pulse mb-4" />
+              <div className="py-12 space-y-3">
+                <div className="h-6 bg-muted rounded w-1/3 animate-pulse" />
                 <div className="h-4 bg-muted rounded w-full animate-pulse" />
-                <div className="h-4 bg-muted rounded w-11/12 animate-pulse" />
                 <div className="h-4 bg-muted rounded w-4/5 animate-pulse" />
-                <div className="h-4 bg-muted rounded w-full animate-pulse" />
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
-                <div className="h-4 bg-muted rounded w-5/6 animate-pulse" />
+                <div className="h-4 bg-muted rounded w-3/5 animate-pulse" />
               </div>
             ) : !doc ? (
               <div className="py-16">
@@ -369,25 +363,9 @@ export function Docs() {
                 {/* Document Header */}
                 <div className="mb-8">
                   {breadcrumbs && (
-                    <div className="flex items-center gap-2 mb-4">
-                      <Breadcrumbs items={breadcrumbs} className="flex-1" />
-                      {doc.frontmatter.description && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                              <Info className="h-4 w-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" align="end" className="max-w-xs">
-                            {doc.frontmatter.description}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
+                    <Breadcrumbs items={breadcrumbs} className="mb-8" />
                   )}
                 </div>
-
-                <Separator className="mb-8" />
 
                 {/* Document Content */}
                 {doc.extension === '.mdx' ? (

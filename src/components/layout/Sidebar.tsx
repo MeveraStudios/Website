@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ChevronsUpDown, BookOpen, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,11 +34,11 @@ import type { DocCategory, DocFile, DocProject, DocVersion } from '@/types/docs'
 function VersionSwitcher({ project, version }: { project: DocProject; version: DocVersion }) {
   const versions = project.versions ?? [];
   const navigate = useNavigate();
-  const location = useLocation();
+  const { slug } = useParams<{ slug?: string }>();
 
   if (versions.length <= 1) return null;
 
-  const currentSlug = location.pathname.split('/').pop() || '';
+  const currentSlug = slug || '';
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextId = e.target.value;
@@ -225,7 +225,7 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
                       className={cn(
                         'block px-3 py-1.5 rounded-md transition-colors',
                         isActive
-                          ? 'bg-primary/10 text-primary font-medium text-sm'
+                          ? 'bg-primary/10 text-primary text-sm'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted text-sm',
                       )}
                     >
@@ -243,8 +243,8 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
 }
 
 export function Sidebar({ project, version, className }: SidebarProps) {
-  const location = useLocation();
-  const currentSlug = location.pathname.split('/').pop() || '';
+  const { slug } = useParams<{ slug?: string }>();
+  const currentSlug = slug || '';
   const navigate = useNavigate();
 
   const navigateToProject = (target: typeof PROJECTS[number]) => {
@@ -306,8 +306,8 @@ export function Sidebar({ project, version, className }: SidebarProps) {
 // Mobile Sidebar
 export function MobileSidebar({ project, version }: { project: DocProject; version: DocVersion }) {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-  const currentSlug = location.pathname.split('/').pop() || '';
+  const { slug } = useParams<{ slug?: string }>();
+  const currentSlug = slug || '';
   const navigate = useNavigate();
 
 

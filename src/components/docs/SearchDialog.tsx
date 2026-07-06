@@ -226,7 +226,7 @@ export function SearchDialog({
           >
             <Search className="h-4 w-4" />
             <span className="text-sm">Search</span>
-            <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+            <kbd className="ml-2 hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium">
               <Command className="h-3 w-3" />
               <span>K</span>
             </kbd>

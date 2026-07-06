@@ -17,7 +17,7 @@
  * `public/docs-content/<project>/<version>/<slug>.json`.
  */
 
-import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
@@ -973,9 +973,10 @@ function precompileDocs() {
     const searchIndexPath = join(PUBLIC_DIR, 'search-index.json');
     const docsContentDir = join(PUBLIC_DIR, 'docs-content');
 
-    if (!existsSync(docsContentDir)) {
-        mkdirSync(docsContentDir, { recursive: true });
+    if (existsSync(docsContentDir)) {
+        rmSync(docsContentDir, { recursive: true, force: true });
     }
+    mkdirSync(docsContentDir, { recursive: true });
 
     writeFileSync(docsNavPath, JSON.stringify(docsNavData), 'utf-8');
     writeFileSync(searchIndexPath, JSON.stringify(searchIndex), 'utf-8');
