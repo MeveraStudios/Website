@@ -17,7 +17,7 @@ Voxy's rank system handles all player permission management across your network.
 
 ## Managing Ranks
 
-All rank management is done via the `/rank` command (permission: `voxy.admin`).
+All rank management is done via the `/rank` command (alias: `ranks`; permission: `voxy.admin`).
 
 ### Create & delete
 
@@ -32,11 +32,13 @@ All rank management is done via the `/rank` command (permission: `voxy.admin`).
 
 | Command | Description |
 |---------|-------------|
-| `/rank setprefix <rank> <prefix>` | Set chat prefix (MiniMessage supported) |
+| `/rank setprefix <rank> <prefix> [--addspace]` | Set chat prefix (MiniMessage supported). `--addspace` appends a trailing space after the prefix. |
 | `/rank setsuffix <rank> <suffix>` | Set chat suffix |
-| `/rank setcolor <rank> <color>` | Set rank color (hex, e.g. `#e11d48`) |
-| `/rank setpriority <rank> <priority>` | Set priority (higher = shown first, 0–1000000000) |
+| `/rank setcolor <rank> <color>` | Set rank color - a hex value (e.g. `#e11d48`) or a named color |
+| `/rank setpriority <rank> <priority>` | Set priority (higher = shown first, 0-1000000000) |
 | `/rank staff <rank>` | Toggle staff status |
+| `/rank authable <rank> <true/false>` | Toggle whether the rank can be used for authentication |
+| `/rank forceAuth <rank> <true/false>` | Toggle whether the rank is forced to authenticate |
 | `/rank setdefault <rank>` | Make this the default rank for new players |
 | `/rank setfriendlimit <rank> <limit>` | Max friends (-1 for unlimited) |
 | `/rank setdiscordrole <rank> <role-id>` | Link a Discord role ID |
@@ -58,8 +60,11 @@ The `--force` flag bypasses rank-guard restrictions if you have `voxy.admin`.
 |---------|-------------|
 | `/rank inherit <rank> <parent>` | Inherit another rank's permissions |
 | `/rank uninherit <rank> <parent>` | Remove inheritance |
+| `/rank tree <rank>` | Show the rank's full inheritance tree |
 
 ## Granting Ranks to Players
+
+These commands require the `voxy.grant` permission.
 
 | Command | Description |
 |---------|-------------|
@@ -75,10 +80,12 @@ When the Vault plugin is present, Voxy registers as the permission provider. Oth
 
 ## Player Permissions
 
-Individual players can also have permissions outside of ranks:
+Individual players can also have permissions outside of ranks. The `/user` command requires `voxy.admin`:
 
 | Command | Description |
 |---------|-------------|
 | `/user addperm <player> <permission> [duration]` | Add a permission to a player |
 | `/user remperm <player> <permission>` | Remove a player permission |
 | `/user editperms [player]` | Open GUI permission editor |
+| `/user delete <player>` | Delete all stored data for a player |
+| `/user deleteall [confirm]` | Delete all stored player data across the network (requires the `confirm` token) |

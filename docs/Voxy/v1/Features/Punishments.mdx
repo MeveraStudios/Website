@@ -25,25 +25,25 @@ All punishment commands accept these common flags:
 | Flag | Description |
 |------|-------------|
 | `-t <duration>` | Duration (e.g. `7d`, `2h`). Omit for permanent. |
-| `-s` | Silent — no broadcast to staff |
+| `-s` | Silent - broadcasts the punishment only to staff (`voxy.staff`); omit it and the punishment is announced publicly |
 | `--extend` | Extend an existing active punishment |
 
-| Command | Description |
-|---------|-------------|
-| `/ban <player> [-t] [-s] [--extend] <reason>` | Ban a player |
-| `/mute <player> [-t] [-s] [--extend] <reason>` | Mute a player |
-| `/blacklist <player> [-t] [-s] [--extend] <reason>` | Blacklist a player |
-| `/warn <player> [-s] <reason>` | Issue a warning |
-| `/kick <player> [-s] <reason>` | Kick a player |
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/ban <player> [-t] [-s] [--extend] <reason>` | `voxy.ban` | Ban a player |
+| `/mute <player> [-t] [-s] [--extend] <reason>` | `voxy.mute` | Mute a player |
+| `/blacklist <player> [-t] [-s] [--extend] <reason>` | `voxy.blacklist` | Blacklist a player |
+| `/warn <player> [-s] <reason>` | `voxy.warn` | Issue a warning |
+| `/kick <player> [-s] <reason>` | `voxy.kick` | Kick a player |
 
 ## Removing Punishments
 
-| Command | Description |
-|---------|-------------|
-| `/unban <player>` | Remove a ban |
-| `/unmute <player>` | Remove a mute |
-| `/unblacklist <player>` | Remove a blacklist |
-| `/unwarn <player>` | Remove the most recent warning |
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/unban <player>` | `voxy.unban` | Remove a ban |
+| `/unmute <player>` | `voxy.unmute` | Remove a mute |
+| `/unblacklist <player>` | `voxy.unblacklist` | Remove a blacklist |
+| `/unwarn <player>` | `voxy.unwarn` | Remove the most recent warning |
 
 ## Punishment Ladders
 
@@ -51,16 +51,16 @@ Ladders define a progression of escalating punishments. When a player is punishe
 
 Configure ladders in `ladders.yml` (proxy) or manage them via the `/ladders` GUI.
 
-| Command | Description |
-|---------|-------------|
-| `/punish <player> <ladder> [-s] <reason>` | Apply the next step of a ladder |
-| `/ladders` | Open ladder management GUI (`voxy.admin`) |
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/punish <player> <ladder> [-s] <reason>` | `voxy.punish` | Apply the next step of a ladder |
+| `/ladders` | `voxy.admin` | Open ladder management GUI |
 
 ## Staff Rollback
 
-| Command | Description |
-|---------|-------------|
-| `/staffrollback <staff> [-t <duration>=1h]` | Revert all punishments issued by a staff member in the given window |
+| Command | Permission | Description |
+|---------|-----------|-------------|
+| `/staffrollback <staff> [-t <duration>=1h]` | `voxy.staffrollback` | Revert all punishments issued by a staff member in the given window |
 
 ## Viewing History
 
@@ -68,8 +68,8 @@ Configure ladders in `ladders.yml` (proxy) or manage them via the `/ladders` GUI
 |---------|-----------|-------------|
 | `/history [player]` | `voxy.history` | Punishment history for a player — click any entry to edit its reason |
 | `/staffhistory <staff> [-t <duration>]` | `voxy.staffhistory` | All punishments issued by a staff member |
-| `/chatlogs <player> <duration> [page]` | `voxy.chatlogs` | Recent chat messages |
-| `/commandlogs <player> <duration> [page]` | `voxy.commandlogs` | Recent command usage |
+| `/chatlogs <player> <duration> [page] [--upload]` | `voxy.chatlogs` | Recent chat messages. `--upload` posts the full log to a paste URL instead of paging in chat. |
+| `/commandlogs <player> <duration> [page] [--upload]` | `voxy.commandlogs` | Recent command usage. `--upload` posts the full log to a paste URL instead of paging in chat. |
 | `/clearviolations [player]` | `voxy.clearviolations` | Clear all punishments and ladder progress |
 
 The history menu shows each punishment's type, reason, duration, revoke status, and date. **Click any punishment entry** to open a chat prompt and edit its reason — type the new reason or `cancel` to abort.

@@ -38,8 +38,8 @@ Disguise lets staff members appear as a different player — with a custom name,
 
 | Command | Permission | Description |
 |---------|-----------|-------------|
-| `/disguise [nickname] [skin] [rank]` | `voxy.disguise` | Apply a disguise |
-| `/undisguise [target]` | `voxy.disguise` | Remove your disguise, or another player's if target is specified |
+| `/disguise [nickname] [skin] [rank]` (alias: `nick`) | `voxy.disguise` | Apply a disguise |
+| `/undisguise [target]` (alias: `unnick`) | `voxy.disguise` (own), `voxy.disguise.others` (others) | Remove your disguise, or another player's if target is specified |
 
 ### Disguise parameters
 
@@ -49,6 +49,13 @@ Disguise lets staff members appear as a different player — with a custom name,
 | `skin` | The skin to display. Use `random` for a random skin, `cached` for the last used skin, `me` for your own skin. |
 | `rank` | The rank displayed to others while disguised. |
 
+### Disguise constraints
+
+Two checks are enforced when applying a disguise:
+
+- **Rank priority** - you cannot disguise as a rank whose priority is greater than or equal to your own. Only lower-priority ranks are offered in the rank chooser and accepted by the command.
+- **Nickname uniqueness** - a nickname is rejected if it is already taken by a real account, by another player's active disguise, or by a stored disguise in the database.
+
 ### Custom disguise
 
 Players with `voxy.disguise.custom` can specify all three parameters directly in the command. Without this permission, Voxy uses an interactive book UI to walk through each step.
@@ -56,3 +63,13 @@ Players with `voxy.disguise.custom` can specify all three parameters directly in
 ### Disguise at join
 
 Voxy can apply a cached disguise automatically when a player joins. If the join-time disguise fails to apply, the disguised state is cleared.
+
+### Privacy while disguised
+
+A disguised staff member's real identity is hidden from everyone except their friends and other staff (`voxy.staff`). This protection is enforced consistently across messaging, invites, and profiles:
+
+- **Messaging** - a player who messages the disguised staff member by their **real name** is told the target is offline. A player who messages the **disguise nickname** is told that player has messages disabled. Neither response reveals the disguise.
+- **Invites** - party, guild, and friend invites behave the same way, so a disguised staff member can't be exposed by inviting or being invited.
+- **Profiles** - opening a disguised player's profile shows the disguise identity (name, skin, rank) and the date the disguise began, never the real account.
+
+Friends and staff bypass all of the above and interact with the real player as normal.

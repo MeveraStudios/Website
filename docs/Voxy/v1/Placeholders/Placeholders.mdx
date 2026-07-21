@@ -15,15 +15,23 @@ Voxy exposes placeholders for use in scoreboards, tab lists, chat formatters, an
 | PlaceholderAPI | `%voxy_<key>%` | Spigot only |
 | Synapse | `{voxy:<key>}` or `{v:<key>}` | Spigot, Hytale |
 
-Both providers expose the same set of keys. PlaceholderAPI must be installed for PAPI placeholders to work; Synapse is a separate library.
+The PlaceholderAPI expansion id is `voxy`. Synapse registers under two namespaces, `voxy` and `v`. PlaceholderAPI must be installed for PAPI placeholders to work; Synapse is a separate library.
+
+:::caution{label="PAPI and Synapse are not identical"}
+The two providers share most keys, but a few differ:
+
+- **`_legacy` keys are PlaceholderAPI-only.** Every `*_legacy` key listed below (for example `coloredname_legacy`, `rank_colored_legacy`, `prefix_legacy`, and the `current_*_legacy` keys) exists **only** on the PAPI provider. Synapse does not register any `_legacy` keys; instead it applies legacy color translation globally through a post-processor, so its base keys (e.g. `{voxy:coloredname}`) already return legacy `§`-formatted output.
+- **`balance` and `level_progress` take an argument on Synapse.** On PAPI they use an underscore suffix (`balance_<currency_id>`, `level_progress_<style>`); on Synapse they are argument-based, using a colon (`{voxy:balance:coins}`, `{voxy:level_progress:<style>}`).
+:::
 
 ## Player Identity
 
 | Key | Description |
 |-----|-------------|
 | `name` | Player's real username |
+| `realname` | Alias of `name` |
 | `coloredname` | Username with rank color applied (MiniMessage) |
-| `coloredname_legacy` | Username with rank color (legacy `§` codes) |
+| `coloredname_legacy` | Username with rank color (legacy `§` codes). PAPI only |
 
 ## Rank
 
@@ -31,13 +39,13 @@ Both providers expose the same set of keys. PlaceholderAPI must be installed for
 |-----|-------------|
 | `rank` | Rank name |
 | `rank_colored` | Rank name with color (MiniMessage) |
-| `rank_colored_legacy` | Rank name with color (legacy codes) |
+| `rank_colored_legacy` | Rank name with color (legacy codes). PAPI only |
 | `prefix` | Rank prefix |
-| `prefix_legacy` | Rank prefix (legacy codes) |
+| `prefix_legacy` | Rank prefix (legacy codes). PAPI only |
 | `suffix` | Rank suffix |
-| `suffix_legacy` | Rank suffix (legacy codes) |
+| `suffix_legacy` | Rank suffix (legacy codes). PAPI only |
 | `color` | Rank color as hex string |
-| `color_legacy` | Rank color as legacy code |
+| `color_legacy` | Rank color as legacy code. PAPI only |
 | `priority` | Rank priority (numeric) |
 
 ## Current (Disguise-aware)
@@ -48,16 +56,16 @@ When a player is disguised, `current_*` keys reflect the disguise. When not disg
 |-----|-------------|
 | `current_name` | Current display name |
 | `current_coloredname` | Current name with color (MiniMessage) |
-| `current_coloredname_legacy` | Current name with color (legacy codes) |
+| `current_coloredname_legacy` | Current name with color (legacy codes). PAPI only |
 | `current_rank` | Current rank name |
 | `current_rank_colored` | Current rank with color (MiniMessage) |
-| `current_rank_colored_legacy` | Current rank with color (legacy codes) |
+| `current_rank_colored_legacy` | Current rank with color (legacy codes). PAPI only |
 | `current_prefix` | Current prefix |
-| `current_prefix_legacy` | Current prefix (legacy codes) |
+| `current_prefix_legacy` | Current prefix (legacy codes). PAPI only |
 | `current_suffix` | Current suffix |
-| `current_suffix_legacy` | Current suffix (legacy codes) |
+| `current_suffix_legacy` | Current suffix (legacy codes). PAPI only |
 | `current_color` | Current rank color (hex) |
-| `current_color_legacy` | Current rank color (legacy code) |
+| `current_color_legacy` | Current rank color (legacy code). PAPI only |
 | `current_priority` | Current rank priority (numeric) |
 
 ## Progression
@@ -71,6 +79,8 @@ When a player is disguised, `current_*` keys reflect the disguise. When not disg
 | `level_progress_<style>` | Level progress bar rendered in the given style |
 
 Replace `<style>` with a valid progress bar style identifier.
+
+The underscore form `level_progress_<style>` is **PlaceholderAPI-only**. On Synapse, the style is passed as an argument: `{voxy:level_progress:<style>}` (key `level_progress`).
 
 ## Playtime
 
@@ -96,3 +106,5 @@ Replace `<style>` with a valid progress bar style identifier.
 | `balance_<currency_id>` | Balance for the given currency ID (numeric) |
 
 Replace `<currency_id>` with the internal ID of the currency, e.g. `%voxy_balance_coins%`.
+
+The underscore form `balance_<currency_id>` is **PlaceholderAPI-only**. On Synapse, the currency ID is passed as an argument: `{voxy:balance:coins}` (key `balance`).

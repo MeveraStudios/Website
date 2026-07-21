@@ -15,6 +15,7 @@ Players can add each other as friends, see when friends are online, and use frie
 - Friend requests are sent and accepted in-game
 - Friend counts are tracked online across the network in real time
 - Maximum friend count is configurable per rank (`/rank setfriendlimit <rank> <limit>`)
+- Players with `voxy.friend.limit.bypass` ignore the per-rank friend limit
 
 **Commands** — `/friends` (aliases: `friend`, `f`) | **Permission:** `voxy.friend`
 
@@ -99,7 +100,6 @@ Voxy provides multiple chat channels players can switch between:
 | Channel | Description |
 |---------|-------------|
 | Global | Network-wide chat |
-| Local | Server-local chat |
 | Staff | Visible only to staff (`voxy.staff` required) |
 | Guild | Guild members only |
 | Party | Party members only |
@@ -110,10 +110,25 @@ Staff chat is also accessible directly via `/staffchat [message]` (alias: `sc`) 
 
 ---
 
+## Player Profiles
+
+Open any player's profile with `/profile [player]` to view their stats, rank, level, playtime, and linked Discord. **Permission:** `voxy.menu.profile`.
+
+The profile adapts to who is viewing it, resolving to one of four tiers: your own profile (Self), a friend's (Friend), another player's (Other), or a staff view (Staff) with additional detail. Every profile respects the target's [privacy settings](#privacy-settings). From another player's profile you can act on them directly with **Message**, **Party Invite**, **Add Friend**, and **Ignore** buttons, which work the same as the matching commands.
+
+---
+
 ## Privacy Settings
 
-Players control who can interact with them via `/privacy` — no permission required. Options cover:
+Players control who can interact with them via `/privacy` - no permission required. The menu exposes two kinds of setting.
 
-- Who can send friend requests
-- Who can send private messages
+Four interaction settings each accept one of three levels: `EVERYONE`, `FRIENDS` (friends only), or `STAFF` (staff only):
+
+- Who can send them private messages
 - Who can invite them to parties
+- Who can invite them to guilds
+- Who can see their linked Discord on their profile
+
+Friend requests is a separate on/off toggle (not a three-way level) - either accepting requests or not.
+
+Staff always bypass these settings, so a `STAFF` level effectively means "staff only".

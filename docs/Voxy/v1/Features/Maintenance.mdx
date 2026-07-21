@@ -26,7 +26,11 @@ Players with **`voxy.maintenance.bypass`** skip all maintenance checks at every 
 
 | Command | Permission | Description |
 |---------|-----------|-------------|
-| `/maintenance <SERVER\|GROUP\|PROXY> <on\|off>` | `voxy.admin.maintenance` (alias: `maint`) | Toggle maintenance for the given scope |
+| `/maintenance <SERVER\|GROUP\|PROXY> <true\|false>` | `voxy.admin.maintenance` (alias: `maint`) | Toggle maintenance for the given scope |
+
+The state argument is a boolean parsed as `true` or `false` (not `on`/`off`).
+
+The `SERVER` and `GROUP` scopes take **no** name argument - they act on the server or group the player issuing the command is currently connected to. The player must be connected to a server (for `SERVER`) or to a server that belongs to a group (for `GROUP`); otherwise the command reports that they are not connected and does nothing. Only `PROXY` is network-wide.
 
 ## State Persistence
 

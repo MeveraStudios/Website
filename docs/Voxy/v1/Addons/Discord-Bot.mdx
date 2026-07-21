@@ -86,43 +86,65 @@ The bot exits with an error if MongoDB or Redis is unreachable.
 |---------|-----|-------------|
 | `/profile [user]` | Anyone | View a linked player's Minecraft profile (name, UUID, rank, level, XP, playtime, join date) |
 | `/unlink` | Anyone | Unlinks your Discord account from Minecraft |
-| `/associate <rank> <role>` | Admin | Binds a Minecraft rank to a Discord role |
+| `/associate <rank> <discord-role>` | Admin | Binds a Minecraft rank to a Discord role |
 | `/disassociate <rank>` | Admin | Removes a rank-role binding |
 
 All responses are ephemeral (visible only to the invoking user).
 ## UI Scripting (YAML)
 
-The Discord bot can render rich interactive messages using YAML definitions. These definitions are placed in `messages.yml` and support a variety of components:
+The Discord bot can render rich interactive messages using YAML definitions in `messages.yml`.
 
-- **SECTION** – a heading with optional thumbnail or image.
-- **ACTION_ROW** – a horizontal container for buttons, selects, or other interactive elements.
-- **BUTTON** – clickable actions that trigger bot commands or open URLs.
-- **STRING_SELECT** – dropdown menus for choosing from textual options.
-- **ENTITY_SELECT** – dropdowns for selecting users, roles, or channels.
-- **MEDIA_GALLERY** – displays a grid of images.
-- **FILE_DISPLAY** – shows downloadable files.
+Each message is keyed by a dotted route (for example `link.request` or `profile.summary`) and is defined as a **list** of top-level container components. Supported top-level component types are:
 
-### Example YAML snippet
+- **TEXT** - a text display block (Markdown supported). Requires a `text` key.
+- **SEPARATOR** - a spacer/divider. Optional `spacing` (`SMALL` or `LARGE`) and `divider` (boolean).
+- **SECTION** - a block of `TEXT` children with a required accessory (thumbnail or button).
+- **ACTION_ROW** - a horizontal row of interactive components, listed under `children`.
+- **BUTTON** - a clickable action (inside an `ACTION_ROW` or as a section accessory).
+- **STRING_SELECT** - dropdown menu of textual options.
+- **ENTITY_SELECT** - dropdown for selecting users, roles, or channels.
+- **MEDIA_GALLERY** - a grid of images.
+- **FILE_DISPLAY** - a downloadable file.
+
+### Component notes
+
+- A **BUTTON** uses the key `id` for its custom identifier (not `custom_id`). Link-style buttons (`style: LINK`) use `url` and `label` instead of `id`.
+- A **SECTION** requires a `children` list containing only `TEXT` items, plus an accessory supplied as a map under `accessory` (or `thumbnail`). A thumbnail accessory must be a map with `type: THUMBNAIL` and a `url` - a bare URL string is rejected. A section cannot contain an `ACTION_ROW`.
+- For the link prompt, the approve/deny button IDs are generated at runtime (they encode the request UUID, e.g. `discord-link:approve:<uuid>`). Reference them in YAML with the `{approve-id}` and `{deny-id}` placeholders, which the bot substitutes before sending.
+
+### Example: `link.request`
+
 ```yaml
-link-request:
-  type: SECTION
-  title: "Link Request"
-  description: "A player wants to link their Discord account."
-  thumbnail: "https://example.com/icon.png"
-  components:
+link:
+  request:
+    - type: SECTION
+      accessory:
+        type: THUMBNAIL
+        source: URL
+        url: "https://cravatar.eu/helmavatar/{player-id}/800.png"
+        description: "Avatar for {player}"
+      children:
+        - type: TEXT
+          text: "## Account Link Request"
+        - type: TEXT
+          text: "Link request from **{player}**"
+    - type: SEPARATOR
+      spacing: SMALL
+    - type: TEXT
+      text: "This request expires in {minutes} minutes."
     - type: ACTION_ROW
-      components:
+      children:
         - type: BUTTON
           style: SUCCESS
+          id: "{approve-id}"
           label: "Approve"
-          custom_id: "link-approve"
         - type: BUTTON
           style: DANGER
+          id: "{deny-id}"
           label: "Deny"
-          custom_id: "link-deny"
 ```
 
-When the bot receives this definition, it builds a Discord message with the specified layout. Pressing **Approve** links the accounts, while **Deny** rejects the request. The bot automatically handles component interactions and updates the message state.
+When the bot renders this definition it builds the message from the listed components. Pressing **Approve** links the accounts, while **Deny** rejects the request. Placeholders such as `{player}`, `{minutes}`, `{approve-id}`, and `{deny-id}` are substituted at send time.
 ## Account Linking
 
 1. Player runs `/linkdiscord` in-game
@@ -137,7 +159,7 @@ To unlink, players run `/unlinkdiscord` in-game or `/unlink` on Discord.
 Map a Minecraft rank to a Discord role with `/associate`:
 
 ```
-/associate <rank> <role>
+/associate <rank> <discord-role>
 ```
 
 Once associated, the bot automatically:

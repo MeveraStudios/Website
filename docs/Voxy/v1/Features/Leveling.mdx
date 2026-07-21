@@ -16,14 +16,16 @@ Server administrators can also configure how the progress is displayed using **B
 
 ### Experience Formula
 
-The experience required to reach the next level is calculated using a mathematical expression.
+The formula is a cumulative expression: evaluated at a given `<level>` it returns the total XP that level represents.
 By default, the formula is:
 ```text
 1250 * (<level> ^ 2) + (6250 * <level>) - 7500
 ```
-*(Where `<level>` is the player's current level).*
+*(Where `<level>` is the level being evaluated).*
 
-You can modify this formula via the settings, along with defining the server's **max level** (default `500`).
+The XP needed to advance from one level to the next is the **difference** between the formula at consecutive levels - that is, `f(level + 1) - f(level)` - not the raw formula value at a single level.
+
+You can modify this formula via the settings, along with defining the server's **max level** (default `1000`).
 
 ## Bar Styles
 
@@ -54,6 +56,11 @@ These formats are used by the `level_chat` and `level_display` placeholders — 
 Rewards can be configured to trigger automatically when a player reaches a specific level.
 A single `LevelReward` consists of multiple actions, which can include giving items, executing commands, sending messages, or granting currency.
 
+### Level-Up and Reminders
+
+- When a player levels up, Voxy sends them a chat message (configured as `LEVELS_LEVELUP_CHAT` in `messages.yml`).
+- When a player has claimable level rewards waiting, an unclaimed-reward reminder (`LEVELS_REWARD_UNCLAIMED`) is sent on join, pointing them to `/rewards` to claim.
+
 ## Commands
 
 Staff can manage a player's levels and XP, as well as configure the entire system through an in-game GUI.
@@ -66,5 +73,7 @@ Staff can manage a player's levels and XP, as well as configure the entire syste
 | `addexp` | `/level addexp <player> <amount>` | Adds experience |
 | `addrandomexp` | `/level addrandomexp <player> <min> <max>` | Adds random experience |
 | `settings` | `/level settings` | Opens the leveling settings GUI |
+
+The command is registered as both `/level` and `/levels`.
 
 *(Requires the `voxy.admin` permission).*

@@ -12,6 +12,8 @@ Voxy can detect and block players connecting through VPNs, proxies, or Tor exit 
 
 When a player joins, Voxy checks their IP address against one or more external detection services. If the IP is flagged, the player is disconnected with a configurable message. Results are cached to avoid re-checking the same IP on every login.
 
+The check runs both on a proxy at login and on a standalone (non-proxied) Spigot server at login - it is not proxy-only. A generic `FLAGGED` verdict (a service says the IP is suspicious without naming a category) is treated as a VPN and uses the `block.vpn` setting.
+
 ## Bypass Permission
 
 Players with **`voxy.antivpn.bypass`** are never checked.
@@ -21,7 +23,7 @@ Players with **`voxy.antivpn.bypass`** are never checked.
 The feature is configured in `vpn.yml` on the proxy:
 
 ```yaml
-enabled: true
+enabled: false
 
 # How long to cache IP check results before rechecking
 cache-ttl: 1h
@@ -74,7 +76,7 @@ The disconnect message is configured in `messages.yml`:
 
 ```yaml
 system:
-  antivpn-kick: "<red>A VPN or proxy was detected on your connection. Please disable it and try again."
+  antivpn-kick: "<red>VPN or proxy detected. Disable it and try again."
 ```
 
 ## Commands

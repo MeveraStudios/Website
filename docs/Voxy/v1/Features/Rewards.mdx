@@ -10,24 +10,45 @@ Voxy's reward system queues actions to be delivered to players. Rewards have rar
 
 ## Reward Actions
 
-The primary reward action type is `RunCommand` — when a player claims a reward, a configured command runs on the server. This lets you give currency, items, ranks, or anything else a command can do.
+The primary reward action type is `RunCommand` - a configured command runs on the server. This lets you give currency, items, ranks, or anything else a command can do.
+
+### RunCommand Target
+
+Each `RunCommand` action has a target that decides **where** the command runs:
+
+| Target | Runs on |
+|--------|---------|
+| `CURRENT` | The server the player is currently on |
+| `ANY` | The first server that receives the player (no specific server required) |
+| `SPECIFIC` | A named server only |
+| `GROUP` | Any server in a named group |
+| `PROXY` | The proxy (not supported on Spigot; such actions are skipped there) |
 
 ## Reward Rarities
 
 Rewards are assigned a rarity which can be used to display or categorise them:
 
+- Hidden
 - Common
-- Uncommon
 - Rare
 - Epic
 - Legendary
+- Mythical
 
 ## Player Rewards Menu
 
 | Command | Permission | Description |
 |---------|-----------|-------------|
-| `/reward [player]` | `voxy.menu.reward` | Open pending rewards menu — omit player for your own, specify player to open theirs |
+| `/rewards [player]` | `voxy.menu.reward` | Open the rewards menu - omit player for your own, specify player to open theirs |
+
+The command is registered as both `/rewards` (primary) and `/reward` (alias).
 
 ## Distributing Rewards
 
-Rewards are queued programmatically via the Voxy API or through admin tooling. The reward service delivers queued rewards to players when they claim them through the `/reward` menu.
+Rewards are queued programmatically via the Voxy API or through admin tooling. Queued actions are stored on the player's data and delivered automatically when the player joins a server whose target matches (see [RunCommand Target](#runcommand-target) above). If an action's target does not match the current server, it stays queued until the player reaches a matching server.
+
+Delivery of general queued rewards is **silent** - there is no reminder or notification for the general reward queue.
+
+:::note
+The only unclaimed-reward reminder in Voxy is driven by **level rewards**, not the general reward queue. That reminder is described on the [Leveling](./Leveling) page.
+:::

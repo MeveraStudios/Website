@@ -12,15 +12,18 @@ Guilds are player-run groups with their own roles, membership management, and cr
 
 | Role | Permissions |
 |------|-------------|
-| Leader | Full control — rename, disband, manage members and roles |
-| Officer | Invite, kick members, manage join requests |
+| Owner | Full control - set tag and tag color, toggle invite-only, disband, plus invite players and accept join requests |
+| Officer | Invite players and accept join requests |
 | Member | Basic membership |
+
+The guild creator becomes the `Owner`. The `Officer` role grants invite and accept-request rights, but there is currently no command to promote or demote members, so members cannot be assigned to `Officer` in-game.
 
 ## Guild Features
 
-- **Invites** — Officers and leaders can invite players to join
-- **Join requests** — Players can request to join a guild; officers and leaders can accept or deny
-- **Cross-server sync** — Guild updates (joins, leaves, role changes) propagate to all servers immediately
+- **Invites** - Owners and officers can invite players to join. Invites respect each player's guild-invite [privacy setting](../Features/Social#privacy-settings), so players can choose who is allowed to invite them. Invites expire automatically after 5 minutes.
+- **Join requests** - When a guild is invite-only, players can request to join; owners and officers accept them with `/guild accept`. There is no deny command - unaccepted requests simply remain pending.
+- **Cross-server sync** - Guild updates (joins, tag changes, disband) propagate to all servers immediately
+- **No leave command** - there is currently no `/guild leave` or member-removal command; the only way a guild ends is the owner running `/guild disband`.
 
 ## Guild Management
 
@@ -29,14 +32,16 @@ Guilds are player-run groups with their own roles, membership management, and cr
 | Subcommand | Description |
 |-----------|-------------|
 | `create <name>` | Creates a new guild |
-| `join <name>` | Joins a guild |
-| `invite <player>` | Invites a player |
-| `accept <player>` | Accepts a join request |
+| `join <name>` | Joins a guild directly, or sends a join request if it is invite-only |
+| `invite <player>` | Invites a player (Owner/Officer) |
+| `accept <player>` | Accepts a join request (Owner/Officer) |
 | `chat [message]` | Sends to guild chat or switches to it |
 | `info` | Shows your guild info |
-| `tag <tag>` | Sets your guild tag |
-| `tagcolor <color>` | Sets your guild tag color |
-| `settings inviteonly <true/false>` | Restricts joins to invited players only |
-| `disband` | Disbands the guild |
+| `tag <tag>` | Sets your guild tag (Owner only) |
+| `tagcolor <color>` | Sets your guild tag color (Owner only) |
+| `settings inviteonly <true/false>` | Restricts joins to invited players only (Owner only) |
+| `disband` | Disbands the guild (Owner only) |
+
+**Tag rules:** a guild tag must match `^[A-Za-z0-9]{1,6}$` (1-6 letters/digits), is stored uppercased, and must be unique across all guilds. The tag color accepts a hex value (with or without a leading `#`) or a named color.
 
 Guild data is backed up as part of the automatic backup system if enabled in `settings.yml`.

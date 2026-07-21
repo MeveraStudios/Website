@@ -22,7 +22,11 @@ Report categories define what reasons players can choose from when filing a repo
 |---------|-----------|-------------|
 | `/report <player> <category>` | `voxy.report` | File a report against a player |
 
-Each report is tied to a category and the reported player. A chat snapshot is automatically attached as evidence. Voxy enforces a **15-minute cooldown** — a player cannot file a second report against the same target within 15 minutes.
+Each report is tied to a category and the reported player. Voxy enforces a **15-minute cooldown** - a player cannot file a second report against the same target within 15 minutes.
+
+### Report proofs
+
+Every category defines which proofs are captured when a report is filed, using the `ReportProof` proof-type system. A chat snapshot is **not** always attached: it is captured only when the category's configured proofs include `CHAT_SNAPSHOT`, in which case Voxy stores the reported player's recent chat (the last 10 minutes) as evidence. Categories without that proof type file the report with no chat snapshot.
 
 ## Managing Reports
 

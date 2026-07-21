@@ -20,12 +20,15 @@ Each currency has a unique identifier. The default setup includes a `coins` curr
 
 ### Managing balances
 
-| Command | Description |
-|---------|-------------|
-| `/currency give <currency> <player> <amount>` | Give currency to a player |
-| `/currency take <currency> <player> <amount>` | Remove currency from a player |
-| `/currency set <currency> <player> <amount>` | Set exact balance |
-| `/currency randomgive <currency> <player> <min> <max>` | Give a random amount |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `/currency give <currency> <player> <amount>` | `add` | Give currency to a player |
+| `/currency take <currency> <player> <amount>` | `remove` | Remove currency from a player |
+| `/currency set <currency> <player> <amount>` | - | Set exact balance |
+| `/currency randomgive <currency> <player> <min> <max>` | `randomadd` | Give a random amount within a range |
+| `/currency help [page]` | - | Show the command help pages |
+
+So `/currency add ...` behaves the same as `/currency give ...`, `/currency remove ...` as `take`, and `/currency randomadd ...` as `randomgive`.
 
 All currency commands require `voxy.admin`.
 

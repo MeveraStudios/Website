@@ -89,6 +89,8 @@ Replies to the last player who messaged you.
 | `warp` | `/party warp` | Warps all online members to your server |
 | `disband` | `/party disband` | Disbands the party |
 
+Standalone shortcuts: `/pl` is the same as `/party list`, and `/pc [message]` is the same as `/party chat [message]`.
+
 ### /guild
 
 **Aliases:** `g` | **Permission:** `voxy.guild`
@@ -159,11 +161,11 @@ Shows your current rank, when it expires, and remaining duration. Staff can chec
 **Aliases (link):** `discordlink` | **Aliases (unlink):** `discordunlink`, `unlink` | **Permission:** none
 
 ```
-/linkdiscord
+/linkdiscord <discord-id>
 /unlinkdiscord
 ```
 
-Links or unlinks your Discord account to your Minecraft profile.
+Links or unlinks your Discord account to your Minecraft profile. `/linkdiscord` requires your numeric Discord user ID.
 
 ---
 
@@ -171,13 +173,13 @@ Links or unlinks your Discord account to your Minecraft profile.
 
 ### /fly
 
-**Permission:** `voxy.fly`
+**Permission:** `voxy.fly` (self), `voxy.fly.others` (other players)
 
 ```
 /fly [player]
 ```
 
-Toggles flight mode. Staff with the permission can toggle flight for other players.
+Toggles flight mode. Toggling flight for another player requires `voxy.fly.others`.
 
 ### /flyspeed
 
@@ -193,7 +195,7 @@ Sets flight speed. Range: `0.1` – `10.0`.
 
 ## Gamemode
 
-**Permissions:** `voxy.gamemode.all`, or per-mode: `voxy.gamemode.survival`, `voxy.gamemode.creative`, `voxy.gamemode.adventure`, `voxy.gamemode.spectator`
+**Permissions:** `voxy.gamemode.all`, or per-mode: `voxy.gamemode.survival`, `voxy.gamemode.creative`, `voxy.gamemode.adventure`, `voxy.gamemode.spectator`. Changing another player's gamemode also requires `voxy.gamemode.others`.
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
@@ -324,7 +326,7 @@ Toggles vanish. See [Disguise & Vanish](../Features/Disguise-Vanish) for world c
 
 ### /disguise
 
-**Aliases:** `nick` | **Permission:** `voxy.disguise`
+**Aliases:** `nick` (for `/disguise`), `unnick` (for `/undisguise`) | **Permission:** `voxy.disguise` *(removing another player's disguise requires `voxy.disguise.others`)*
 
 ```
 /disguise [nickname] [skin] [rank]
@@ -347,12 +349,12 @@ See [Disguise & Vanish](../Features/Disguise-Vanish) for full details.
 
 Opens the player profile GUI.
 
-### /reward
+### /rewards
 
-**Permission:** `voxy.menu.reward`
+**Aliases:** `reward` | **Permission:** `voxy.menu.reward`
 
 ```
-/reward [player]
+/rewards [player]
 ```
 
 Opens the rewards redemption menu.

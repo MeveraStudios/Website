@@ -20,6 +20,15 @@ Filters can apply to:
 
 Set any of these to `false` in `settings.yml` to disable filtering for that channel on a server.
 
+## Filter Types
+
+Voxy supports two kinds of filter:
+
+| Type | Matches on | Notes |
+|------|-----------|-------|
+| Word / phrase (`WordFilter`) | A list of literal words or phrases | Straightforward exact-text matching |
+| Regex (`PatternFilter`) | A list of regular-expression patterns | Patterns are combined and matched case-insensitively; matched text is replaced with `***` |
+
 ## Filter Actions
 
 Each filter word or phrase is linked to an action. When a match is found, Voxy triggers that action against the player. Actions include things like cancelling the message, warning the player, or progressing them on a punishment ladder.

@@ -6,7 +6,7 @@ order: 9
 
 # Analytics
 
-Voxy tracks playtime, peak player counts, new players, and version distribution across the network, per group, and per server. Data is stored in Redis with a 365-day retention window.
+Voxy tracks playtime, peak player counts, new players, retention, sessions, hourly activity, and version distribution across the network, per group, and per server. Data is stored in Redis. Daily keys expire after **365 days**, but the all-time distinct-player counter (a HyperLogLog) has **no expiry**. All day boundaries are pinned to **UTC** so counts stay consistent across a multi-proxy setup.
 
 ## What Is Tracked
 
@@ -14,16 +14,24 @@ Voxy tracks playtime, peak player counts, new players, and version distribution 
 |--------|--------|--------------|
 | Average playtime per player | Global, group, server | Today, yesterday, last 7 days, all-time |
 | Peak concurrent players | Global, group, server | Today, yesterday, last 7 days, all-time |
+| Peak timestamps (time-of-day each peak was hit) | Global, group, server | Today, yesterday |
 | New player count | Global, group, server | Today, yesterday, last 7 days |
+| Sessions | Global, group, server | Today, yesterday, last 7 days |
+| Quits | Global | Today |
+| Retention (D1 / D7 / D30 return cohorts) | Global only | Rolling cohorts |
+| Hourly activity curve (24h UTC sparkline) | Global only | Today |
 | Top server by playtime | Global only | All-time |
-| Minecraft version distribution | Global only | Current |
+| Minecraft version distribution | Global only | Last 7 days |
+
+Queue wait times and connect outcomes are also recorded per group and per server for diagnostics.
 
 ## How It Works
 
 - Playtime is buffered in memory and flushed to Redis every **15 seconds** and on proxy shutdown
 - Peak counts are tracked in memory per day and flushed on the same schedule
 - Player events (join, server switch, leave) update the relevant server and group buckets
-- Data keys expire after **365 days**
+- Daily keys expire after **365 days**; the all-time distinct-player HyperLogLog never expires
+- All date math uses **UTC** day boundaries for consistency across multiple proxies
 
 ## Viewing Analytics
 
@@ -34,21 +42,28 @@ Analytics are viewed in-game via a GUI opened from the proxy. The command is pro
 | `/analytics` | `voxy.analytics` | Open global network analytics |
 | `/analytics server <name>` | `voxy.analytics` | Open analytics for a specific server |
 | `/analytics group <name>` | `voxy.analytics` | Open analytics for a server group |
-| `/analytics clear` | `voxy.analytics` | Clear all analytics data |
+| `/analytics clear confirm` | `voxy.analytics.clear` | Permanently clear all analytics data (the `confirm` token is required) |
 
-### Global view (5-slot GUI)
+Running `/analytics clear` without the `confirm` token only prints a warning; nothing is deleted until you run `/analytics clear confirm`.
 
-| Slot | Item | Shows |
+### Global view (5-row GUI)
+
+The network view is a 5-row GUI holding 8 stat items:
+
+| Item | Icon | Shows |
 |------|------|-------|
 | Average Playtime | Clock | Today / yesterday / last 7 days / all-time per-player avg |
-| Player Peaks | Custom head | Today / yesterday / last 7 days / all-time peak |
+| Player Peaks | Custom head | Today / yesterday (with time-of-day) / last week / overall peak |
 | New Players | Emerald | Today / yesterday / last 7 days |
+| Activity | Paper | Sessions today / yesterday / last week and quits today |
+| Retention | Compass | Day 1 / Day 7 / Day 30 return rates |
 | Top Server | Grass block | Server name + share of network playtime |
-| Versions | Book | Minecraft version breakdown by percentage |
+| Hourly Activity | Lime dye | 24-hour UTC activity sparkline |
+| Versions | Book | Minecraft version breakdown by percentage (last 7 days) |
 
-### Server / Group view (3-slot GUI)
+### Server / Group view (3-row GUI)
 
-Shows Average Playtime, Player Peaks, and New Players for the selected scope.
+The per-scope view is a 3-row GUI holding 4 items: Average Playtime, Player Peaks (with peak time-of-day), New Players, and Sessions for the selected scope.
 
 ## PlaceholderAPI / Synapse
 
