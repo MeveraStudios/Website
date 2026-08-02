@@ -8,7 +8,7 @@
  * - Mobile responsive drawer
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ChevronsUpDown, BookOpen, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -159,8 +159,72 @@ function categoryColorIndex(name: string): number {
   return Math.abs(hash) % CATEGORY_COLORS.length;
 }
 
+/**
+ * Scroll the sidebar's own scroll container so `el` is visible — but only when
+ * it isn't already. Deliberately not `scrollIntoView`, which would also scroll
+ * the window and yank the reader away from the doc body.
+ */
+function revealInSidebar(el: HTMLElement) {
+  let container = el.parentElement;
+  while (container) {
+    const overflowY = getComputedStyle(container).overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && container.scrollHeight > container.clientHeight) break;
+    container = container.parentElement;
+  }
+  if (!container) return;
+
+  const elRect = el.getBoundingClientRect();
+  const boxRect = container.getBoundingClientRect();
+  if (elRect.top >= boxRect.top && elRect.bottom <= boxRect.bottom) return;
+
+  container.scrollTop += elRect.top - boxRect.top - (container.clientHeight - elRect.height) / 2;
+}
+
+/** A single doc entry — self-scrolling when it's the active one. */
+function DocLink({ doc, to, isActive, onNavigate }: { doc: DocFile; to: string; isActive: boolean; onNavigate?: () => void }) {
+  const ref = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (isActive && ref.current) revealInSidebar(ref.current);
+  }, [isActive]);
+
+  return (
+    <Link
+      ref={ref}
+      to={to}
+      aria-current={isActive ? 'page' : undefined}
+      onClick={onNavigate}
+      className={cn(
+        'block px-3 py-1.5 rounded-md transition-colors',
+        isActive
+          ? 'bg-primary/10 text-primary text-sm'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted text-sm',
+      )}
+    >
+      {doc.frontmatter.sidebarLabel || doc.frontmatter.title}
+    </Link>
+  );
+}
+
+/** True when the active doc lives in this category or any of its descendants. */
+function containsSlug(category: DocCategory, slug: string): boolean {
+  if (!slug) return false;
+  if (category.docs?.some(d => d.slug === slug)) return true;
+  return category.children?.some(child => containsSlug(child, slug)) ?? false;
+}
+
 function CategorySection({ category, currentSlug, projectId, versionId, depth = 0, onNavigate }: CategorySectionProps) {
-  const [expanded, setExpanded] = useState(category.collapsed !== true);
+  const holdsActiveDoc = containsSlug(category, currentSlug);
+  const [expanded, setExpanded] = useState(category.collapsed !== true || holdsActiveDoc);
+
+  // Navigating into a collapsed category (search, links, next/prev) opens it.
+  // Only forces open — a manual collapse while the doc stays active is kept.
+  const [wasHoldingActiveDoc, setWasHoldingActiveDoc] = useState(holdsActiveDoc);
+  if (holdsActiveDoc !== wasHoldingActiveDoc) {
+    setWasHoldingActiveDoc(holdsActiveDoc);
+    if (holdsActiveDoc) setExpanded(true);
+  }
+
   const regionId = `cat-${projectId}-${versionId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
   const dotColor = CATEGORY_COLORS[categoryColorIndex(category.name)];
   const hasChildren = category.children && category.children.length > 0;
@@ -214,26 +278,16 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
           {/* Render docs in this category */}
           {hasDocs && (
             <ul className="space-y-1" style={{ marginLeft: `${16 + depth * 16}px` }}>
-              {category.docs.map((doc) => {
-                const isActive = doc.slug === currentSlug;
-                return (
-                  <li key={doc.slug}>
-                    <Link
-                      to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={onNavigate}
-                      className={cn(
-                        'block px-3 py-1.5 rounded-md transition-colors',
-                        isActive
-                          ? 'bg-primary/10 text-primary text-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted text-sm',
-                      )}
-                    >
-                      {doc.frontmatter.sidebarLabel || doc.frontmatter.title}
-                    </Link>
-                  </li>
-                );
-              })}
+              {category.docs.map((doc) => (
+                <li key={doc.slug}>
+                  <DocLink
+                    doc={doc}
+                    to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
+                    isActive={doc.slug === currentSlug}
+                    onNavigate={onNavigate}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </div>
