@@ -950,6 +950,16 @@ function precompileDocs() {
         };
     }
 
+    // Helper: first doc in sidebar order — categories can hold only subcategories.
+    function findFirstDoc(categories: DocCategory[]): DocFile | undefined {
+        for (const cat of categories) {
+            if (cat.docs.length > 0) return cat.docs[0];
+            const nested = cat.children ? findFirstDoc(cat.children) : undefined;
+            if (nested) return nested;
+        }
+        return undefined;
+    }
+
     // 1. Generate Navigation Data (lightweight)
     const navProjects: NavDocProject[] = Array.from(projectsMap.values()).map(project => ({
         id: project.id,
@@ -1023,7 +1033,7 @@ function precompileDocs() {
 
     projectsMap.forEach(project => {
         const latest = project.versions.find(v => v.latest) || project.versions[0];
-        const firstDoc = latest?.categories[0]?.docs[0];
+        const firstDoc = latest ? findFirstDoc(latest.categories) : undefined;
         if (firstDoc) {
             urlEntries.push({
                 loc: `${SITE_URL}${encodePath(`/docs/${project.id}`)}`,

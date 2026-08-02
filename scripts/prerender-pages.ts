@@ -33,6 +33,7 @@ interface NavDoc {
     slug: string;
     path: string;
     category: string;
+    categoryPath?: string;
     frontmatter: {
         title: string;
         sidebarLabel?: string;
@@ -43,7 +44,9 @@ interface NavDoc {
 interface NavCategory {
     name: string;
     order: number;
+    categoryPath?: string;
     docs: NavDoc[];
+    children?: NavCategory[];
 }
 
 interface NavVersion {
@@ -86,6 +89,14 @@ interface DocContent {
     contributors?: Array<{ name: string; email: string; avatar?: string }>;
 }
 
+/** Categories form a tree — collect docs from every level, not just the top. */
+function flattenDocs(categories: NavCategory[]): NavDoc[] {
+    return categories.flatMap(c => [
+        ...c.docs,
+        ...(c.children ? flattenDocs(c.children) : []),
+    ]);
+}
+
 function prerender() {
     const start = Date.now();
     console.log('\n🔧 Generating static HTML pages...');
@@ -109,11 +120,12 @@ function prerender() {
 
     for (const project of navData.projects) {
         for (const version of project.versions) {
-            // Flatten all docs across all categories
-            const allDocs = version.categories.flatMap(c => c.docs);
+            // Flatten all docs across the whole category tree
+            const allDocs = flattenDocs(version.categories);
 
             for (const doc of allDocs) {
-                const contentPath = join(PUBLIC, 'docs-content', project.id, version.id, `${doc.slug}.json`);
+                const segments = doc.categoryPath ? doc.categoryPath.split('/') : [];
+                const contentPath = join(PUBLIC, 'docs-content', project.id, version.id, ...segments, `${doc.slug}.json`);
                 if (!existsSync(contentPath)) {
                     console.warn(`  ⚠ Missing content: ${contentPath}`);
                     continue;
@@ -123,7 +135,7 @@ function prerender() {
                 const title = docData.frontmatter?.title || doc.slug;
                 const description = docData.frontmatter?.description || '';
 
-                const outDir = join(DIST, 'docs', project.id, version.id, doc.slug);
+                const outDir = join(DIST, 'docs', project.id, version.id, ...segments, doc.slug);
                 mkdirSync(outDir, { recursive: true });
 
                 let html = indexHtml;
@@ -166,14 +178,17 @@ function prerender() {
     // Generate /docs/<project>/index.html with meta-refresh redirect to first doc
     for (const project of navData.projects) {
         const latest = project.versions.find(v => v.latest) || project.versions[0];
-        const firstDoc = latest?.categories?.[0]?.docs?.[0];
+        const firstDoc = latest ? flattenDocs(latest.categories)[0] : undefined;
         if (!firstDoc) continue;
 
         const projectDir = join(DIST, 'docs', project.id);
         mkdirSync(projectDir, { recursive: true });
 
-        const targetSlug = encodeURIComponent(firstDoc.slug);
-        const redirectTo = `/docs/${project.id}/${latest.id}/${targetSlug}`;
+        const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
+        const targetPath = firstDoc.categoryPath
+            ? `${encodePath(firstDoc.categoryPath)}/${encodeURIComponent(firstDoc.slug)}`
+            : encodeURIComponent(firstDoc.slug);
+        const redirectTo = `/docs/${project.id}/${latest.id}/${targetPath}`;
 
         const redirectHtml = `<!DOCTYPE html>
 <html lang="en">
