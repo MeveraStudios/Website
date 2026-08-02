@@ -1,0 +1,218 @@
+---
+title: Guilds & Parties
+description: Manage parties through the PartyManager and read guild data from PlayerData
+order: 5
+---
+
+# Guilds & Parties
+
+Parties are a first-class part of the `VoxyAPI` and are reached through `getPartyManager()`. Guilds are exposed read-only: you read a player's guild off their `PlayerData` and inspect the `Guild` type. There is no guild manager on the published API.
+
+Every method here is synchronous - none of them return a `CompletableFuture`. Where I/O happens it is hidden behind the call, and the value is returned directly (as a plain value or an `Optional`).
+
+## Parties
+
+### Getting the manager
+
+`PartyManager` is a standard `VoxyAPI` getter:
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.party.PartyManager;
+
+PartyManager parties = VoxyAPI.getAPI().getPartyManager();
+```
+
+### Looking up a player's party
+
+`PartyManager` is keyed by party id, not player id. To go from a player to their party, read the party id (or the party itself) off their `PlayerData`:
+
+```java
+import dev.iiahmed.voxy.player.PlayerData;
+import dev.iiahmed.voxy.player.party.Party;
+
+import java.util.Optional;
+import java.util.UUID;
+
+UUID playerId = /* ... */;
+
+Optional<PlayerData> maybeData = VoxyAPI.getAPI().getDataManager().get(playerId);
+if (maybeData.isEmpty()) {
+    return;
+}
+
+PlayerData data = maybeData.get();
+UUID partyId = data.getPartyID();      // null if the player is not in a party
+Party direct = data.getParty();        // the resolved Party, or null
+```
+
+Given a party id you have two lookups:
+
+```java
+// In-memory only. Empty if the party is not currently loaded.
+Optional<Party> cached = parties.getParty(partyId);
+
+// In-memory, falling back to the storage backend. Returns null if it does not exist.
+Party loaded = parties.getOrLoad(partyId);
+```
+
+### Reading members, roles and the leader
+
+```java
+import dev.iiahmed.voxy.player.party.PartyMember;
+import dev.iiahmed.voxy.player.party.PartyRole;
+
+import java.util.Collection;
+
+Party party = loaded;
+
+UUID leaderId = party.getLeaderID();
+boolean isLeader = party.isLeader(playerId);
+
+int size = party.size();
+Collection<PartyMember> members = party.getMembers();
+Collection<PartyMember> mods = party.getMembers(PartyRole.MOD);
+
+Optional<PartyMember> member = party.getMember(playerId);
+member.ifPresent(m -> {
+    PartyRole role = m.getRole();          // LEADER, MOD or MEMBER
+    String name = m.getLastKnownName();
+    long joinedAt = m.getJoinedAt();       // epoch millis
+});
+```
+
+A `PartyMember` can resolve back to full `PlayerData` on demand. The `load` flag controls whether missing data is fetched from storage; the result is `@Nullable`:
+
+```java
+PlayerData memberData = member.get().getData(true); // may be null
+```
+
+`PartyRole` has three values: `LEADER`, `MOD` and `MEMBER`.
+
+### Membership and role changes
+
+Mutations happen on the `Party` instance:
+
+```java
+// Add with an explicit role, or with the default MEMBER role.
+party.addMember(memberData, PartyRole.MOD);
+party.addNewMember(memberData);
+
+party.removeMember(playerId);
+
+boolean promoted = party.promote(playerId); // true if the role actually changed
+boolean demoted  = party.demote(playerId);
+
+party.save();  // persist the current state
+party.clear(); // drop all members
+```
+
+`rechooseLeaderID()` picks a new leader and returns the chosen `UUID`. Use `isValid()` to check the party is still in a usable state, and `hasMember(UUID)` for a quick membership test.
+
+### Creating parties and invites
+
+```java
+// Create a brand new party led by the given player, and register it.
+Party fresh = parties.create(leaderData);
+
+// Register a party you built yourself.
+parties.register(fresh);
+
+// Remove a party by id.
+parties.remove(fresh.getPartyID());
+```
+
+Invites are driven by `requestInvite(senderID, targetID)`. Both players must be online on the network. On backend (Spigot) servers the call forwards the request to the proxy, which owns invites and runs the full validation and messaging flow - including creating a party for the sender when they have none. On proxies the invite is processed directly:
+
+```java
+parties.requestInvite(senderId, targetId);
+```
+
+The `PartyInvite` type itself is an immutable record - `sender`, `receiver`, `partyID` and a `Duration`. It exposes `hasExpired()` and `similarTo(PartyInvite)` for comparing two invites regardless of direction. There is no create/warp/disband method on `PartyManager`; use `create`, `requestInvite` and `remove` for those lifecycle steps.
+
+## Guilds
+
+:::note{label="Guilds are read-only"}
+Guild management (creating, inviting, disbanding) is not part of the published API. The API exposes guilds only for reading: resolve a player's `Guild` from their `PlayerData` and inspect it through the `Guild` type. This works on every platform with only `voxy-api`.
+:::
+
+### Reading a player's guild
+
+Read a player's guild straight off their `PlayerData`:
+
+```java
+import dev.iiahmed.voxy.guild.Guild;
+
+Guild guild = data.getGuild();     // the resolved Guild, or null
+UUID guildId = data.getGuildID();  // the guild id, or null
+```
+
+### Reading guild properties
+
+`Guild` is an interface backed by storage; its getters are read-only:
+
+```java
+import dev.iiahmed.voxy.guild.GuildRole;
+import net.kyori.adventure.text.format.TextColor;
+
+import java.util.Map;
+
+UUID id = guild.getId();
+String name = guild.getName();          // unique, changeable
+String tag = guild.getTag();            // unique short tag
+TextColor tagColor = guild.getTagColor();
+boolean inviteOnly = guild.isInviteOnly();
+
+Map<UUID, GuildRole> members = guild.getMembers();
+```
+
+`GuildRole` has three values: `OWNER`, `OFFICER` and `MEMBER`.
+
+### Resolving the owner
+
+There is no dedicated `getOwner()` method. The owner is the member whose role is `GuildRole.OWNER`, so resolve it from the members map:
+
+```java
+UUID owner = members.entrySet().stream()
+        .filter(e -> e.getValue() == GuildRole.OWNER)
+        .map(Map.Entry::getKey)
+        .findFirst()
+        .orElse(null);
+```
+
+## Key methods
+
+### Parties
+
+| Signature | Description |
+|-----------|-------------|
+| `PartyManager VoxyAPI.getPartyManager()` | Obtain the party manager. |
+| `Party PartyManager.create(PlayerData data)` | Create and register a party led by the player. |
+| `void PartyManager.register(Party party)` | Register an existing party instance. |
+| `void PartyManager.remove(UUID partyID)` | Remove a party by id. |
+| `Optional<Party> PartyManager.getParty(UUID partyID)` | In-memory lookup by id. |
+| `Party PartyManager.getOrLoad(UUID partyID)` | Lookup by id, loading from storage; `null` if not found. |
+| `void PartyManager.requestInvite(UUID senderID, UUID targetID)` | Request an invite; both players must be online. |
+| `UUID PlayerData.getPartyID()` / `Party PlayerData.getParty()` | Resolve a player's party. |
+| `UUID Party.getLeaderID()` / `boolean Party.isLeader(UUID id)` | Read or test the party leader. |
+| `UUID Party.rechooseLeaderID()` | Select a new leader and return its id. |
+| `Optional<PartyMember> Party.getMember(UUID id)` | Look up a single member. |
+| `Collection<PartyMember> Party.getMembers()` / `getMembers(PartyRole role)` | List members, optionally filtered by role. |
+| `void Party.addMember(PlayerData data, PartyRole role)` / `addNewMember(PlayerData data)` | Add a member (default role is `MEMBER`). |
+| `void Party.removeMember(UUID id)` | Remove a member. |
+| `boolean Party.promote(UUID targetId)` / `demote(UUID targetId)` | Change a member's role; `true` if it changed. |
+| `int Party.size()` / `boolean Party.hasMember(UUID)` / `boolean Party.isValid()` | Party state checks. |
+| `PlayerData PartyMember.getData(boolean load)` | Resolve a member to full data (`@Nullable`). |
+
+### Guilds
+
+Guilds are read-only through `voxy-api`. There is no guild manager accessor and no mutation methods on the published API.
+
+| Signature | Description |
+|-----------|-------------|
+| `Guild PlayerData.getGuild()` / `UUID PlayerData.getGuildID()` | Resolve a player's guild (portable, `null` if none). |
+| `UUID Guild.getId()` | Unique guild id. |
+| `String Guild.getName()` / `String Guild.getTag()` | Read the unique name and short tag. |
+| `TextColor Guild.getTagColor()` | Read the guild tag color. |
+| `boolean Guild.isInviteOnly()` | Whether the guild is invite-only. |
+| `Map<UUID, GuildRole> Guild.getMembers()` | Read members mapped to their `GuildRole` (`OWNER`, `OFFICER`, `MEMBER`). |

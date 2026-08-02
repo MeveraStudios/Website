@@ -1,0 +1,220 @@
+---
+title: Progression
+description: Read and adjust player levels and experience, and grant rewards
+order: 7
+---
+
+# Progression
+
+Voxy's progression system is split into two services obtained from `VoxyAPI`:
+
+- `getLevelManager()` returns a `LevelManager` for reading and changing a player's level and experience, and for reaching the level configuration.
+- `getRewardService()` returns a `RewardService` for granting and processing reward actions.
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.level.LevelManager;
+import dev.iiahmed.voxy.reward.RewardService;
+
+VoxyAPI api = VoxyAPI.getAPI();
+LevelManager levels = api.getLevelManager();
+RewardService rewards = api.getRewardService();
+```
+
+:::note{label="All synchronous"}
+Every method on both services is synchronous. They operate on a loaded `PlayerData` object, which you obtain from the `DataManager` (see [Player Data](./Player-Data)).
+:::
+
+```java
+import dev.iiahmed.voxy.player.PlayerData;
+
+import java.util.Optional;
+import java.util.UUID;
+
+Optional<PlayerData> maybe = api.getDataManager().get(playerId);
+if (maybe.isEmpty()) return;
+PlayerData data = maybe.get();
+```
+
+## Reading level and experience
+
+The current level and experience live on `PlayerData` and are read directly:
+
+```java
+int level = data.getLevel();             // current level
+long experience = data.getExperience();  // current experience points
+```
+
+## Changing level and experience
+
+`LevelManager` exposes the safe way to mutate progression. Each method returns a `boolean` describing whether the change was applied. If a player is online, level-up messages are sent automatically.
+
+```java
+// Set the level outright. Returns false if it exceeds the max level.
+// Lowering the level resets experience to 0.
+boolean set = levels.setLevel(data, 25);
+
+// Add levels. Returns false if the result would exceed the max level.
+boolean gained = levels.giveLevel(data, 5);
+
+// Set experience directly.
+boolean setXp = levels.setExperience(data, 10_000L);
+
+// Add experience. May trigger one or more level-ups.
+boolean gaveXp = levels.giveExperience(data, 2_500L);
+
+// Attempt to consume experience and unlock the next level.
+// Returns true if the player actually leveled up.
+boolean leveled = levels.tryUnlockNext(data);
+```
+
+## Required experience
+
+`getRequiredExperience(int level)` returns the total experience points needed to reach a given level, computed from the configured formula:
+
+```java
+long needed = levels.getRequiredExperience(30);
+long remaining = Math.max(0, needed - data.getExperience());
+```
+
+The default formula is `1250 * (<level> ^ 2) + (6250 * <level>) - 7500` with a max level of `1000`. `<level>` is the placeholder substituted per level.
+
+## Level settings
+
+`levels.getSettings()` returns a `LevelSettings` holding the experience formula, the max level, progress-bar styles, per-level display formats, and level rewards.
+
+```java
+import dev.iiahmed.voxy.level.LevelSettings;
+
+LevelSettings settings = levels.getSettings();
+
+String formula = settings.getExpFormula(); // e.g. "1250 * (<level> ^ 2) + (6250 * <level>) - 7500"
+int max = settings.getMaxLevel();
+```
+
+### Bar styles
+
+A `BarStyle` is a record describing how a progress bar renders. `build(long current, long max)` produces the bar string for a given progress.
+
+```java
+import dev.iiahmed.voxy.level.BarStyle;
+
+BarStyle style = settings.getBarStyle("bar"); // null if the style is not defined
+if (style != null) {
+    String bar = style.build(data.getExperience(), levels.getRequiredExperience(data.getLevel() + 1));
+}
+```
+
+The record components are `name`, `size`, `barChar`, `donePrefix`, `progressPrefix`, and `remainingPrefix`. Use `settings.getBarStyles()` for the full `Map<String, BarStyle>`, or `settings.addBarStyle(style)` to register one.
+
+### Level formats
+
+A `LevelFormat` is a record of `level`, `displayFormat`, and `chatDisplayFormat`. Formats are stored in a `NavigableMap` keyed by level, so `getFormat(int)` returns the format that applies at or below the requested level (its floor entry), or `null` if none is configured.
+
+```java
+import dev.iiahmed.voxy.level.LevelFormat;
+
+LevelFormat format = settings.getFormat(data.getLevel());
+if (format != null) {
+    String nameTag = format.display(data.getLevel()); // rendered display string
+    String chatTag = format.chat(data.getLevel());    // rendered chat string
+}
+```
+
+`display()` and `chat()` (no-argument) render using the format's own `level`, while the `int`-argument overloads render for an arbitrary level.
+
+### Level rewards
+
+A `LevelReward` is a record of `id`, `level`, and a `Reward` to grant when that level is reached. `LevelSettings` stores them in a `Map<Integer, LevelReward>` keyed by level.
+
+```java
+import dev.iiahmed.voxy.level.LevelReward;
+
+LevelReward reward = settings.getLevelReward(data.getLevel()); // null if none at that level
+if (reward != null) {
+    rewards.grant(data, reward.reward());
+}
+```
+
+Use `settings.getLevelRewards()` for the full `Map<Integer, LevelReward>`, or `settings.addLevelReward(LevelReward)` / `settings.setLevelReward(int, LevelReward)` to register one.
+
+## Granting rewards
+
+A `Reward` is a bundle of `RewardAction`s. `RewardService.grant(PlayerData, Reward)` runs any actions that can execute on the current server immediately and queues the rest on the player's data for later.
+
+```java
+import dev.iiahmed.voxy.reward.Reward;
+import dev.iiahmed.voxy.reward.RewardRarity;
+import dev.iiahmed.voxy.reward.action.RunCommandAction;
+
+RunCommandAction action = new RunCommandAction();
+action.setTarget(RunCommandAction.Target.PROXY);
+action.setDescription("A shiny rank upgrade");
+action.setRarity(RewardRarity.LEGENDARY);
+action.getCommands().add("lp user <player> parent add vip");
+
+Reward reward = new Reward();
+reward.addAction(action);
+
+rewards.grant(data, reward);
+```
+
+### Reward rarities
+
+`RewardRarity` describes how special an action is, in ascending priority: `HIDDEN`, `COMMON`, `RARE`, `EPIC`, `LEGENDARY`, `MYTHICAL`. Each carries an Adventure `Style` (`getStyle()` / `setStyle(Style)`) and a `getPriority()`. `RewardRarity.fromString(String)` parses a name, falling back to `COMMON` for null or unknown values.
+
+### RunCommand actions and targets
+
+`RunCommandAction` is the built-in action type (`RewardActionType.RUN_COMMAND`). Its `Target` enum controls where the commands run:
+
+| Target | Runs the commands on |
+|--------|----------------------|
+| `CURRENT` | The server the player is currently on |
+| `SPECIFIC` | A named server (`setServer(String)`) |
+| `GROUP` | A named server group (`setGroup(String)`) |
+| `ANY` | Any available server |
+| `PROXY` | The proxy node |
+
+Additional toggles: `setRequirePlayerOnline(boolean)` (default `true`) and `setEnsureExecuted(boolean)` (default `false`); when `ensureExecuted` is on, `execute` stops and reports failure if a command fails to dispatch. Commands themselves live in the `getCommands()` list.
+
+### Pending and queued actions
+
+Actions that could not run immediately are stored on `PlayerData.getQueuedActions()`. You can inspect them by player id or process them with a command dispatcher:
+
+```java
+import dev.iiahmed.voxy.reward.RewardAction;
+
+import java.util.List;
+import java.util.function.Function;
+
+List<RewardAction> pending = rewards.getPendingActions(playerId);
+
+// Dispatch queued commands; the function returns true when a command ran.
+Function<String, Boolean> dispatcher = command -> {
+    // hand the command to your platform's console/command executor
+    return true;
+};
+int executed = rewards.process(data, dispatcher);
+```
+
+`process` removes actions from the queue as they succeed and returns the number executed.
+
+## Key methods
+
+| Method | Returns | Notes |
+|--------|---------|-------|
+| `LevelManager.setLevel(PlayerData, int)` | `boolean` | False if it exceeds max level; lowering resets XP |
+| `LevelManager.giveLevel(PlayerData, int)` | `boolean` | False if the result exceeds max level |
+| `LevelManager.setExperience(PlayerData, long)` | `boolean` | Sets XP directly |
+| `LevelManager.giveExperience(PlayerData, long)` | `boolean` | May trigger level-ups |
+| `LevelManager.getRequiredExperience(int)` | `long` | Total XP to reach a level |
+| `LevelManager.tryUnlockNext(PlayerData)` | `boolean` | True if the player leveled up |
+| `LevelManager.getSettings()` | `LevelSettings` | Formula, max level, styles, formats, rewards |
+| `LevelSettings.getBarStyle(String)` | `BarStyle` | Null if undefined |
+| `LevelSettings.getFormat(int)` | `LevelFormat` | Floor match, null if none |
+| `LevelSettings.getLevelReward(int)` | `LevelReward` | Null if none at that level |
+| `BarStyle.build(long, long)` | `String` | Renders the progress bar |
+| `PlayerData.getLevel()` / `getExperience()` | `int` / `long` | Current progression |
+| `RewardService.grant(PlayerData, Reward)` | `void` | Runs now, queues the rest |
+| `RewardService.getPendingActions(UUID)` | `List<RewardAction>` | Queued actions for a player |
+| `RewardService.process(PlayerData, Function<String, Boolean>)` | `int` | Actions executed |

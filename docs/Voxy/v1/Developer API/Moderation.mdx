@@ -1,0 +1,405 @@
+---
+title: Moderation
+description: Issue and read punishments, drive punishment ladders, and work with player reports
+order: 6
+---
+
+# Moderation
+
+Voxy's moderation API covers three related domains, each with its own manager off `VoxyAPI`:
+
+| Domain | Manager | Getter |
+|--------|---------|--------|
+| Punishments | `PunishmentManager` | `getPunishmentManager()` |
+| Ladders | `LadderManager` | `getLadderManager()` |
+| Reports | `ReportsManager` | `getReportsManager()` |
+
+Most of the actual work happens on `PlayerData` (see [Player Data](./Player-Data)), which owns a player's punishments and ladder progressions. The managers handle enforcement, ladder definitions, and report storage.
+
+:::note{label="Synchronous, call off-thread"}
+These APIs are synchronous. Loading a player through `DataManager` can hit the database, and `save()`, `handlePunishment(...)`, and `Report#save()` perform I/O and broadcasts. Call them off the main server thread when the player is not already in memory.
+:::
+
+## Punishments
+
+### Getting the manager
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.manager.PunishmentManager;
+
+VoxyAPI api = VoxyAPI.getAPI();
+PunishmentManager punishments = api.getPunishmentManager();
+```
+
+### Punishment types
+
+A punishment carries a `PunishmentType`:
+
+```java
+public enum PunishmentType {
+    BAN,
+    BLACKLIST,
+    MUTE,
+    KICK,
+    WARN
+}
+```
+
+### Building a punishment
+
+A `Punishment` is created from a `PunishmentType` and a `Duration`, then given its issuer and reason:
+
+```java
+import dev.iiahmed.voxy.player.punishments.Punishment;
+import dev.iiahmed.voxy.player.punishments.PunishmentType;
+import dev.iiahmed.voxy.util.Duration;
+
+// 7-day ban
+Punishment ban = new Punishment(PunishmentType.BAN, Duration.of("7d"));
+ban.setBy("Notch");
+ban.setReason("Cheating");
+
+// Permanent mute
+Punishment mute = new Punishment(PunishmentType.MUTE, Duration.permanent());
+mute.setBy("Notch");
+mute.setReason("Chat abuse");
+```
+
+`Duration` accepts a duration string such as `"7d"`, `"1h"`, or `"30m"` via `Duration.of(String)`, a raw millisecond value via `Duration.of(long)`, a `long` plus `TimeUnit` via `Duration.of(long, TimeUnit)`, or `Duration.permanent()` for a punishment that never expires.
+
+### Issuing a punishment
+
+Applying a punishment is a two-step process. `PlayerData#punish(Punishment)` records it on the player (revoking any existing active punishment of the same type), and `PunishmentManager#handlePunishment(PlayerData, Punishment, boolean)` enforces it - notifications, broadcasts, and player actions such as kicking or blocking chat. The `boolean` is `silent`: pass `true` for a staff-only broadcast.
+
+```java
+import dev.iiahmed.voxy.player.PlayerData;
+
+PlayerData target = api.getDataManager().getOrLoad(playerId).orElse(null);
+if (target == null) {
+    return;
+}
+
+Punishment ban = new Punishment(PunishmentType.BAN, Duration.of("7d"));
+ban.setBy("Notch");
+ban.setReason("Cheating");
+
+target.punish(ban);                              // record on the player
+punishments.handlePunishment(target, ban, false); // enforce and announce
+target.save();                                   // persist
+```
+
+A `KICK` has no lasting state, so it usually just needs enforcement:
+
+```java
+Punishment kick = new Punishment(PunishmentType.KICK, Duration.permanent());
+kick.setBy("Notch");
+kick.setReason("Go cool off");
+punishments.handlePunishment(target, kick, false);
+```
+
+### Reading active punishments
+
+`PlayerData` exposes the currently active punishment of each stateful type, plus quick boolean checks:
+
+```java
+if (target.isBanned()) {
+    Punishment current = target.getCurrentBan();
+    String reason = current.getReason();
+    String left = current.getDuration().timeLeft(true); // e.g. "6 days"
+}
+
+if (target.isMuted()) {
+    Punishment currentMute = target.getCurrentMute();
+}
+
+boolean blacklisted = target.isBlacklisted();
+Punishment currentBlacklist = target.getCurrentBlacklist();
+```
+
+To look up the active punishment of any type generically, use `findCurrentPunishment`:
+
+```java
+Punishment activeWarn = target.findCurrentPunishment(PunishmentType.WARN);
+if (activeWarn != null) {
+    // ...
+}
+```
+
+If you have mutated a player's punishment list directly, call `calculatePunishments()` to refresh the cached current ban / mute / blacklist.
+
+### Reading punishment history
+
+`getPunishments()` returns every punishment ever applied to the player, active or not:
+
+```java
+import java.util.Collection;
+
+Collection<Punishment> history = target.getPunishments();
+for (Punishment p : history) {
+    boolean active = p.isValid();      // not revoked and not expired
+    boolean revoked = p.isRevoked();
+    PunishmentType type = p.getType();
+    String by = p.getBy();
+    long when = p.getDuration().getCreationTime();
+}
+```
+
+Each `Punishment` also offers convenience type checks: `isBan()`, `isMute()`, `isBlacklist()`, `isKick()`, and `isWarn()`.
+
+### Revoking (unban / unmute)
+
+There is no separate "unban" call. Revoke the punishment object, recalculate the player's active punishments, and save:
+
+```java
+Punishment ban = target.getCurrentBan();
+if (ban != null) {
+    ban.revoke("Notch");        // marks revoked, stamps revokedBy and revokedAt
+    target.calculatePunishments();
+    target.save();
+}
+```
+
+`revoke(String)` uses the current time; `revoke(String, long)` lets you supply the revocation timestamp. `unrevoke()` clears the revoked flag. A punishment is considered live only while `isValid()` returns `true` (`!isRevoked()` and the `Duration` has not expired).
+
+## Ladders
+
+A ladder is a named, ordered set of `Step`s that escalates automatically as a player re-offends. Each step declares a `StepAction` - either `PUNISH` (apply the step's punishment template) or `IGNORE` (advance without punishing). A player's position on a ladder is tracked by a `LadderProgression`, which also carries its own `Duration` so progress expires after a while.
+
+```java
+public enum StepAction {
+    PUNISH,
+    IGNORE
+}
+```
+
+### Getting the manager and looking up a ladder
+
+```java
+import dev.iiahmed.voxy.player.punishments.Ladder;
+import dev.iiahmed.voxy.player.punishments.LadderManager;
+
+import java.util.Optional;
+import java.util.UUID;
+
+LadderManager ladders = api.getLadderManager();
+
+Optional<Ladder> byName = ladders.getByName("chat");   // case-insensitive
+Optional<Ladder> byId = ladders.getById(someLadderId);
+Collection<Ladder> all = ladders.getAll();
+```
+
+`addOrUpdate(Ladder)` and `remove(UUID)` let you manage the loaded set, and `reloadLadders()` re-reads them from storage.
+
+### Inspecting a ladder's steps
+
+```java
+import dev.iiahmed.voxy.player.punishments.Step;
+import dev.iiahmed.voxy.player.punishments.StepAction;
+
+Ladder ladder = byName.orElseThrow();
+UUID id = ladder.id();
+String name = ladder.name();
+
+for (Step step : ladder.steps()) {
+    if (step.action() == StepAction.PUNISH) {
+        Punishment template = step.punishment(); // may be null
+    }
+}
+
+Optional<Step> third = ladder.stepById(3);
+```
+
+`Step#punishment()` is nullable and only meaningful when the action is `PUNISH`.
+
+### Punishing a player through a ladder
+
+`PlayerData#punishByLadder(Ladder, String reason, String by)` advances the player one step on the ladder and applies that step's punishment. It returns the `Punishment` that was applied, or `null` if the reached step's action was `IGNORE`:
+
+```java
+Punishment applied = target.punishByLadder(ladder, "Spamming", "Notch");
+if (applied != null) {
+    punishments.handlePunishment(target, applied, false);
+}
+target.save();
+```
+
+### Reading a player's progression
+
+A player holds a progression per ladder, keyed by ladder id:
+
+```java
+import dev.iiahmed.voxy.player.punishments.LadderProgression;
+
+import java.util.Map;
+
+LadderProgression prog = target.getLadderProgression(ladder.id());
+if (prog != null && !prog.hasExpired()) {
+    int step = prog.getCurrentStep();
+    long updated = prog.getLastUpdated();
+}
+
+// Or just the step number (returns 0 if absent or expired)
+int step = target.getLadderStep(ladder.id());
+
+// The full map of every ladder the player is progressing on
+Map<UUID, LadderProgression> progressions = target.getLadderProgressions();
+```
+
+`cleanupExpiredLadderProgressions()` drops progressions whose `Duration` has elapsed, and `setLadderProgression(LadderProgression)` writes one directly. `LadderProgression.create(UUID, Ladder)` builds a fresh progression at step 1 using the ladder's duration.
+
+## Reports
+
+### Getting the manager
+
+```java
+import dev.iiahmed.voxy.report.ReportsManager;
+
+ReportsManager reports = api.getReportsManager();
+```
+
+### Report categories
+
+Reports are filed under a `ReportCategory`, a record loaded from configuration:
+
+```java
+public record ReportCategory(
+        String id,
+        String displayName,
+        List<String> aliases,
+        UUID ladderId,          // optional ladder this category escalates on, may be null
+        Set<ReportProof> proofs
+) { }
+```
+
+Look categories up by id, or fuzzily by id / display name / alias with `match`:
+
+```java
+import dev.iiahmed.voxy.report.ReportCategory;
+
+Collection<ReportCategory> categories = reports.getCategories();
+
+Optional<ReportCategory> byId = reports.getById("cheating");
+Optional<ReportCategory> matched = reports.match("hacks"); // matches id, name, or alias
+```
+
+`saveCategory(ReportCategory)` persists a category and `deleteCategory(String)` removes one; `reloadCategories()` re-reads them from storage.
+
+### Creating a report
+
+`issueReport(PlayerData reporter, PlayerData reported, ReportCategory category)` builds a `Report` but does not store it - call `save()` on the returned report to persist it:
+
+```java
+import dev.iiahmed.voxy.report.Report;
+
+ReportCategory category = reports.match("cheating").orElse(null);
+if (category == null) {
+    return;
+}
+
+Report report = reports.issueReport(reporter, reported, category);
+report.setReporterServer("lobby-1");
+report.save();
+```
+
+### Querying reports
+
+Counts and pages operate over unsolved reports. Paging is 1-based:
+
+```java
+import java.util.List;
+import java.util.UUID;
+
+long open = reports.countReports();                // all unsolved
+long againstPlayer = reports.countReports(reportedId);
+long inCategory = reports.countReports(category);
+
+List<Report> firstPage = reports.getReports(1, 10);          // page 1, 10 per page
+List<Report> playerPage = reports.getReports(reportedId, 1, 10);
+List<Report> categoryPage = reports.getReports(category, 1, 10);
+List<Report> everything = reports.getReports();              // all unsolved
+```
+
+### Reading and resolving a report
+
+```java
+UUID reportId = report.getReportID();
+UUID reporter = report.getReporterID();
+UUID reported = report.getReportedID();
+String categoryId = report.getCategory();
+long filedAt = report.getAddedAt();
+
+// Resolve it
+report.setSolved(true);
+report.setSolvedBy("Notch");
+report.save();
+```
+
+### The proof-type system
+
+A category can require one or more `ReportProof` types. Currently the API defines one:
+
+```java
+public enum ReportProof {
+    CHAT_SNAPSHOT   // snapshot of the reported player's recent chat
+}
+```
+
+When a category requires `CHAT_SNAPSHOT`, the report captures recent chat at the time of filing. Read it back from the report:
+
+```java
+import org.bson.Document;
+
+if (category.proofs().contains(ReportProof.CHAT_SNAPSHOT)) {
+    List<Document> chat = report.getChatSnapshot(); // may be empty, never null
+}
+```
+
+## Key methods
+
+### Punishments
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `Punishment` | `new Punishment(PunishmentType, Duration)` | Build a punishment |
+| `Punishment#setBy` / `#setReason` | `void setBy(String)` / `void setReason(String)` | Set issuer and reason |
+| `PlayerData#punish` | `void punish(Punishment)` | Record it, revoking any active one of the same type |
+| `PunishmentManager#handlePunishment` | `void handlePunishment(PlayerData, Punishment, boolean silent)` | Enforce and announce |
+| `PlayerData#isBanned` / `#isMuted` / `#isBlacklisted` | `boolean` | Quick active-state checks |
+| `PlayerData#getCurrentBan` / `#getCurrentMute` / `#getCurrentBlacklist` | `Punishment` | Active punishment of that type |
+| `PlayerData#findCurrentPunishment` | `Punishment findCurrentPunishment(PunishmentType)` | Active punishment of any type, or null |
+| `PlayerData#getPunishments` | `Collection<Punishment> getPunishments()` | Full punishment history |
+| `PlayerData#calculatePunishments` | `void calculatePunishments()` | Recompute cached active punishments |
+| `Punishment#isValid` | `boolean isValid()` | Not revoked and not expired |
+| `Punishment#revoke` | `void revoke(String)` / `void revoke(String, long)` | Revoke (unban / unmute) |
+| `Punishment#unrevoke` | `void unrevoke()` | Clear the revoked flag |
+
+### Ladders
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `LadderManager#getByName` | `Optional<Ladder> getByName(String)` | Look up a ladder by name (case-insensitive) |
+| `LadderManager#getById` | `Optional<Ladder> getById(UUID)` | Look up a ladder by id |
+| `LadderManager#getAll` | `Collection<Ladder> getAll()` | All loaded ladders |
+| `LadderManager#addOrUpdate` / `#remove` | `void addOrUpdate(Ladder)` / `boolean remove(UUID)` | Manage loaded ladders |
+| `Ladder#steps` | `List<Step> steps()` | Ordered steps |
+| `Ladder#stepById` | `Optional<Step> stepById(int)` | A specific step |
+| `Step#action` / `#punishment` | `StepAction action()` / `Punishment punishment()` | Step behaviour and template |
+| `PlayerData#punishByLadder` | `Punishment punishByLadder(Ladder, String reason, String by)` | Advance and punish, or null on `IGNORE` |
+| `PlayerData#getLadderProgression` | `LadderProgression getLadderProgression(UUID)` | Progression, or null if absent/expired |
+| `PlayerData#getLadderStep` | `int getLadderStep(UUID)` | Current step number, 0 if absent/expired |
+| `PlayerData#getLadderProgressions` | `Map<UUID, LadderProgression> getLadderProgressions()` | All progressions |
+
+### Reports
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `ReportsManager#issueReport` | `Report issueReport(PlayerData reporter, PlayerData reported, ReportCategory)` | Build a report (not persisted) |
+| `Report#save` | `void save()` | Persist a report |
+| `ReportsManager#getCategories` | `Collection<ReportCategory> getCategories()` | Loaded categories |
+| `ReportsManager#getById` / `#match` | `Optional<ReportCategory> getById(String)` / `match(String)` | Look up a category |
+| `ReportsManager#countReports` | `long countReports()` / `countReports(UUID)` / `countReports(ReportCategory)` | Count unsolved reports |
+| `ReportsManager#getReports` | `List<Report> getReports(int page, int pageSize)` (plus `UUID` / `ReportCategory` overloads, and no-arg) | Page unsolved reports |
+| `Report#setSolved` / `#setSolvedBy` | `void setSolved(boolean)` / `void setSolvedBy(String)` | Resolve a report |
+| `Report#getChatSnapshot` | `List<Document> getChatSnapshot()` | Captured chat proof |
+| `ReportCategory#proofs` | `Set<ReportProof> proofs()` | Required proof types |

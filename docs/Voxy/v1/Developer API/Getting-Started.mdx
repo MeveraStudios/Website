@@ -1,0 +1,109 @@
+---
+title: Getting Started
+description: Add the Voxy API dependency and obtain the API entry point
+order: 1
+---
+
+# Developer API
+
+Voxy publishes a set of API modules so other plugins can read player data, adjust economy balances, look up ranks and guilds, issue punishments, and react to Voxy events.
+
+This section is a task-oriented guide to the published API. It covers only the four API artifacts below - the rest of Voxy is internal and not part of the supported surface.
+
+## Modules
+
+| Artifact | Purpose |
+|----------|---------|
+| `voxy-api` | Common, platform-agnostic data and services (the `VoxyAPI` entry point and its managers) |
+| `voxy-spigot-api` | Spigot / Paper events (party, punishment, rank, vanish) |
+| `voxy-velocity-api` | Velocity events (private message, server switch) |
+| `voxy-bungee-api` | BungeeCord events (private message, server switch) |
+
+Depend on `voxy-api` for reading and mutating data. Add the module that matches your platform when you also want to listen to Voxy [events](./Events).
+
+:::warning{label="Java 21 required"}
+Voxy and all of its API modules are built for **Java 21**. Your build and runtime must use Java 21 or newer.
+:::
+
+## Add the repository
+
+The API artifacts are published to the GraveMC repository.
+
+<Tabs defaultValue="gradle-kotlin" group="java-build-tools">
+  <CodeTabItem value="maven" label="Maven" language="xml">{`
+<repositories>
+    <repository>
+      <id>gravemc</id>
+      <url>https://repo.gravemc.net/releases/</url>
+    </repository>
+</repositories>
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-groovy" label="Gradle (Groovy)" language="groovy">{`
+repositories {
+    maven { url = uri("https://repo.gravemc.net/releases/") }
+}
+`}</CodeTabItem>
+  <CodeTabItem value="gradle-kotlin" label="Gradle (Kotlin)" language="kotlin">{`
+repositories {
+    maven("https://repo.gravemc.net/releases/")
+}
+`}</CodeTabItem>
+</Tabs>
+
+## Add the dependency
+
+Add the common `voxy-api` module:
+
+<LatestVersionBlock owner="iiAhmedYT" repo="Voxy" group="dev.iiahmed" id="voxy-api" version="1.1.3" />
+
+:::note{label="Use a provided scope"}
+Voxy is present at runtime, so the API should not be shaded into your jar. Change `implementation` to `compileOnly` (Gradle) or add `<scope>provided</scope>` (Maven).
+:::
+
+Sources and Javadoc jars are published alongside each artifact, so your IDE can attach them for inline documentation.
+
+Add Voxy as a `depend` (or `softdepend`) in your `plugin.yml` so it loads before your plugin and the API is ready when you enable.
+
+## Obtain the API
+
+The entry point is the abstract `VoxyAPI` class. Voxy registers the implementation on startup; retrieve it with the static accessor and guard for `null` in case Voxy has not loaded yet:
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+
+VoxyAPI api = VoxyAPI.getAPI();
+if (api == null) {
+    getLogger().warning("Voxy is not loaded - skipping integration.");
+    return;
+}
+```
+
+## Available managers and services
+
+Everything hangs off `VoxyAPI`. Each getter returns a manager or service for a specific domain:
+
+| Getter | Type | Covered in |
+|--------|------|-----------|
+| `getDataManager()` | `DataManager` | [Player Data](./Player-Data) |
+| `getEconomyService()` | `EconomyService` | [Economy](./Economy) |
+| `getRankManager()` | `RankManager` | [Ranks & Permissions](./Ranks-and-Permissions) |
+| `getPartyManager()` | `PartyManager` | [Guilds & Parties](./Guilds-and-Parties) |
+| `getPunishmentManager()` | `PunishmentManager` | [Moderation](./Moderation) |
+| `getLadderManager()` | `LadderManager` | [Moderation](./Moderation) |
+| `getReportsManager()` | `ReportsManager` | [Moderation](./Moderation) |
+| `getLevelManager()` | `LevelManager` | [Progression](./Progression) |
+| `getRewardService()` | `RewardService` | [Progression](./Progression) |
+| `getFilterManager()` | `FilterManager` | [Other Services](./Other-Services) |
+| `getAnalyticsProvider()` | `AnalyticsProvider` | [Other Services](./Other-Services) |
+| `getVPNManager()` | `VPNManager` | [Other Services](./Other-Services) |
+| `getCooldownManager()` | `CooldownManager` | [Other Services](./Other-Services) |
+| `getServerInfo()` | `ServerInfo` | this page |
+| `getSettings()` | `VoxySettings` | this page |
+
+:::note{label="Guilds"}
+There is no guild manager on `VoxyAPI`. Read a player's guild through `PlayerData.getGuild()` (see [Guilds & Parties](./Guilds-and-Parties)). Guild mutation is not part of the published API.
+:::
+
+## Server info
+
+`getServerInfo()` returns a `ServerInfo` describing the current server or proxy node (its name, identifier, and group), which is useful when writing logic that behaves differently per server or per group.

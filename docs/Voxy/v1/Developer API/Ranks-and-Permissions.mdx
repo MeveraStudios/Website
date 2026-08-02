@@ -1,0 +1,206 @@
+---
+title: Ranks & Permissions
+description: Look up ranks, read their properties, and resolve permission states
+order: 4
+---
+
+# Ranks & Permissions
+
+Ranks carry a name, a priority, prefix/suffix formatting, and a permission set that can inherit from other ranks. Players receive ranks through grants, and permission checks resolve to a three-state model (allowed, denied, or undefined).
+
+## Getting the manager
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.manager.RankManager;
+
+RankManager ranks = VoxyAPI.getAPI().getRankManager();
+```
+
+`RankManager` operations are synchronous. Methods such as `updateRank`, `deleteRank`, and `createRank` persist to the database and publish packets to other servers as part of the call.
+
+## Looking up ranks
+
+Fetch a rank by name or `UUID`. Both overloads are annotated `@Nullable` and return `null` when no rank matches, so guard the result:
+
+```java
+import dev.iiahmed.voxy.rank.Rank;
+
+Rank admin = ranks.getRank("Admin");   // may be null
+if (admin == null) {
+    getLogger().warning("No 'Admin' rank exists.");
+    return;
+}
+
+Rank byId = ranks.getRank(admin.getID()); // by UUID
+```
+
+The default rank is always available and never null:
+
+```java
+Rank def = ranks.getDefaultRank();
+```
+
+List ranks in a few useful orders. Each of these returns a `Collection<Rank>`, except `getRankNamesArray` which returns a `String[]`:
+
+```java
+Collection<Rank> all = ranks.getRanks();
+Collection<Rank> ascending = ranks.getSortedRanks();    // by priority, ascending
+Collection<Rank> descending = ranks.getReversedRanks(); // by priority, descending
+String[] names = ranks.getRankNamesArray();
+```
+
+## Reading rank properties
+
+`Rank` is an interface (it extends `Comparable<Rank>`). The properties it exposes:
+
+```java
+UUID id        = rank.getID();
+String name    = rank.getName();
+int priority   = rank.getPriority();
+String prefix  = rank.getPrefix();
+String suffix  = rank.getSuffix();
+
+// Adventure-formatted variants
+Component adventurePrefix = rank.getAdventurePrefix();
+Component adventureSuffix = rank.getAdventureSuffix();
+Component coloredName     = rank.getAdventureColoredName();
+TextColor color           = rank.getColor();
+```
+
+Useful flags include `isDefaulted()`, `isStaff()`, `isReachable()`, `isAuth()`, and `isForceAuth()`, plus `getFriendLimit()` (where `-1` means unlimited) and `getDiscordRoleID()`.
+
+### Inheritance
+
+A rank inherits from other ranks referenced by their UUIDs. `getInheritedRanks()` returns a `Set<UUID>`:
+
+```java
+Set<UUID> parents = rank.getInheritedRanks();
+for (UUID parentId : parents) {
+    Rank parent = ranks.getRank(parentId);
+}
+```
+
+### Permissions on a rank
+
+A rank holds its own permission set plus pre-computed caches that already fold in inherited ranks. `getPermissions()` returns a `Set<Permission>`, while the cached views return a `Set<String>`:
+
+```java
+Set<Permission> own = rank.getPermissions();                // this rank's own entries
+Set<String> effective = rank.getCachedPermissions();        // resolved, including inheritance
+Set<String> negated = rank.getCachedNegatedPermissions();   // resolved negations
+```
+
+A `Permission` is a record of a permission value and a `Duration`:
+
+```java
+public record Permission(String value, Duration duration) { }
+```
+
+Its `value` is stored lowercased, and `hasExpired()` reports whether the permission's duration has elapsed:
+
+```java
+for (Permission permission : rank.getPermissions()) {
+    if (!permission.hasExpired()) {
+        getLogger().info("Active permission: " + permission.value());
+    }
+}
+```
+
+Check a permission against a rank directly:
+
+```java
+boolean can = rank.hasPermission("voxy.admin.manage.users");
+```
+
+## Player rank grants
+
+A `Grant` ties a rank to a player for a duration, with metadata about who issued it and where it applies. Grants are read-only from a player's `PlayerData` (obtained through the `DataManager`, see [Player Data](./Player-Data)):
+
+```java
+import dev.iiahmed.voxy.player.PlayerData;
+import dev.iiahmed.voxy.player.other.Grant;
+
+PlayerData data = VoxyAPI.getAPI().getDataManager()
+        .getOrLoad(playerId)
+        .orElse(null);
+
+if (data != null) {
+    for (Grant grant : data.getGrants()) {
+        if (grant.isValid()) {
+            Rank granted = grant.getRank(); // resolves via RankManager; null if the rank was deleted
+            getLogger().info(data.getName() + " has " + granted.getName()
+                    + " (by " + grant.getBy() + ")");
+        }
+    }
+}
+```
+
+`Grant` exposes:
+
+```java
+UUID getRankID();       // the granted rank's UUID
+Rank getRank();         // resolved Rank, or null if it no longer exists
+Duration getDuration(); // how long the grant lasts
+String getBy();         // who issued it (default "CONSOLE")
+String getServers();    // where it applies (default "ALL")
+String getReason();
+boolean isRevoked();
+boolean isValid();      // true when the rank exists, is not revoked, and has not expired
+```
+
+A player's active rank is derived from valid grants. `PlayerData` exposes `getRank()` and `getCurrentRank()`, and `calculateHighestRank()` recomputes the highest-priority granted rank.
+
+## Permission state model
+
+Permissions resolve to a three-state enum rather than a simple boolean:
+
+```java
+public enum PermissionState { ALLOWED, DENIED, UNDEFINED; }
+```
+
+- `ALLOWED` - a matching node or wildcard grants the permission.
+- `DENIED` - a node in the tree is explicitly negated.
+- `UNDEFINED` - nothing matches, so a caller can fall through to a default.
+
+`PermissionState` has a helper to collapse it to a boolean with your chosen default for the undefined case:
+
+```java
+PermissionState state = rank.permissionState("voxy.admin.manage.users");
+boolean allowed = state.toBoolean(false); // UNDEFINED -> false here
+```
+
+Both `Rank` and `PlayerData` provide `permissionState(String)` and boolean `hasPermission(String)` checks. Use `permissionState` when the difference between an explicit denial and an unmatched node matters; use `hasPermission` for a plain yes/no:
+
+```java
+if (data.hasPermission("voxy.admin.manage.users")) {
+    // ...
+}
+
+// Or with a default-permission flag:
+boolean can = rank.hasPermission("voxy.chat.color", true);
+```
+
+## Key methods
+
+| Signature | Description |
+|-----------|-------------|
+| `Rank getRank(String name)` | Looks up a rank by name; `null` if none. |
+| `Rank getRank(UUID uuid)` | Looks up a rank by UUID; `null` if none. |
+| `Rank getDefaultRank()` | The default rank; never null. |
+| `Collection<Rank> getRanks()` | All ranks. |
+| `Collection<Rank> getSortedRanks()` | Ranks by priority, ascending. |
+| `Collection<Rank> getReversedRanks()` | Ranks by priority, descending. |
+| `String[] getRankNamesArray()` | Array of all rank names. |
+| `void createRank(String name)` | Creates and persists a new rank. |
+| `void updateRank(Rank rank)` | Persists a rank and publishes an update packet. |
+| `void deleteRank(Rank rank, boolean internal)` | Deletes a rank; `internal` skips database removal. |
+| `Set<Permission> Rank.getPermissions()` | The rank's own permission entries. |
+| `Set<String> Rank.getCachedPermissions()` | Resolved permissions including inheritance. |
+| `Set<UUID> Rank.getInheritedRanks()` | UUIDs of inherited ranks. |
+| `PermissionState Rank.permissionState(String permission)` | Three-state resolution for a node. |
+| `boolean Rank.hasPermission(String permission)` | Plain yes/no permission check. |
+| `Collection<Grant> PlayerData.getGrants()` | All rank grants assigned to a player. |
+| `Rank Grant.getRank()` | Resolves the granted rank; `null` if deleted. |
+| `boolean Grant.isValid()` | True when the grant is active (exists, not revoked, not expired). |
+| `boolean PermissionState.toBoolean(boolean def)` | Collapses the state to a boolean, using `def` for `UNDEFINED`. |

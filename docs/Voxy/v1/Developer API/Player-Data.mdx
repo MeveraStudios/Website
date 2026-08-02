@@ -1,0 +1,269 @@
+---
+title: Player Data
+description: Look up, read, and persist player profiles through the DataManager
+order: 2
+---
+
+# Player Data
+
+Every player Voxy knows about is represented by a `PlayerData` object. You reach it through the `DataManager`, obtained from the API entry point. This page covers getting the manager, looking up profiles (from cache or the database), reading common fields, and persisting changes.
+
+## Getting the DataManager
+
+`DataManager` hangs off the main `VoxyAPI` entry point:
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.manager.DataManager;
+
+VoxyAPI api = VoxyAPI.getAPI();
+if (api == null) {
+    // Voxy has not finished loading yet.
+    return;
+}
+
+DataManager data = api.getDataManager();
+```
+
+See [Getting Started](./Getting-Started) for how to null-guard the API and set up load order.
+
+## Looking up player data
+
+The lookup methods split into two groups: **cache-only** reads that never touch the database, and **loading** reads that fall back to the database. Know which one you are calling - the loading variants perform a synchronous database round trip and block the calling thread, so keep them off the main server thread.
+
+### Cache-only lookups (non-blocking)
+
+These only inspect data already loaded in memory. They return quickly and never hit the database.
+
+```java
+import dev.iiahmed.voxy.player.PlayerData;
+import java.util.Optional;
+import java.util.UUID;
+
+// By UUID, wrapped in an Optional.
+Optional<PlayerData> byId = data.get(playerId);
+
+// By name, wrapped in an Optional.
+Optional<PlayerData> byName = data.get("Notch");
+
+// Same lookups, but returning null instead of an Optional.
+PlayerData orNull = data.getOrNull(playerId);
+PlayerData orNullByName = data.getOrNull("Notch");
+
+// Cheap check: is this player's data currently in memory?
+boolean loaded = data.isLoaded(playerId);
+```
+
+`get(UUID)`, `get(String)`, `getOrNull(UUID)`, and `getOrNull(String)` all read from the in-memory map only. If the player is not loaded, the `Optional` is empty (or the `getOrNull` variants return `null`).
+
+There is also an overload that opts into loading:
+
+```java
+// load = true tells get(...) to load from the database if not cached.
+Optional<PlayerData> maybe = data.get(playerId, true);
+```
+
+### Loading lookups (blocking, hit the database)
+
+These fall back to the database when the player is not already in memory, load the result into the cache, and return it. Because they perform a blocking database read, call them asynchronously.
+
+```java
+// Load by UUID; empty Optional if no such profile exists.
+Optional<PlayerData> loaded = data.getOrLoad(playerId);
+
+// Load by name; a List because names are not guaranteed unique in storage.
+List<PlayerData> matches = data.getOrLoad("Notch");
+
+// Load by UUID + name, creating a fresh profile if none exists.
+// Never returns null - always gives you a usable PlayerData.
+PlayerData profile = data.getLoadOrCreate(playerId, "Notch");
+```
+
+Note the differing return types:
+
+- `getOrLoad(UUID)` returns `Optional<PlayerData>`.
+- `getOrLoad(String)` returns `List<PlayerData>` (empty if nothing matched).
+- `getLoadOrCreate(UUID, String)` returns a non-null `PlayerData`, creating the profile if it did not exist.
+
+:::caution{label="These calls block"}
+None of these return a `CompletableFuture` - they are synchronous and return the resolved data (or `Optional` / `List`) directly. A loading lookup performs a blocking database read, so never call one on the main server thread. Wrap it in your own async task instead.
+:::
+
+```java
+// Bukkit example - run the blocking load off the main thread.
+Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+    PlayerData profile = data.getLoadOrCreate(playerId, name);
+    // ... use profile, then hop back to the main thread if you need the API/world
+});
+```
+
+### Other lookups
+
+```java
+// Resolve a linked Discord account to a profile.
+Optional<PlayerData> linked = data.getByDiscordId(discordSnowflake);
+
+// UUID of a currently online player by name, or null if offline.
+UUID online = data.getOnlineID("Notch");
+
+// Alternate accounts sharing any of the given IP addresses.
+Collection<PlayerData> alts = data.getAlts(ipList);
+Collection<PlayerData> bannedAlts = data.getBlacklistedAlts(ipList);
+```
+
+`getByDiscordId(long)` returns an `Optional<PlayerData>`, while `getAlts(...)` and `getBlacklistedAlts(...)` each return a `Collection<PlayerData>`.
+
+## Reading fields from PlayerData
+
+Once you hold a `PlayerData`, the getters are plain synchronous accessors over the in-memory object.
+
+### Identity and profile
+
+```java
+UUID id = profile.getPlayerID();
+String name = profile.getName();
+String lower = profile.getLowercaseName();
+long created = profile.getProfileCreation();   // epoch millis
+long discordId = profile.getDiscordID();
+String discordName = profile.getDiscordUsername();
+```
+
+### Rank and permissions
+
+```java
+Rank rank = profile.getRank();
+boolean isAdmin = profile.hasPermission("voxy.admin");
+
+// Three-state check: ALLOWED, DENIED, or UNDEFINED.
+PermissionState state = profile.permissionState("voxy.admin.manage.users");
+```
+
+### Level and experience
+
+```java
+int level = profile.getLevel();
+long exp = profile.getExperience();
+```
+
+### Playtime and sessions
+
+Playtime values are in milliseconds.
+
+```java
+long total = profile.getTotalPlaytime();
+Map<String, Long> daily = profile.getDailyPlaytime(); // keyed by yyyy-MM-dd, last 30 days
+long lastQuit = profile.getLastQuitTime();
+long sessionStart = profile.getGlobalSession();
+```
+
+### Friends
+
+```java
+Collection<Friend> friends = profile.getFriends();
+boolean areFriends = profile.isFriend(otherId);
+Friend friend = profile.getFriend(otherId);   // null if not a friend
+int onlineFriends = profile.getOnlineFriendsCount(); // -1 if not yet computed
+```
+
+Each `Friend` exposes `getFriendID()`, `getName()`, `getColoredName()`, `isBest()`, and `getData()` (the friend's own `PlayerData`). There is also a lightweight `FriendRequest` value type (`getSender()`, `getReceiver()`, `getTime()`, `hasExpired()`) used for pending requests; requests expire after 5 minutes.
+
+### Disguise and vanish state
+
+```java
+boolean disguised = profile.isDisguised();
+boolean vanished = profile.isVanished();
+String nickname = profile.getNickname();          // active while disguised
+long disguisedSince = profile.getDisguisedSince(); // epoch millis
+UUID disguiseRank = profile.getDisguiseRankID();
+Rank effectiveRank = profile.getCurrentRank();     // disguise rank if disguised, else real rank
+String display = profile.getCurrentColoredName();  // respects disguise
+```
+
+`canView(PlayerData)` and `canBeViewedBy(PlayerData)` answer disguise visibility questions between two players.
+
+### Privacy
+
+`getPrivacy()` returns a `PrivacySettings` record describing who may message, invite, or view the player:
+
+```java
+PrivacySettings privacy = profile.getPrivacy();
+boolean canMessage = privacy.allowsMessage(sender, profile);
+```
+
+`PrivacySettings` carries per-action `InteractionPrivacy` values (`EVERYONE`, `FRIENDS`, `STAFF`) for messages, party invites, Discord visibility, and guild invites, plus a `friendRequests` toggle. It exposes matching helpers - `allowsMessage`, `allowsPartyInvite`, `allowsDiscordView`, `allowsGuildInvite`, and `allowsFriendRequest` - each taking the sender (and target) `PlayerData` and returning whether the action is permitted. Staff always pass.
+
+### Punishment state
+
+```java
+boolean banned = profile.isBanned();
+boolean muted = profile.isMuted();
+boolean blacklisted = profile.isBlacklisted();
+Punishment ban = profile.getCurrentBan();
+Collection<Punishment> history = profile.getPunishments();
+```
+
+## Mutating and persisting data
+
+:::note{label="Setters do not persist on their own"}
+Most setters mutate the in-memory object only. They do **not** write to the database - you must persist explicitly with `save()` (on `PlayerData`) or `saveOrUpdate(PlayerData)` (on `DataManager`).
+:::
+
+```java
+profile.setLevel(10);
+profile.setExperience(2500L);
+profile.setNickname("Ghost");
+
+// Persist this profile.
+profile.save();
+```
+
+You can also persist through the manager:
+
+```java
+data.saveOrUpdate(profile);
+```
+
+`save()` (on `PlayerData`) and `saveOrUpdate(PlayerData)` (on `DataManager`) write the profile to the database. Voxy tracks a "dirty" document of pending changes (`getDirtyDocument()`), and `update(Document)` / `updateInternalData(UUID, Document)` apply an incoming document to a loaded profile - this is how Voxy reconciles external updates.
+
+:::warning{label="No implicit cross-server sync"}
+The API javadoc does not document these save methods as broadcasting a cross-server sync, so do not assume a `save()` on one node instantly refreshes an already-loaded copy on another node. Persist your changes, and re-read with a loading lookup where you need fresh data.
+:::
+
+When you are finished with a profile and want to free memory, `unload(UUID)` removes it from the cache and returns the removed `PlayerData` (if any) in an `Optional`.
+
+## Key methods
+
+### DataManager
+
+| Signature | Description |
+|-----------|-------------|
+| `Optional<PlayerData> get(UUID id)` | Cache-only lookup by UUID. Empty if not loaded. |
+| `Optional<PlayerData> get(String name)` | Cache-only lookup by name. |
+| `Optional<PlayerData> get(UUID id, boolean load)` | Lookup that loads from the database when `load` is true. |
+| `PlayerData getOrNull(UUID id)` | Cache-only lookup returning `null` instead of an `Optional`. |
+| `Optional<PlayerData> getOrLoad(UUID id)` | Blocking: loads from the database if not cached. Empty if no profile. |
+| `List<PlayerData> getOrLoad(String name)` | Blocking: loads matching profiles by name. |
+| `PlayerData getLoadOrCreate(UUID id, String name)` | Blocking: loads or creates a profile. Never null. |
+| `Optional<PlayerData> getByDiscordId(long id)` | Finds the profile linked to a Discord account. |
+| `boolean isLoaded(UUID id)` | Whether the profile is currently in memory. |
+| `Optional<PlayerData> unload(UUID id)` | Removes a profile from the cache. |
+| `void saveOrUpdate(PlayerData data)` | Persists a profile to the database. |
+| `UUID getOnlineID(String name)` | UUID of an online player by name, or null. |
+
+### PlayerData
+
+| Signature | Description |
+|-----------|-------------|
+| `UUID getPlayerID()` | The player's UUID. |
+| `String getName()` | Current stored name. |
+| `Rank getRank()` / `Rank getCurrentRank()` | Real rank / effective rank (respects disguise). |
+| `int getLevel()` / `long getExperience()` | Progression values. |
+| `long getTotalPlaytime()` | Total playtime in milliseconds. |
+| `Collection<Friend> getFriends()` | The player's friends. |
+| `boolean isFriend(UUID id)` | Whether a UUID is a friend. |
+| `PrivacySettings getPrivacy()` | Privacy preferences record. |
+| `boolean isDisguised()` / `boolean isVanished()` | Disguise / vanish state. |
+| `boolean isBanned()` / `isMuted()` / `isBlacklisted()` | Active punishment state. |
+| `boolean hasPermission(String node)` | Permission check. |
+| `PermissionState permissionState(String node)` | Three-state permission check. |
+| `void save()` | Persists this profile to the database. |

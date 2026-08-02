@@ -1,0 +1,212 @@
+---
+title: Events
+description: Listen to Voxy party, punishment, rank, vanish, and proxy events on your platform
+order: 10
+---
+
+# Events
+
+Voxy fires platform-native events, so you listen to them with your platform's normal event system. There is no custom bus to learn: a Spigot event extends Bukkit's `Event`, a Bungee event extends BungeeCord's `Event`, and a Velocity event is a plain object dispatched to `@Subscribe` methods. Register a listener the way you already do on that platform and Voxy's events flow in alongside the server's own.
+
+Which events exist depends on the platform:
+
+| Module | Platform | Events |
+|--------|----------|--------|
+| `voxy-spigot-api` | Spigot / Paper | party, punishment, rank, vanish |
+| `voxy-velocity-api` | Velocity | private message, server switch |
+| `voxy-bungee-api` | BungeeCord | private message, server switch |
+
+:::note{label="Where the data types come from"}
+Event getters return the same common types documented elsewhere in this section - `PlayerData`, `Party`, `PartyMember`, `Rank`, `Punishment`, and so on - all from the `voxy-api` module. Add `voxy-api` too so those types resolve.
+:::
+
+## Add the dependency
+
+Set up the [repository](./Getting-Started#add-the-repository) first, then add the event module that matches your platform. Each is added exactly like the common `voxy-api` module.
+
+**Spigot / Paper**
+
+<LatestVersionBlock owner="iiAhmedYT" repo="Voxy" group="dev.iiahmed" id="voxy-spigot-api" version="1.1.3" />
+
+**Velocity**
+
+<LatestVersionBlock owner="iiAhmedYT" repo="Voxy" group="dev.iiahmed" id="voxy-velocity-api" version="1.1.3" />
+
+**Bungee**
+
+<LatestVersionBlock owner="iiAhmedYT" repo="Voxy" group="dev.iiahmed" id="voxy-bungee-api" version="1.1.3" />
+
+:::note{label="Use a provided scope"}
+As with the rest of the API, Voxy is present at runtime, so do not shade these modules. Use `compileOnly` (Gradle) or `<scope>provided</scope>` (Maven).
+:::
+
+## Spigot / Paper
+
+Voxy's Spigot events extend Bukkit's `org.bukkit.event.Event`. Listen to them with an ordinary `Listener` and `@EventHandler`, and register through Bukkit's plugin manager.
+
+```java
+import dev.iiahmed.voxy.api.event.punishment.PlayerPunishEvent;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class MyPlugin extends JavaPlugin implements Listener {
+
+    @Override
+    public void onEnable() {
+        getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    @EventHandler
+    public void onPunish(PlayerPunishEvent event) {
+        // Block any punishment aimed at a protected player
+        if (event.getTarget().getName().equalsIgnoreCase("Notch")) {
+            event.setCancelled(true);
+        }
+    }
+}
+```
+
+The `party` events live in `dev.iiahmed.voxy.api.event.party`, the `punishment` events in `dev.iiahmed.voxy.api.event.punishment`, the `rank` events in `dev.iiahmed.voxy.api.event.rank`, and `VanishEvent` sits in `dev.iiahmed.voxy.api.event`.
+
+When each event fires:
+
+- `PartyCreateEvent` - a new party is being created.
+- `PartyDisbandEvent` - an existing party is disbanded.
+- `PartyMemberJoinEvent` - a member is about to join a party.
+- `PartyMemberLeaveEvent` - after a member leaves a party.
+- `PartyRoleChangeEvent` - a member's party role is changed.
+- `PlayerPunishEvent` - before a punishment is applied to a player.
+- `PlayerPunishmentAppliedEvent` - after a punishment has been applied.
+- `PlayerPunishmentRemovedEvent` - a punishment is removed before it expires.
+- `PlayerRankChangeEvent` - a player's primary rank is changed.
+- `RankCreateEvent` - a new rank is about to be created.
+- `RankDeleteEvent` - a rank is about to be deleted.
+- `RankUpdateEvent` - a rank's data is modified.
+- `VanishEvent` - a player's vanish state is toggled.
+
+| Event | Cancellable | Key getters |
+|-------|-------------|-------------|
+| `PartyCreateEvent` | No | `getCreator()` -> `PlayerData`, `getParty()` -> `Party` |
+| `PartyDisbandEvent` | No | `getParty()` -> `Party` |
+| `PartyMemberJoinEvent` | Yes | `getParty()` -> `Party`, `getMember()` -> `PartyMember` |
+| `PartyMemberLeaveEvent` | No | `getParty()` -> `Party`, `getMember()` -> `PartyMember` |
+| `PartyRoleChangeEvent` | Yes | `getParty()` -> `Party`, `getActor()` -> `PlayerData`, `getTarget()` -> `PartyMember`, `getPreviousRole()` / `getNewRole()` -> `PartyRole` |
+| `PlayerPunishEvent` | Yes | `getTarget()` / `getSource()` -> `PlayerData`, `getPunishment()` -> `Punishment`, `isSilent()` -> `boolean` |
+| `PlayerPunishmentAppliedEvent` | No | `getTarget()` / `getSource()` -> `PlayerData`, `getPunishment()` -> `Punishment`, `isSilent()` -> `boolean` |
+| `PlayerPunishmentRemovedEvent` | No | `getTarget()` / `getRemover()` -> `PlayerData`, `getPunishment()` -> `Punishment` |
+| `PlayerRankChangeEvent` | No | `getPlayer()` / `getActor()` -> `PlayerData`, `getPreviousRank()` / `getNewRank()` -> `Rank` |
+| `RankCreateEvent` | No | `getRank()` -> `Rank` |
+| `RankDeleteEvent` | No | `getRank()` -> `Rank`, `isForce()` -> `boolean` |
+| `RankUpdateEvent` | No | `getRank()` -> `Rank`, `getUpdateType()` -> `UpdateType`, `getActor()` -> `@Nullable PlayerData`, `getField()` / `getOldValue()` / `getNewValue()` -> `String` |
+| `VanishEvent` | Yes | `getPlayer()` -> `Player`, `getData()` -> `PlayerData`, `isVanished()` -> `boolean` |
+
+:::note{label="RankUpdateEvent.UpdateType"}
+`getUpdateType()` returns a nested `UpdateType` enum: `PERMISSION_ADDED`, `PERMISSION_REMOVED`, `INHERITANCE_ADDED`, `INHERITANCE_REMOVED`, `METADATA`, `PRIORITY`, `OTHER`. Its `getActor()` may be `null` when the change was not driven by a player.
+:::
+
+:::tip{label="Cancellable events run before the action"}
+Only `PartyMemberJoinEvent`, `PartyRoleChangeEvent`, `PlayerPunishEvent`, and `VanishEvent` implement `org.bukkit.event.Cancellable`. They fire before their action is committed, so calling `setCancelled(true)` prevents it. The remaining events are notifications fired after the fact.
+:::
+
+## Velocity
+
+Voxy's Velocity events are plain objects (they do not extend a base class). Handle them with a method annotated `@Subscribe` and register the listener through the proxy's `EventManager`.
+
+```java
+import com.google.inject.Inject;
+import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.plugin.Plugin;
+import com.velocitypowered.api.proxy.ProxyServer;
+import dev.iiahmed.voxy.proxy.velocity.api.event.ProxyPrivateMessageEvent;
+import dev.iiahmed.voxy.proxy.velocity.api.event.ProxyServerSwitchEvent;
+
+@Plugin(id = "myplugin")
+public final class MyPlugin {
+
+    private final ProxyServer proxy;
+
+    @Inject
+    public MyPlugin(ProxyServer proxy) {
+        this.proxy = proxy;
+    }
+
+    @Subscribe
+    public void onInit(ProxyInitializeEvent event) {
+        proxy.getEventManager().register(this, this);
+    }
+
+    @Subscribe
+    public void onMessage(ProxyPrivateMessageEvent event) {
+        // Rewrite or cancel the private message before it is delivered
+        if (event.getMessage().contains("badword")) {
+            event.setCancelled(true);
+        }
+    }
+
+    @Subscribe
+    public void onSwitch(ProxyServerSwitchEvent event) {
+        long seconds = event.getSessionDuration() / 1000;
+    }
+}
+```
+
+Both events live in `dev.iiahmed.voxy.proxy.velocity.api.event`.
+
+When each event fires:
+
+- `ProxyPrivateMessageEvent` - a player sends a private message to another player through the proxy.
+- `ProxyServerSwitchEvent` - a player switches from one backend server to another.
+
+| Event | Cancellable | Key getters |
+|-------|-------------|-------------|
+| `ProxyPrivateMessageEvent` | Yes, via `setCancelled(boolean)` | `getSender()` / `getRecipient()` -> `Player`, `getSenderData()` / `getRecipientData()` -> `PlayerData`, `getMessage()` -> `String` (mutable with `setMessage(String)`), `isCancelled()` -> `boolean` |
+| `ProxyServerSwitchEvent` | No | `getPlayer()` -> `Player`, `getData()` -> `PlayerData`, `getFromServer()` / `getToServer()` -> `RegisteredServer`, `getFromGroup()` / `getToGroup()` -> `String`, `getSessionDuration()` -> `long` |
+
+:::note{label="Cancellation on Velocity"}
+`ProxyPrivateMessageEvent` is not a Bukkit-style `Cancellable`; it simply carries a mutable `cancelled` flag. Call `setCancelled(true)` to stop the message, and use `setMessage(String)` to rewrite it. `ProxyServerSwitchEvent` is a read-only notification. `getSessionDuration()` is reported in milliseconds.
+:::
+
+## Bungee
+
+Voxy's Bungee events extend BungeeCord's `net.md_5.bungee.api.plugin.Event`. Handle them with a `Listener` and `@EventHandler` (from `net.md_5.bungee.event.EventHandler`), and register the listener through the proxy's plugin manager.
+
+```java
+import dev.iiahmed.voxy.proxy.bungee.api.event.ProxyPrivateMessageEvent;
+import net.md_5.bungee.api.plugin.Listener;
+import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.event.EventHandler;
+
+public final class MyPlugin extends Plugin implements Listener {
+
+    @Override
+    public void onEnable() {
+        getProxy().getPluginManager().registerListener(this, this);
+    }
+
+    @EventHandler
+    public void onMessage(ProxyPrivateMessageEvent event) {
+        // Rewrite or cancel the private message before it is delivered
+        if (event.getMessage().contains("badword")) {
+            event.setCancelled(true);
+        }
+    }
+}
+```
+
+Both events live in `dev.iiahmed.voxy.proxy.bungee.api.event`.
+
+When each event fires:
+
+- `ProxyPrivateMessageEvent` - a player sends a private message to another player through the proxy.
+- `ProxyServerSwitchEvent` - a player switches from one backend server to another.
+
+| Event | Cancellable | Key getters |
+|-------|-------------|-------------|
+| `ProxyPrivateMessageEvent` | Yes | `getSender()` / `getRecipient()` -> `ProxiedPlayer`, `getSenderData()` / `getRecipientData()` -> `PlayerData`, `getMessage()` -> `String` (mutable with `setMessage(String)`), `isCancelled()` -> `boolean` |
+| `ProxyServerSwitchEvent` | No | `getPlayer()` -> `ProxiedPlayer`, `getData()` -> `PlayerData`, `getFromServer()` / `getToServer()` -> `String`, `getFromGroup()` / `getToGroup()` -> `String`, `getSessionDuration()` -> `long` |
+
+:::note{label="Cancellation on Bungee"}
+`ProxyPrivateMessageEvent` implements `net.md_5.bungee.api.plugin.Cancellable`, so `setCancelled(true)` stops delivery and `setMessage(String)` rewrites the text. Unlike Velocity, Bungee reports the from/to server as a `String` name rather than a server object. `ProxyServerSwitchEvent` is a read-only notification and `getSessionDuration()` is in milliseconds.
+:::

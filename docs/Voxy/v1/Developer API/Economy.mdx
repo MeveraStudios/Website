@@ -1,0 +1,145 @@
+---
+title: Economy
+description: Manage currencies and player balances through the EconomyService
+order: 3
+---
+
+# Economy
+
+The economy subsystem lets you register currencies and read or modify player balances. A server can hold multiple currencies at once, each identified by a stable `UUID`, and one of them can be marked as the primary currency exposed to Vault.
+
+## Getting the service
+
+Obtain the `EconomyService` from the API entry point:
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+import dev.iiahmed.voxy.economy.EconomyService;
+
+EconomyService economy = VoxyAPI.getAPI().getEconomyService();
+```
+
+:::note{label="Synchronous and blocking"}
+All `EconomyService` operations are synchronous and blocking. They return plain values (no `CompletableFuture`), and lookups that miss return `null` rather than an `Optional`. Because reads and writes may touch persistence, treat them like any other blocking call and keep them off the main thread when doing bulk work.
+:::
+
+## Currencies
+
+A `Currency` has three fields: a persistent `UUID`, a case-insensitive `id` used in commands and config, and a human-readable `displayName`.
+
+```java
+public UUID getUuid();
+public String getId();
+public String getDisplayName();
+```
+
+### Creating and looking up currencies
+
+`createCurrency` returns the existing currency if one with the same id already exists, otherwise it creates a new one:
+
+```java
+Currency coins = economy.createCurrency("coins", "Coins");
+UUID coinsId = coins.getUuid();
+```
+
+Look up a currency by its id (case-insensitive) or by its `UUID`. Both return `null` when nothing is registered under that key, so guard the result:
+
+```java
+Currency byId = economy.getCurrency("coins");     // may be null
+Currency byUuid = economy.getCurrency(coinsId);   // may be null
+
+if (byId == null) {
+    getLogger().warning("The 'coins' currency is not registered.");
+    return;
+}
+```
+
+List every registered currency as an immutable view:
+
+```java
+for (Currency currency : economy.getCurrencies()) {
+    getLogger().info(currency.getId() + " -> " + currency.getDisplayName());
+}
+```
+
+### Renaming and deleting
+
+```java
+economy.renameCurrency(coinsId, "gold");           // updates id and display name
+boolean removed = economy.deleteCurrency(coinsId); // also clears associated balances
+```
+
+`deleteCurrency` returns `true` if the currency existed and was removed.
+
+## Player balances
+
+Balances are keyed by player `UUID` and currency `UUID`.
+
+:::note{label="Balances key on the currency UUID"}
+The balance methods take the currency's **UUID**, not its string id, so resolve the `Currency` first and pass `getUuid()`.
+:::
+
+```java
+import java.util.UUID;
+
+UUID playerId = player.getUniqueId();
+UUID currencyId = economy.getCurrency("coins").getUuid();
+```
+
+### Reading a balance
+
+`getBalance` returns a `double` and yields zero when the player has no stored balance for that currency:
+
+```java
+double balance = economy.getBalance(playerId, currencyId);
+```
+
+### Giving, taking, and setting
+
+```java
+// Give: adds to the balance
+economy.deposit(playerId, currencyId, 250.0);
+
+// Take: removes funds only if the player can afford it
+boolean paid = economy.withdraw(playerId, currencyId, 100.0);
+if (!paid) {
+    player.sendMessage("You do not have enough coins.");
+}
+
+// Set: overwrites the balance outright
+economy.setBalance(playerId, currencyId, 0.0);
+```
+
+`deposit` and `setBalance` return `void`. `withdraw` returns a `boolean`: `true` on success, `false` when the player has insufficient funds (the balance is left unchanged).
+
+## The primary currency
+
+One currency can be marked as primary. This is the currency Voxy uses by default and the one exposed to Vault for other plugins that read balances through Vault's economy abstraction.
+
+```java
+UUID primary = economy.getPrimaryCurrency(); // may be null if none is set
+if (primary != null) {
+    double main = economy.getBalance(playerId, primary);
+}
+
+economy.setPrimaryCurrency(currencyId);
+```
+
+`getPrimaryCurrency` returns the primary currency `UUID`, or `null` if none has been configured.
+
+## Key methods
+
+| Signature | Description |
+|-----------|-------------|
+| `Currency createCurrency(String id, String displayName)` | Creates a currency, or returns the existing one with the same id. |
+| `Currency getCurrency(String id)` | Looks up a currency by case-insensitive id; `null` if not registered. |
+| `Currency getCurrency(UUID uuid)` | Looks up a currency by UUID; `null` if not registered. |
+| `Collection<Currency> getCurrencies()` | Immutable view of all registered currencies. |
+| `void renameCurrency(UUID uuid, String newId)` | Renames a currency's id and display name. |
+| `boolean deleteCurrency(UUID uuid)` | Deletes a currency and clears its balances; `true` if it existed. |
+| `double getBalance(UUID playerId, UUID currencyId)` | Reads a player's balance; zero if none. |
+| `void setBalance(UUID playerId, UUID currencyId, double amount)` | Overwrites a player's balance. |
+| `void deposit(UUID playerId, UUID currencyId, double amount)` | Adds to a player's balance. |
+| `boolean withdraw(UUID playerId, UUID currencyId, double amount)` | Removes funds if affordable; `false` on insufficient funds. |
+| `UUID getPrimaryCurrency()` | UUID of the default / Vault-exposed currency; `null` if unset. |
+| `void setPrimaryCurrency(UUID currencyId)` | Sets the default / Vault-exposed currency. |

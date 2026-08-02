@@ -1,0 +1,171 @@
+---
+title: Other Services
+description: Chat filters, analytics, anti-VPN, and network-wide cooldowns
+order: 9
+---
+
+# Other Services
+
+This page covers four smaller services hanging off `VoxyAPI`: chat filters, analytics, anti-VPN, and cooldowns.
+
+```java
+import dev.iiahmed.voxy.api.VoxyAPI;
+
+VoxyAPI api = VoxyAPI.getAPI();
+```
+
+## Chat filters
+
+`api.getFilterManager()` returns a `FilterManager`. The main entry point is `processText(String)`, which runs the text through every loaded filter and returns a `FilterResult`. It is synchronous.
+
+```java
+import dev.iiahmed.voxy.filter.FilterResult;
+import dev.iiahmed.voxy.filter.FilterAction;
+
+FilterResult result = api.getFilterManager().processText(message);
+if (result.isTriggered()) {
+    FilterAction action = result.action();     // KEEP, GHOST, SENSOR, BLOCK
+    String cleaned = result.processedText();    // may be censored
+    String matched = result.matchedPart();      // the offending substring
+    // result.originalText(), result.triggeredFilter(), result.ladder()
+}
+```
+
+`FilterResult` is a record exposing `action()`, `originalText()`, `processedText()`, `matchedPart()`, `triggeredFilter()`, and `ladder()`, plus the helpers `isTriggered()` and `hasLadder()`. `FilterAction` has four values: `KEEP` (leave unchanged), `GHOST` (show only to the sender), `SENSOR` (censor/modify), and `BLOCK` (reject).
+
+You can also enumerate or look up individual filters:
+
+```java
+import dev.iiahmed.voxy.filter.Filter;
+
+import java.util.Collection;
+import java.util.Optional;
+
+Collection<Filter> all = api.getFilterManager().getAll();
+Optional<Filter> byName = api.getFilterManager().getByName("profanity");
+```
+
+A `Filter` exposes `getId()`, `getName()`, `getAction()`, `getLadderId()` (nullable), and its compiled regex via `pattern()`. `triggers(String)` tests text against that pattern, and `replace(String)` masks matches with `*`. `FilterManager` also offers `getById(UUID)`, `addOrUpdate(Filter)`, `remove(UUID)` (returns `boolean`), and `reloadFilters()`.
+
+Individual words are modeled by the `FilterWord` record, which pairs a `word()` with a `MatchType`: `NONE` (fuzzy matching with character substitutions), `CONTAINS_EXACTLY` (the exact word, possibly surrounded by other characters), or `EXACT` (the standalone word only). Build one with `FilterWord.of(word)` or `FilterWord.of(word, matchType)`.
+
+## Analytics
+
+`api.getAnalyticsProvider()` returns an `AnalyticsProvider`. It builds an immutable `AnalyticsSnapshot` for a single server, the whole network, or a group. Both methods are synchronous.
+
+```java
+import dev.iiahmed.voxy.analytics.AnalyticsSnapshot;
+
+// Pass a server name, or null for global (network-wide) statistics.
+AnalyticsSnapshot global = api.getAnalyticsProvider().getSnapshot(null);
+AnalyticsSnapshot lobby = api.getAnalyticsProvider().getSnapshot("lobby");
+AnalyticsSnapshot survival = api.getAnalyticsProvider().getGroupSnapshot("survival");
+
+int peak = global.getPeakToday();
+int newPlayers = global.getNewPlayersToday();
+long avgPlaytime = global.getAvgPlaytimeToday(); // milliseconds
+double d1 = global.getRetentionD1();             // percentage
+```
+
+`AnalyticsSnapshot` is read-only and exposes a wide set of getters, including:
+
+- Playtime averages: `getAvgPlaytimeToday()`, `getAvgPlaytimeYesterday()`, `getAvgPlaytimeLastWeek()`, `getAvgPlaytimeOverall()` (all `long` milliseconds).
+- Peaks: `getPeakToday()`, `getPeakYesterday()`, `getPeakLastWeek()`, `getPeakOverall()`, plus timestamps `getPeakTodayAt()` and `getPeakYesterdayAt()` (epoch millis, `0` when unknown).
+- New players: `getNewPlayersToday()`, `getNewPlayersYesterday()`, `getNewPlayersLastWeek()`.
+- Sessions and quits: `getSessionsToday()`, `getSessionsYesterday()`, `getSessionsLastWeek()`, `getQuitsToday()`.
+- Retention percentages: `getRetentionD1()`, `getRetentionD7()`, `getRetentionD30()`.
+- Distribution: `getTopServer()`, `getTopServerPercent()`, `getVersionPercentages()` (`Map<Integer, Double>`), and `getHourlyOnlineToday()` (`Map<Integer, Integer>`, global snapshots only).
+
+## Anti-VPN
+
+`api.getVPNManager()` returns a `VPNManager`. `check(String ip)` runs the IP through every registered check service and returns a single `boolean` - `true` means the IP is blocked (VPN, proxy, Tor, and so on), `false` means it is clean or every service failed. The check is IP-based and synchronous.
+
+:::warning{label="Run off the main thread"}
+Check services may call external APIs, so `check(String ip)` can block. Never call it on the server or proxy main thread. A `false` result also covers the fail-open case where every service errored, so a returned `false` is never a guarantee the IP is clean.
+:::
+
+```java
+boolean blocked = api.getVPNManager().check(ip);
+if (blocked) {
+    // deny the connection, flag the player, etc.
+}
+```
+
+To plug in your own provider, implement `VPNCheckService` and register it. `checkIP(String)` returns a `VPNCheckResult`:
+
+```java
+import dev.iiahmed.voxy.antivpn.VPNCheckService;
+import dev.iiahmed.voxy.antivpn.VPNCheckResult;
+
+VPNCheckService service = new VPNCheckService() {
+    @Override
+    public String name() {
+        return "my-service";
+    }
+
+    @Override
+    public VPNCheckResult checkIP(String ip) {
+        // ... perform your lookup ...
+        return VPNCheckResult.CLEAN;
+    }
+};
+api.getVPNManager().registerService(service);
+```
+
+`VPNCheckResult` is an enum of `CLEAN`, `VPN`, `PROXY`, `TOR`, `FLAGGED`, `HOSTING`, and `API_ERROR`; each carries a human-readable `getReason()`. `VPNManager` also offers `unregisterService(VPNCheckService)`, `getServices()`, and `reload()`.
+
+## Cooldowns
+
+`api.getCooldownManager()` returns a `CooldownManager` - a network-wide, per-player cooldown engine keyed by a caller-supplied string (for example `"kit"`) and a player UUID. A cooldown started on one server blocks the same key on every server until it expires.
+
+:::warning{label="Redis-backed, fails open"}
+State lives in Redis, so all methods are synchronous and may block; call them off the main thread where appropriate. On Redis failure the manager fails open (a cooldown is treated as inactive).
+:::
+
+```java
+import dev.iiahmed.voxy.cooldown.Cooldown;
+import dev.iiahmed.voxy.util.Duration;
+
+import java.util.UUID;
+
+UUID player = data.getPlayerID();
+
+// Atomically start a cooldown only if one is not already active.
+boolean acquired = api.getCooldownManager().tryAcquire(player, "kit", Duration.of("1h"));
+if (!acquired) {
+    long remaining = api.getCooldownManager().getRemaining(player, "kit"); // millis left
+    // deny the action and tell the player how long is left
+}
+```
+
+`tryAcquire` also has an overload taking a raw `long` millisecond duration. Query state with `isActive(UUID, String)` and `getRemaining(UUID, String)`, or fetch a richer `Cooldown` object:
+
+```java
+Cooldown cooldown = api.getCooldownManager().getCooldown(player, "kit");
+if (cooldown != null && cooldown.isActive()) {
+    String left = cooldown.toDuration().timeLeft(); // formatted string
+}
+```
+
+`Cooldown` is an immutable record of `key()` and `expiresAt()` (epoch millis), with `remainingMillis()`, `isActive()`, and `toDuration()` for messaging. To manage cooldowns directly, use `set(UUID, String, Duration)` (force-set, overwriting any existing one with no atomic check) and `clear(UUID, String)` (remove a cooldown, e.g. an admin reset).
+
+## Key methods
+
+| Method | Returns | Notes |
+|--------|---------|-------|
+| `FilterManager.processText(String)` | `FilterResult` | Runs text through all filters |
+| `FilterManager.getByName(String)` | `Optional<Filter>` | Case-insensitive lookup |
+| `FilterManager.remove(UUID)` | `boolean` | True if a filter was removed |
+| `Filter.triggers(String)` | `boolean` | Tests text against the pattern |
+| `Filter.replace(String)` | `String` | Masks matches with `*` |
+| `AnalyticsProvider.getSnapshot(String)` | `AnalyticsSnapshot` | Null server = global |
+| `AnalyticsProvider.getGroupSnapshot(String)` | `AnalyticsSnapshot` | Per-group stats |
+| `VPNManager.check(String)` | `boolean` | True if the IP is blocked |
+| `VPNManager.registerService(VPNCheckService)` | `void` | Add a custom provider |
+| `VPNCheckService.checkIP(String)` | `VPNCheckResult` | Per-service result |
+| `CooldownManager.tryAcquire(UUID, String, Duration)` | `boolean` | True if acquired |
+| `CooldownManager.isActive(UUID, String)` | `boolean` | Active cooldown check |
+| `CooldownManager.getRemaining(UUID, String)` | `long` | Millis remaining |
+| `CooldownManager.getCooldown(UUID, String)` | `Cooldown` | Null if none/expired |
+| `CooldownManager.set(UUID, String, Duration)` | `void` | Force-set, overwrites |
+| `CooldownManager.clear(UUID, String)` | `void` | Reset a cooldown |
