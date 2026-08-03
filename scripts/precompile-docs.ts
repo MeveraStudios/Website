@@ -344,6 +344,15 @@ function toGitPath(path: string): string {
 }
 
 /**
+ * Canonical identity of a doc. Slugs are only unique *within* a category
+ * (e.g. Voxy has both `Commands/Moderation` and `Developer API/Moderation`),
+ * so every per-doc lookup key must carry the category path.
+ */
+function docKey(projectId: string, versionId: string, categoryPath: string | undefined, slug: string): string {
+    return `${projectId}/${versionId}/${categoryPath ? `${categoryPath}/` : ''}${slug}`;
+}
+
+/**
  * Parse YAML-like content (simplified parser)
  */
 function parseYAML(content: string): Record<string, YamlValue> {
@@ -667,9 +676,10 @@ function buildVersion(
 
         allDocs.push(docFile);
 
-        // Extract TOC keyed by project/version/slug.
+        // Extract TOC keyed by project/version/categoryPath/slug — the slug
+        // alone collides when two categories hold a same-named file.
         const toc = extractToc(body);
-        tocMap[`${projectId}/${versionMeta.id}/${slug}`] = toc;
+        tocMap[docKey(projectId, versionMeta.id, categoryPath, slug)] = toc;
 
         // Search index — include only the latest version per project to keep
         // results free of duplicates while content is mirrored across versions.
@@ -1008,7 +1018,7 @@ function precompileDocs() {
             version.allDocs.forEach(doc => {
                 const docContentData = {
                     ...doc,
-                    toc: tocMap[`${project.id}/${version.id}/${doc.slug}`] || [],
+                    toc: tocMap[docKey(project.id, version.id, doc.categoryPath, doc.slug)] || [],
                 };
                 const contentDir = doc.categoryPath
                     ? join(versionContentDir, doc.categoryPath)

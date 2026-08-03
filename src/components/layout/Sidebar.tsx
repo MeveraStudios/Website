@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ChevronsUpDown, BookOpen, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { PROJECTS } from '@/config/site';
+import { flattenDocsInNavOrder, isCurrentDoc } from '@/lib/docs';
+import { useDocRoute } from '@/hooks/useDocRoute';
 import type { DocCategory, DocFile, DocProject, DocVersion } from '@/types/docs';
 
 /**
@@ -34,26 +36,21 @@ import type { DocCategory, DocFile, DocProject, DocVersion } from '@/types/docs'
 function VersionSwitcher({ project, version }: { project: DocProject; version: DocVersion }) {
   const versions = project.versions ?? [];
   const navigate = useNavigate();
-  const { slug } = useParams<{ slug?: string }>();
+  const { categoryPath: currentCategory, slug: currentSlug } = useDocRoute();
 
   if (versions.length <= 1) return null;
-
-  const currentSlug = slug || '';
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextId = e.target.value;
     const next = versions.find(v => v.id === nextId);
     if (!next) return;
 
-    function flattenDocs(cats: DocCategory[]): DocFile[] {
-      return cats.flatMap(c => [
-        ...(c.docs || []),
-        ...(c.children ? flattenDocs(c.children) : []),
-      ]);
-    }
-    const allNextDocs = flattenDocs(next.categories);
-    const sameSlug = allNextDocs.find(d => d.slug === currentSlug);
-    const targetDoc = sameSlug || allNextDocs[0];
+    const allNextDocs = flattenDocsInNavOrder(next.categories);
+    // Prefer the same category+slug; fall back to the slug in any category
+    // (a doc may have been reorganised between versions).
+    const sameDoc = allNextDocs.find(d => isCurrentDoc(d, currentSlug, currentCategory))
+      || allNextDocs.find(d => d.slug === currentSlug);
+    const targetDoc = sameDoc || allNextDocs[0];
     if (!targetDoc) return;
 
     const targetUrl = targetDoc.categoryPath
@@ -91,6 +88,8 @@ interface SidebarProps {
 interface CategorySectionProps {
   category: DocCategory;
   currentSlug: string;
+  /** Category path from the URL — disambiguates same-named docs across categories. */
+  currentCategoryPath: string;
   projectId: string;
   versionId: string;
   depth?: number;
@@ -207,14 +206,14 @@ function DocLink({ doc, to, isActive, onNavigate }: { doc: DocFile; to: string; 
 }
 
 /** True when the active doc lives in this category or any of its descendants. */
-function containsSlug(category: DocCategory, slug: string): boolean {
+function containsActiveDoc(category: DocCategory, slug: string, categoryPath: string): boolean {
   if (!slug) return false;
-  if (category.docs?.some(d => d.slug === slug)) return true;
-  return category.children?.some(child => containsSlug(child, slug)) ?? false;
+  if (category.docs?.some(d => isCurrentDoc(d, slug, categoryPath))) return true;
+  return category.children?.some(child => containsActiveDoc(child, slug, categoryPath)) ?? false;
 }
 
-function CategorySection({ category, currentSlug, projectId, versionId, depth = 0, onNavigate }: CategorySectionProps) {
-  const holdsActiveDoc = containsSlug(category, currentSlug);
+function CategorySection({ category, currentSlug, currentCategoryPath, projectId, versionId, depth = 0, onNavigate }: CategorySectionProps) {
+  const holdsActiveDoc = containsActiveDoc(category, currentSlug, currentCategoryPath);
   const [expanded, setExpanded] = useState(category.collapsed !== true || holdsActiveDoc);
 
   // Navigating into a collapsed category (search, links, next/prev) opens it.
@@ -225,7 +224,8 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
     if (holdsActiveDoc) setExpanded(true);
   }
 
-  const regionId = `cat-${projectId}-${versionId}-${category.name.replace(/\s+/g, '-').toLowerCase()}`;
+  // Keyed on the category path, not the label — labels repeat across the tree.
+  const regionId = `cat-${projectId}-${versionId}-${(category.categoryPath || category.name).replace(/[\s/]+/g, '-').toLowerCase()}`;
   const dotColor = CATEGORY_COLORS[categoryColorIndex(category.name)];
   const hasChildren = category.children && category.children.length > 0;
   const hasDocs = category.docs && category.docs.length > 0;
@@ -266,9 +266,10 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
           {/* Recursively render child categories */}
           {hasChildren && category.children!.map(child => (
             <CategorySection
-              key={child.name}
+              key={child.categoryPath || child.name}
               category={child}
               currentSlug={currentSlug}
+              currentCategoryPath={currentCategoryPath}
               projectId={projectId}
               versionId={versionId}
               depth={depth + 1}
@@ -283,7 +284,7 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
                   <DocLink
                     doc={doc}
                     to={doc.categoryPath ? `/docs/${projectId}/${versionId}/${doc.categoryPath}/${doc.slug}` : `/docs/${projectId}/${versionId}/${doc.slug}`}
-                    isActive={doc.slug === currentSlug}
+                    isActive={isCurrentDoc(doc, currentSlug, currentCategoryPath)}
                     onNavigate={onNavigate}
                   />
                 </li>
@@ -297,8 +298,7 @@ function CategorySection({ category, currentSlug, projectId, versionId, depth = 
 }
 
 export function Sidebar({ project, version, className }: SidebarProps) {
-  const { slug } = useParams<{ slug?: string }>();
-  const currentSlug = slug || '';
+  const { categoryPath: currentCategoryPath, slug: currentSlug } = useDocRoute();
   const navigate = useNavigate();
 
   const navigateToProject = (target: typeof PROJECTS[number]) => {
@@ -341,11 +341,12 @@ export function Sidebar({ project, version, className }: SidebarProps) {
 
           {/* Categories */}
           <nav aria-label="Documentation sections">
-            {version.categories.map((category) => (
+            {version.categories.map((cat) => (
               <CategorySection
-                key={category.name}
-                category={category}
+                key={cat.categoryPath || cat.name}
+                category={cat}
                 currentSlug={currentSlug}
+                currentCategoryPath={currentCategoryPath}
                 projectId={project.id}
                 versionId={version.id}
               />
@@ -360,8 +361,7 @@ export function Sidebar({ project, version, className }: SidebarProps) {
 // Mobile Sidebar
 export function MobileSidebar({ project, version }: { project: DocProject; version: DocVersion }) {
   const [open, setOpen] = useState(false);
-  const { slug } = useParams<{ slug?: string }>();
-  const currentSlug = slug || '';
+  const { categoryPath: currentCategoryPath, slug: currentSlug } = useDocRoute();
   const navigate = useNavigate();
 
 
@@ -415,11 +415,12 @@ export function MobileSidebar({ project, version }: { project: DocProject; versi
 
             {/* Categories */}
             <nav aria-label="Documentation sections">
-              {version.categories.map((category) => (
+              {version.categories.map((cat) => (
                 <CategorySection
-                  key={category.name}
-                  category={category}
+                  key={cat.categoryPath || cat.name}
+                  category={cat}
                   currentSlug={currentSlug}
+                  currentCategoryPath={currentCategoryPath}
                   projectId={project.id}
                   versionId={version.id}
                   depth={0}

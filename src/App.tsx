@@ -152,9 +152,9 @@ function AppRoutes() {
         }>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/docs/:projectId/:version/:category/:slug" element={<Docs />} />
-            <Route path="/docs/:projectId/:version/:category" element={<Docs />} />
-            <Route path="/docs/:projectId/:version/:slug" element={<Docs />} />
+            {/* Splat: everything after the version is a category path of any
+                depth plus a doc slug. Parsed by `useDocRoute()`. */}
+            <Route path="/docs/:projectId/:version/*" element={<Docs />} />
             <Route path="/docs/:projectId/:version" element={<Docs />} />
             <Route path="/docs/:projectId" element={<Docs />} />
             <Route path="/docs" element={<DocsHome />} />

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { DocFile, DocProject, DocVersion, TocItem, Header } from '@/types/docs';
+import type { DocCategory, DocFile, DocProject, DocVersion, TocItem, Header } from '@/types/docs';
 import { buildHeaderTree, flattenHeaderTree } from './utils';
 
 // Type for cached documentation navigation data
@@ -29,6 +29,42 @@ interface SearchDoc {
 
 // Cached data for content chunks
 const docContentCache = new Map<string, DocFile>();
+
+/**
+ * Canonical identity of a doc: `<categoryPath>/<slug>`.
+ *
+ * Slugs are only unique *within* a category — Voxy ships both
+ * `Commands/Moderation` and `Developer API/Moderation` — so anything that
+ * asks "is this the current doc?" must compare the category path too.
+ */
+export function docIdentity(doc: Pick<DocFile, 'slug' | 'categoryPath'>): string {
+  return `${doc.categoryPath || ''}/${doc.slug}`;
+}
+
+/**
+ * Match a nav doc against the active route.
+ *
+ * `categoryPath` comes from the URL. Legacy flat URLs (`/docs/p/v1/Slug`)
+ * carry no category — those match on slug alone, which is what the redirect
+ * in `pages/Docs.tsx` relies on to resolve them to a categorized URL.
+ */
+export function isCurrentDoc(
+  doc: Pick<DocFile, 'slug' | 'categoryPath'>,
+  slug: string,
+  categoryPath: string,
+): boolean {
+  if (!slug || doc.slug !== slug) return false;
+  if (!categoryPath) return true;
+  return (doc.categoryPath || '') === categoryPath;
+}
+
+/** Flatten a category tree in the same order the sidebar renders it. */
+export function flattenDocsInNavOrder(categories: DocCategory[]): DocFile[] {
+  return categories.flatMap(c => [
+    ...(c.children ? flattenDocsInNavOrder(c.children) : []),
+    ...(c.docs || []),
+  ]);
+}
 
 // Cached search index data
 let searchIndexCache: SearchDoc[] | null = null;
@@ -249,8 +285,8 @@ export function parseDocs(): DocProject[] {
 /**
  * Get a specific document from the loaded docContentCache OR basic nav info
  */
-export function getDoc(projectId: string, version: string, slug: string): DocFile | undefined {
-  const cacheKey = `${projectId}/${version}/${slug}`;
+export function getDoc(projectId: string, version: string, slug: string, categoryPath = ''): DocFile | undefined {
+  const cacheKey = `${projectId}/${version}/${categoryPath ? `${categoryPath}/` : ''}${slug}`;
   if (docContentCache.has(cacheKey)) {
     return docContentCache.get(cacheKey);
   }
@@ -264,12 +300,8 @@ export function getDoc(projectId: string, version: string, slug: string): DocFil
   const versionEntry = project.versions.find(v => v.id === version);
   if (!versionEntry) return undefined;
 
-  for (const cat of versionEntry.categories) {
-    const doc = cat.docs.find(d => d.slug === slug);
-    if (doc) return doc;
-  }
-
-  return undefined;
+  return flattenDocsInNavOrder(versionEntry.categories)
+    .find(d => isCurrentDoc(d, slug, categoryPath));
 }
 
 /**
@@ -442,9 +474,13 @@ export async function searchDocs(query: string, projectId?: string) {
 /**
  * Get next and previous navigation for a doc within a specific version.
  */
-export function getDocNavigation(version: DocVersion, currentSlug: string): { prev?: DocFile; next?: DocFile } {
-  const allDocs = version.categories.flatMap(c => c.docs);
-  const currentIndex = allDocs.findIndex(d => d.slug === currentSlug);
+export function getDocNavigation(
+  version: DocVersion,
+  currentSlug: string,
+  currentCategoryPath = '',
+): { prev?: DocFile; next?: DocFile } {
+  const allDocs = flattenDocsInNavOrder(version.categories);
+  const currentIndex = allDocs.findIndex(d => isCurrentDoc(d, currentSlug, currentCategoryPath));
 
   return {
     prev: currentIndex > 0 ? allDocs[currentIndex - 1] : undefined,

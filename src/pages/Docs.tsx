@@ -8,7 +8,7 @@
  * - Previous/next navigation
  */
 
-import { Link, useParams, Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ChevronRight, Edit, Calendar, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -21,7 +21,8 @@ import { DocFeedback } from '@/components/docs/DocFeedback';
 import { Contributors } from '@/components/docs/Contributors';
 import { Breadcrumbs } from '@/components/docs/Breadcrumbs';
 import { Button } from '@/components/ui/button';
-import { useDocs, useDocContent, getDocNavigation, getLatestVersion } from '@/lib/docs';
+import { useDocs, useDocContent, getDocNavigation, getLatestVersion, isCurrentDoc } from '@/lib/docs';
+import { useDocRoute } from '@/hooks/useDocRoute';
 import { SITE_CONFIG, FEATURES, PROJECTS } from '@/config/site';
 import { Seo, type Breadcrumb } from '@/components/Seo';
 import type { DocCategory, DocFile } from '@/types/docs';
@@ -77,12 +78,7 @@ function docUrl(projectId: string, version: string, slugOrDoc: string | DocFile,
 }
 
 export function Docs() {
-  const { projectId, version, category, slug } = useParams<{
-    projectId: string;
-    version: string;
-    category: string;
-    slug: string;
-  }>();
+  const { projectId, version, categoryPath, slug: pathSlug, rest } = useDocRoute();
 
   // Use the hook to get documentation data
   const { projects, isLoaded } = useDocs();
@@ -98,8 +94,18 @@ export function Docs() {
     return getLatestVersion(projectForFetch)?.id || '';
   })();
 
+  // A URL can name a category rather than a doc (`…/v1/developer-api`, or a
+  // nested `…/v1/guides/basic`). Those have no content to fetch — we redirect
+  // to the category's first doc instead. Categories win over a same-named doc
+  // slug, which is why this is resolved against the nav tree, not the path.
+  const versionForRoute = projectForFetch?.versions.find(v => v.id === resolvedVersionId);
+  const routeCategory = rest && versionForRoute
+    ? findCategory(versionForRoute.categories, rest.split('/'))
+    : undefined;
+  const slug = routeCategory ? '' : pathSlug;
+
   // Fetch the current document content (unconditionally call hooks)
-  const { doc, isLoading } = useDocContent(projectId || '', resolvedVersionId, category || '', slug || '');
+  const { doc, isLoading } = useDocContent(projectId || '', resolvedVersionId, slug ? categoryPath : '', slug);
 
   // Show loading state while data is being fetched
   if (!isLoaded) {
@@ -168,7 +174,7 @@ export function Docs() {
 
   // Redirect old flat URLs (/docs/:projectId/:version/:slug) to new
   // categorized URLs when the doc is found in the nav data.
-  if (!category && slug && activeVersion) {
+  if (!categoryPath && slug && activeVersion) {
     const matchedDoc = allDocsFromCategories(activeVersion.categories)
       .find(d => d.slug === slug);
     if (matchedDoc && matchedDoc.categoryPath) {
@@ -194,14 +200,17 @@ export function Docs() {
   }
 
   if (!version || version !== activeVersion.id) {
-    const firstDoc = activeVersion.categories[0]?.docs[0];
-    const targetSlug = slug || firstDoc?.slug;
-    if (targetSlug) {
-      const matchedDoc = firstDoc?.slug === targetSlug ? firstDoc : undefined;
-      if (matchedDoc) {
-        return <Navigate to={docUrl(project.id, activeVersion.id, matchedDoc)} replace />;
-      }
-      return <Navigate to={`/docs/${project.id}/${activeVersion.id}/${targetSlug}`} replace />;
+    // Version segment missing or unknown — land on the same doc under the
+    // resolved version when it exists there, else the same category's first
+    // doc, else the version's first doc.
+    const allDocs = allDocsFromCategories(activeVersion.categories);
+    const target =
+      allDocs.find(d => isCurrentDoc(d, slug, categoryPath)) ||
+      allDocs.find(d => d.slug === slug) ||
+      (routeCategory ? allDocsFromCategories([routeCategory])[0] : undefined) ||
+      allDocs[0];
+    if (target) {
+      return <Navigate to={docUrl(project.id, activeVersion.id, target)} replace />;
     }
     return (
       <div className="min-h-screen flex flex-col bg-docs">
@@ -219,13 +228,10 @@ export function Docs() {
     );
   }
 
-  // Redirect to first doc when no slug provided.
+  // Redirect to the first doc when the URL names a category (or nothing).
   if (!slug) {
-    const targetCategory = category
-      ? findCategory(activeVersion.categories, category.split('/'))
-      : undefined;
-    const allDocList = targetCategory
-      ? allDocsFromCategories([targetCategory])
+    const allDocList = routeCategory
+      ? allDocsFromCategories([routeCategory])
       : allDocsFromCategories(activeVersion.categories);
     const firstDoc = allDocList[0];
     if (firstDoc) {
@@ -247,8 +253,9 @@ export function Docs() {
     );
   }
 
-  // Get prev/next navigation within the active version.
-  const { prev, next } = getDocNavigation(activeVersion, slug);
+  // Get prev/next navigation within the active version. The category path is
+  // required: two categories can hold docs with the same slug.
+  const { prev, next } = getDocNavigation(activeVersion, slug, categoryPath);
 
   // Docs live in the MeveraDocs/Website repo, so "Edit this page" always
   // targets that repo (not the per-project source repo).
@@ -359,7 +366,7 @@ export function Docs() {
                 </div>
               </div>
             ) : (
-              <div key={slug} className="animate-fadein mx-auto max-w-4xl">
+              <div key={fullDocUrl} className="animate-fadein mx-auto max-w-4xl">
                 {/* Document Header */}
                 <div className="mb-8">
                   {breadcrumbs && (
@@ -384,10 +391,11 @@ export function Docs() {
 
                 {/* Feedback */}
                 <DocFeedback
-                  key={`${project.id}/${activeVersion.id}/${doc.slug}`}
+                  key={fullDocUrl}
                   projectId={project.id}
                   version={activeVersion.id}
                   slug={doc.slug}
+                  categoryPath={doc.categoryPath}
                   docTitle={doc.frontmatter.title}
                   docPath={doc.path}
                 />
@@ -449,7 +457,7 @@ export function Docs() {
 
           {/* Table of Contents */}
           {FEATURES.tableOfContents && doc && doc.toc && !isLoading && (
-            <TableOfContents key={doc.slug} items={doc.toc} />
+            <TableOfContents key={fullDocUrl} items={doc.toc} />
           )}
         </div>
       </div>

@@ -19,6 +19,8 @@ interface DocFeedbackProps {
   projectId: string;
   version: string;
   slug: string;
+  /** Category path of the doc — slugs repeat across categories. */
+  categoryPath?: string;
   docTitle: string;
   /** Absolute or root-relative path to the current doc, used in the issue body. */
   docPath: string;
@@ -36,9 +38,9 @@ function readStoredVote(key: string): Vote {
   return null;
 }
 
-export function DocFeedback({ projectId, version, slug, docTitle, docPath }: DocFeedbackProps) {
-  const key = `${STORAGE_PREFIX}${projectId}/${version}/${slug}`;
-  // The parent passes `key={slug}` so a navigation remounts this component
+export function DocFeedback({ projectId, version, slug, categoryPath, docTitle, docPath }: DocFeedbackProps) {
+  const key = `${STORAGE_PREFIX}${projectId}/${version}/${categoryPath ? `${categoryPath}/` : ''}${slug}`;
+  // The parent passes a per-doc `key` so a navigation remounts this component
   // and we can simply seed state from localStorage — no effect/sync needed.
   const [vote, setVote] = useState<Vote>(() => readStoredVote(key));
 
