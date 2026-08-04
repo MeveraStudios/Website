@@ -29,6 +29,10 @@ interface LightRaysProps {
 
 const DEFAULT_COLOR = '#ffffff';
 
+// The rays are a soft, low-frequency background effect: rendering it at full
+// device pixel ratio quadruples fragment cost for no visible gain.
+const MAX_DPR = 1;
+
 const hexToRgb = (hex: string): [number, number, number] => {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
@@ -143,7 +147,7 @@ const LightRays: React.FC<LightRaysProps> = ({
       if (!containerRef.current) return;
 
       const renderer = new Renderer({
-        dpr: Math.min(window.devicePixelRatio, 2),
+        dpr: Math.min(window.devicePixelRatio, MAX_DPR),
         alpha: true
       });
       rendererRef.current = renderer;
@@ -292,7 +296,7 @@ void main() {
       const updatePlacement = () => {
         if (!containerRef.current || !renderer) return;
 
-        renderer.dpr = Math.min(window.devicePixelRatio, 2);
+        renderer.dpr = Math.min(window.devicePixelRatio, MAX_DPR);
 
         const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
         renderer.setSize(wCSS, hCSS);
@@ -333,7 +337,19 @@ void main() {
         }
       };
 
+      const handleVisibility = () => {
+        if (document.hidden) {
+          if (animationIdRef.current) {
+            cancelAnimationFrame(animationIdRef.current);
+            animationIdRef.current = null;
+          }
+        } else if (!animationIdRef.current) {
+          animationIdRef.current = requestAnimationFrame(loop);
+        }
+      };
+
       window.addEventListener('resize', updatePlacement);
+      document.addEventListener('visibilitychange', handleVisibility);
       updatePlacement();
       animationIdRef.current = requestAnimationFrame(loop);
 
@@ -344,6 +360,7 @@ void main() {
         }
 
         window.removeEventListener('resize', updatePlacement);
+        document.removeEventListener('visibilitychange', handleVisibility);
 
         if (renderer) {
           try {

@@ -79,7 +79,7 @@ function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number]
 
   const cardContent = (
     <Card
-      className="relative border-border/20 bg-card/80 backdrop-blur-md overflow-hidden transition-all duration-300 group-hover:-translate-y-0.5"
+      className="relative border-border/20 bg-card/80 backdrop-blur-sm overflow-hidden transition-all duration-300 group-hover:-translate-y-0.5"
       style={{
         background: member.color
           ? `linear-gradient(135deg, ${member.color}11, ${member.color}22)`

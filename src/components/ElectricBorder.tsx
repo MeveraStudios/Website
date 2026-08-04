@@ -293,13 +293,42 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
     });
     resizeObserver.observe(container);
 
-    animationRef.current = requestAnimationFrame(drawElectricBorder);
+    // The noise field is recomputed per sample per frame on the main thread, so
+    // only run it while the border is actually on screen and the tab is active.
+    const start = () => {
+      if (animationRef.current !== null) return;
+      lastFrameTimeRef.current = performance.now();
+      animationRef.current = requestAnimationFrame(drawElectricBorder);
+    };
+
+    const stop = () => {
+      if (animationRef.current === null) return;
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    };
+
+    let onScreen = false;
+    const sync = () => {
+      if (onScreen && !document.hidden) start();
+      else stop();
+    };
+
+    const intersectionObserver = new IntersectionObserver(
+      entries => {
+        onScreen = entries[0].isIntersecting;
+        sync();
+      },
+      { rootMargin: '100px' }
+    );
+    intersectionObserver.observe(container);
+
+    document.addEventListener('visibilitychange', sync);
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      stop();
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      document.removeEventListener('visibilitychange', sync);
     };
   }, [color, speed, chaos, borderRadius, octavedNoise, getRoundedRectPoint]);
 

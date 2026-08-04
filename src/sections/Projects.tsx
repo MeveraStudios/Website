@@ -95,7 +95,7 @@ function FeaturedProjectCard({ project }: { project: typeof PROJECTS[number] }) 
         style={{ '--project-color': project.color } as React.CSSProperties}
       />
 
-      <div className="project-card-3d relative bg-card/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl border border-border dark:border-white/10 overflow-hidden">
+      <div className="project-card-3d relative bg-card dark:bg-zinc-950 rounded-xl border border-border dark:border-white/10 overflow-hidden">
         <Card className="border-0 bg-transparent relative z-10">
           <CardContent className="p-8 lg:p-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
@@ -208,7 +208,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
         } as React.CSSProperties}
       />
 
-      <div className="project-card-3d relative bg-card/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl border border-border dark:border-white/10 overflow-hidden h-full">
+      <div className="project-card-3d relative bg-card dark:bg-zinc-950 rounded-xl border border-border dark:border-white/10 overflow-hidden h-full">
         <Animator
           isHovered={isHovered}
           mousePosition={{ x: 0, y: 0 }}

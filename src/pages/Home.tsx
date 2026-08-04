@@ -23,7 +23,7 @@ export function Home() {
     <div className="min-h-screen flex flex-col relative bg-background overflow-x-hidden">
       <Seo path="/" title="Home" type="website" />
       {/* Background Effect */}
-      <div className="absolute inset-0 h-full pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0">
         <LightRays
           raysOrigin="right"
           raysColor="#ffffff"
