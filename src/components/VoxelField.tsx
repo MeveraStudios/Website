@@ -6,8 +6,11 @@ interface VoxelFieldProps {
   baseColor?: string;
   /** Blocks tinted with these colours are sprinkled through the cluster. */
   accentColors?: string[];
-  /** Scroll distance, in px, over which the cluster fully disperses. */
-  disperseDistance?: number;
+  /**
+   * Scroll distance over which the cluster fully disperses, in viewport
+   * heights. Recomputed per frame, so it survives resizes and zoom.
+   */
+  disperseViewports?: number;
   className?: string;
 }
 
@@ -236,7 +239,7 @@ void main() {
 export function VoxelField({
   baseColor,
   accentColors = [],
-  disperseDistance,
+  disperseViewports = 0.85,
   className = ''
 }: VoxelFieldProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -244,10 +247,10 @@ export function VoxelField({
   const mouseRef = useRef({ x: 0, y: 0 });
   const smoothMouseRef = useRef({ x: 0, y: 0 });
 
-  // Props are read inside a long-lived render loop; mirroring them into refs
-  // keeps the loop from being torn down and rebuilt on every parent render.
-  const accentsRef = useRef(accentColors);
-  accentsRef.current = accentColors;
+  // The scene is built once and then runs for the lifetime of the page, so the
+  // accent list is depended on by value rather than by identity — a caller
+  // passing a fresh array each render must not tear the whole scene down.
+  const accentKey = accentColors.join(',');
 
   useEffect(() => {
     const container = containerRef.current;
@@ -275,7 +278,7 @@ export function VoxelField({
     const scene = new Transform();
 
     const base = baseColor ? hexToRgb(baseColor) : (readHslVar('--primary') ?? [0.65, 0.85, 0.4]);
-    const accents = accentsRef.current.map(hexToRgb);
+    const accents = accentKey ? accentKey.split(',').map(hexToRgb) : [];
     const data = buildInstances(base, accents);
 
     const geometry = new Box(gl);
@@ -328,7 +331,7 @@ export function VoxelField({
       camera.position.z = wide ? 13 : 15;
     };
 
-    const fadeOver = () => disperseDistance ?? Math.max(window.innerHeight * 0.85, 320);
+    const fadeOver = () => Math.max(window.innerHeight * disperseViewports, 320);
 
     let rafId: number | null = null;
     let startedAt: number | null = null;
@@ -411,7 +414,7 @@ export function VoxelField({
       if (lose) lose.loseContext();
       gl.canvas.parentNode?.removeChild(gl.canvas);
     };
-  }, [baseColor, disperseDistance]);
+  }, [baseColor, accentKey, disperseViewports]);
 
   return <div ref={containerRef} className={`w-full h-full pointer-events-none ${className}`.trim()} />;
 }

@@ -82,7 +82,12 @@ export function Stats() {
 
   return (
     <section className="py-24 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent pointer-events-none" />
+      {/*
+        Fades in from transparent at both ends. Starting the tint at full
+        strength puts a hard horizontal edge at the section boundary, which
+        reads as a stray border against the empty space above.
+      */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent pointer-events-none" />
       <div className="container mx-auto px-4 relative">
         <RevealGroup stagger={0.09} className="max-w-4xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">

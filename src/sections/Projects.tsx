@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { PROJECTS } from '@/config/site';
 
 import { DefaultAnimator } from '@/components/animators/DefaultAnimator';
-import { Reveal, RevealGroup, RevealItem } from '@/components/animators/Reveal';
+import { RevealGroup, RevealItem } from '@/components/animators/Reveal';
+import { PinnedScene } from '@/components/scroll/PinnedScene';
+import { DepthLayer } from '@/components/scroll/DepthLayer';
 import { ImperatSvg, VoxySvg, LotusSvg, ScofiSvg, SynapseSvg } from '@/components/project-svgs';
 
 const ANIMATORS: Record<string, any> = {
@@ -46,37 +48,54 @@ export function Projects() {
   const [first, ...rest] = featured;
 
   return (
-    <section id="projects" className="py-24 relative perspective-2000">
-      <div className="container mx-auto px-4 relative">
-        {/* Section Header */}
-        <Reveal className="text-center mb-16" amount={0.5}>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-balance">
-            Our Projects
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Frameworks, libraries, and plugins built for the Minecraft ecosystem.
-          </p>
-        </Reveal>
+    <>
+      {/*
+        Only the header and the flagship card are pinned: the full section is
+        taller than a viewport, and a pinned scene can never be.
+      */}
+      <PinnedScene id="projects" length={1} perspective={1800}>
+        {progress => (
+          <div className="container mx-auto px-4 relative">
+            <DepthLayer
+              progress={progress}
+              range={[0, 0.32]}
+              z={-420}
+              rotateX={22}
+              y={70}
+              className="text-center mb-16"
+            >
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-balance">
+                Our Projects
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Frameworks, libraries, and plugins built for the Minecraft ecosystem.
+              </p>
+            </DepthLayer>
 
-        {/* Featured Project — full-width bento card */}
-        {first && (
-          <Reveal className="mb-14" amount={0.15}>
-            <FeaturedProjectCard project={first} />
-          </Reveal>
+            {first && (
+              <DepthLayer progress={progress} range={[0.2, 0.8]} z={-900} rotateY={20} rotateX={10} y={150}>
+                <FeaturedProjectCard project={first} />
+              </DepthLayer>
+            )}
+          </div>
         )}
+      </PinnedScene>
 
-        {/* Remaining Projects — 2-column grid */}
-        {rest.length > 0 && (
-          <RevealGroup stagger={0.1} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {rest.map((project, index) => (
-              <RevealItem key={project.id} className="h-full">
-                <ProjectCard project={project} index={index} />
-              </RevealItem>
-            ))}
-          </RevealGroup>
-        )}
-      </div>
-    </section>
+      {/* Remaining Projects — 2-column grid, in normal flow below the scene */}
+      {rest.length > 0 && (
+        <section className="pt-4 pb-24 relative perspective-2000">
+          <div className="container mx-auto px-4 relative">
+            <RevealGroup stagger={0.1} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {rest.map((project, index) => (
+                <RevealItem key={project.id} className="h-full">
+                  <ProjectCard project={project} index={index} />
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </div>
+        </section>
+      )}
+    </>
   );
 }
 

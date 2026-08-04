@@ -9,7 +9,7 @@
 
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Hero } from '@/sections/Hero';
+import { Hero, HERO_SCENE_LENGTH } from '@/sections/Hero';
 import { Features } from '@/sections/Features';
 import { Stats } from '@/sections/Stats';
 import { Projects } from '@/sections/Projects';
@@ -21,13 +21,25 @@ import { PROJECTS } from '@/config/site';
 
 const ACCENT_COLORS = PROJECTS.map(p => p.color).filter(Boolean) as string[];
 
+// `overflow-x-clip`, not `overflow-x-hidden`: hidden on one axis forces the
+// other to `auto`, which makes the page root a scroll container and silently
+// breaks `position: sticky` for everything inside it — including the header.
+// `clip` contains the same overflow without creating a scrollport.
 export function Home() {
   return (
-    <div className="min-h-screen flex flex-col relative bg-background overflow-x-hidden">
+    <div className="min-h-screen flex flex-col relative bg-background overflow-x-clip">
       <Seo path="/" title="Home" type="website" />
       {/* Background Effect */}
       <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
-        <VoxelField accentColors={ACCENT_COLORS} className="opacity-80" />
+        {/*
+          The cluster opens out over exactly the hero's pinned scroll, so the
+          blocks reach their ambient spread as the hero finishes receding.
+        */}
+        <VoxelField
+          accentColors={ACCENT_COLORS}
+          disperseViewports={HERO_SCENE_LENGTH}
+          className="opacity-80"
+        />
       </div>
 
       <Header />
