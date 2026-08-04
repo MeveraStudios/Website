@@ -76,19 +76,42 @@ import teamsData from '../data/teams.json';
 // PROJECTS - Outsourced to src/data/projects.json
 // =============================================================================
 
-export const PROJECTS = projectsData.map(p => ({
-  id: p.id,
-  name: p.title,
-  description: p.description,
-  emoji: p.logoPath,
-  color: p.color,
-  featured: p.featured,
-  githubRepo: p.githubRepo,
-  docLink: p.docLink,
-  hoverAnimator: p.hoverAnimator,
-  titleColor: (p as any).titleColor,
-  titleHoverColor: (p as any).titleHoverColor
-}));
+/** A marketplace listing. `id` picks the store's icon in the UI. */
+export interface ProjectStore {
+  id: string;
+  url: string;
+}
+
+/**
+ * Fields that only some entries in projects.json carry. The JSON import's
+ * inferred type drops them from the common shape, so they are declared here
+ * once instead of casting per property.
+ */
+interface OptionalProjectFields {
+  tags?: string[];
+  stores?: ProjectStore[];
+  titleColor?: string;
+  titleHoverColor?: string;
+}
+
+export const PROJECTS = projectsData.map(raw => {
+  const p = raw as typeof raw & OptionalProjectFields;
+  return {
+    id: p.id,
+    name: p.title,
+    description: p.description,
+    emoji: p.logoPath,
+    color: p.color,
+    featured: p.featured,
+    tags: p.tags,
+    githubRepo: p.githubRepo,
+    stores: p.stores,
+    docLink: p.docLink,
+    hoverAnimator: p.hoverAnimator,
+    titleColor: p.titleColor,
+    titleHoverColor: p.titleHoverColor
+  };
+});
 
 // =============================================================================
 // TEAM MEMBERS - Outsourced to src/data/teams.json
