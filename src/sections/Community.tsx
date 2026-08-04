@@ -1,6 +1,7 @@
 import { MessageCircle, Star, GitPullRequest } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SITE_CONFIG } from '@/config/site';
+import { RevealGroup, RevealItem } from '@/components/animators/Reveal';
 
 export function Community() {
   return (
@@ -9,23 +10,29 @@ export function Community() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 relative">
-        <div className="max-w-3xl mx-auto text-center">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-            Community
-          </span>
+        <RevealGroup stagger={0.12} className="max-w-3xl mx-auto text-center">
+          <RevealItem>
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
+              Community
+            </span>
+          </RevealItem>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 text-balance">
-            Built by developers,
-            <br />
-            <span className="text-primary">for developers</span>
-          </h2>
+          <RevealItem>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 text-balance">
+              Built by developers,
+              <br />
+              <span className="text-primary">for developers</span>
+            </h2>
+          </RevealItem>
 
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 text-pretty">
-            Join hundreds of plugin developers building with Mevera libraries.
-            Contribute, ask questions, or just see what&rsquo;s being made.
-          </p>
+          <RevealItem>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 text-pretty">
+              Join hundreds of plugin developers building with Mevera libraries.
+              Contribute, ask questions, or just see what&rsquo;s being made.
+            </p>
+          </RevealItem>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <RevealItem className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
               className="h-12 px-8 text-base bg-primary hover:bg-primary/90 text-black font-semibold shadow-[0_0_12px_hsl(var(--primary)/0.25)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.4)] transition-all"
@@ -60,8 +67,8 @@ export function Community() {
                 Contribute
               </a>
             </Button>
-          </div>
-        </div>
+          </RevealItem>
+        </RevealGroup>
       </div>
     </section>
   );

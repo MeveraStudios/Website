@@ -27,6 +27,7 @@ import { CodeThemeToggle } from '@/components/CodeThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { SearchDialog } from '@/components/docs/SearchDialog';
 import { DiscordIcon } from '@/components/DiscordIcon';
+import { ScrollProgress } from '@/components/layout/ScrollProgress';
 
 /**
  * =============================================================================
@@ -84,6 +85,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full glass">
+      <ScrollProgress />
       <div className="container mx-auto px-4 h-16 flex items-center" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         {/* Logo */}
         <div className="flex-1 flex justify-start -ml-24">

@@ -15,30 +15,19 @@ import { Stats } from '@/sections/Stats';
 import { Projects } from '@/sections/Projects';
 import { Community } from '@/sections/Community';
 import { Team } from '@/sections/Team';
-import LightRays from '@/components/LightRays';
+import { VoxelField } from '@/components/VoxelField';
 import { Seo } from '@/components/Seo';
+import { PROJECTS } from '@/config/site';
+
+const ACCENT_COLORS = PROJECTS.map(p => p.color).filter(Boolean) as string[];
 
 export function Home() {
   return (
     <div className="min-h-screen flex flex-col relative bg-background overflow-x-hidden">
       <Seo path="/" title="Home" type="website" />
       {/* Background Effect */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <LightRays
-          raysOrigin="right"
-          raysColor="#ffffff"
-          raysSpeed={0.8}
-          lightSpread={0.6}
-          rayLength={2.5}
-          followMouse={true}
-          mouseInfluence={0.08}
-          noiseAmount={0}
-          distortion={0}
-          className="opacity-50"
-          pulsating={false}
-          fadeDistance={1.2}
-          saturation={0.8}
-        />
+      <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+        <VoxelField accentColors={ACCENT_COLORS} className="opacity-80" />
       </div>
 
       <Header />

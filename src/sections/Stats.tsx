@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { useInView } from 'framer-motion';
 import { useStats } from '@/hooks/useStats';
+import { RevealGroup, RevealItem } from '@/components/animators/Reveal';
 
 function BookIcon() {
   return (
@@ -83,19 +84,13 @@ export function Stats() {
     <section className="py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] to-transparent pointer-events-none" />
       <div className="container mx-auto px-4 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-          className="max-w-4xl mx-auto"
-        >
+        <RevealGroup stagger={0.09} className="max-w-4xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {items.map((item) => {
               const Icon = item.icon;
               const loaded = item.value !== null;
               return (
-                <div key={item.label} className="text-center">
+                <RevealItem key={item.label} className="text-center">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/5 mb-4">
                     <Icon />
                   </div>
@@ -109,11 +104,11 @@ export function Stats() {
                   <div className="text-sm text-muted-foreground">
                     {item.label}
                   </div>
-                </div>
+                </RevealItem>
               );
             })}
           </div>
-        </motion.div>
+        </RevealGroup>
       </div>
     </section>
   );

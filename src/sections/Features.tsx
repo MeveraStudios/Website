@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
 import { useStats } from '@/hooks/useStats';
+import { Reveal } from '@/components/animators/Reveal';
 
 function LayersIcon() {
   return (
@@ -122,26 +122,26 @@ export function Features() {
   return (
     <section className="py-24 relative overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16" amount={0.5}>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-balance">
             Why Mevera
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty">
             We build the kind of software that makes people ask who built it.
           </p>
-        </div>
+        </Reveal>
 
         <div className="max-w-5xl mx-auto space-y-20">
           {SECTIONS.map((section, i) => {
             const Icon = section.icon;
             const isReversed = i % 2 === 1;
             return (
-              <motion.div
+              // Rows drift in from the side their text sits on, so the zig-zag
+              // layout is reinforced by the motion rather than fought by it.
+              <Reveal
                 key={section.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+                direction={isReversed ? 'left' : 'right'}
+                amount={0.25}
                 className={`grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center ${isReversed ? 'lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1' : ''}`}
               >
                 <div className={isReversed ? 'lg:text-right' : ''}>
@@ -158,7 +158,7 @@ export function Features() {
                 <div>
                   {section.visual}
                 </div>
-              </motion.div>
+              </Reveal>
             );
           })}
         </div>

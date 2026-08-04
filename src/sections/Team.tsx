@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TEAM_MEMBERS, SITE_CONFIG } from '@/config/site';
 
 import ElectricBorder from '@/components/ElectricBorder';
+import { Reveal, RevealGroup, RevealItem } from '@/components/animators/Reveal';
 
 function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number], index: number }) {
   const displayName = member.displayName || member.name;
@@ -122,26 +123,26 @@ export function Team() {
     <section id="team" className="py-24 relative">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16" amount={0.5}>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-balance">
             Team
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             The people behind Mevera Studios and its open-source libraries.
           </p>
-        </div>
+        </Reveal>
 
         {/* Team Row — horizontal cards */}
-        <div className="flex flex-wrap justify-center gap-6 max-w-3xl mx-auto">
+        <RevealGroup stagger={0.1} className="flex flex-wrap justify-center gap-6 max-w-3xl mx-auto">
           {TEAM_MEMBERS.map((member, index) => (
-            <div key={member.name} className="w-full sm:w-80">
+            <RevealItem key={member.name} className="w-full sm:w-80">
               <TeamMemberCard member={member} index={index} />
-            </div>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
 
         {/* Contributors Link */}
-        <div className="text-center mt-12">
+        <Reveal className="text-center mt-12" amount={0.5}>
           <Button variant="outline" size="lg" asChild className="rounded-full border-border/40 text-foreground hover:text-primary hover:border-primary/40 transition-colors">
             <a
               href={`${SITE_CONFIG.githubUrl}/graphs/contributors`}
@@ -152,7 +153,7 @@ export function Team() {
               <Github className="h-4 w-4 ml-2" />
             </a>
           </Button>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
