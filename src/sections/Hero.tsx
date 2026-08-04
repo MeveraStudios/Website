@@ -19,7 +19,11 @@ const preloadDocsRoute = () => {
 
 export function Hero() {
   return (
-    <PinnedScene length={HERO_SCENE_LENGTH} perspective={1400}>
+    <PinnedScene
+      length={HERO_SCENE_LENGTH}
+      perspective={1400}
+      fallbackClassName="pt-28 pb-24 flex items-center min-h-[calc(100vh-4rem)]"
+    >
       {progress => <HeroScene progress={progress} />}
     </PinnedScene>
   );

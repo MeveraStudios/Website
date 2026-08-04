@@ -5,9 +5,12 @@ import { SITE_CONFIG } from '@/config/site';
 import { PinnedScene } from '@/components/scroll/PinnedScene';
 import { DepthLayer } from '@/components/scroll/DepthLayer';
 
+// Everything lands by 55% of the scene; the remaining 45% is deliberate dwell,
+// so the finished panel holds on screen for roughly half a viewport of
+// scrolling before the page moves on.
 export function Community() {
   return (
-    <PinnedScene length={0.8} perspective={1200}>
+    <PinnedScene length={1.4} perspective={1200}>
       {progress => <CommunityScene progress={progress} />}
     </PinnedScene>
   );
@@ -23,13 +26,13 @@ function CommunityScene({ progress }: { progress: MotionValue<number> }) {
 
       <div className="container mx-auto px-4 relative">
         <div className="max-w-3xl mx-auto text-center">
-          <DepthLayer progress={progress} range={[0, 0.22]} z={-260} rotateX={40} y={40}>
+          <DepthLayer progress={progress} range={[0, 0.15]} z={-260} rotateX={40} y={40}>
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
               Community
             </span>
           </DepthLayer>
 
-          <DepthLayer progress={progress} range={[0.12, 0.45]} z={-620} rotateX={28} y={90}>
+          <DepthLayer progress={progress} range={[0.08, 0.3]} z={-620} rotateX={28} y={90}>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 text-balance">
               Built by developers,
               <br />
@@ -37,7 +40,7 @@ function CommunityScene({ progress }: { progress: MotionValue<number> }) {
             </h2>
           </DepthLayer>
 
-          <DepthLayer progress={progress} range={[0.34, 0.62]} z={-380} rotateX={20} y={60}>
+          <DepthLayer progress={progress} range={[0.23, 0.42]} z={-380} rotateX={20} y={60}>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 text-pretty">
               Join hundreds of plugin developers building with Mevera libraries.
               Contribute, ask questions, or just see what&rsquo;s being made.
@@ -46,7 +49,7 @@ function CommunityScene({ progress }: { progress: MotionValue<number> }) {
 
           <DepthLayer
             progress={progress}
-            range={[0.5, 0.82]}
+            range={[0.34, 0.55]}
             z={-300}
             rotateX={16}
             y={50}

@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { motion, useTransform, type MotionValue } from 'framer-motion';
+import { useSceneActive } from '@/components/scroll/sceneContext';
 
 type Mode = 'enter' | 'exit';
 
@@ -45,6 +46,7 @@ export function DepthLayer({
 }: DepthLayerProps) {
   const [from, to] = range;
   const entering = mode === 'enter';
+  const active = useSceneActive();
 
   // Entering layers travel from the far value to rest; exiting layers do the
   // reverse. Opacity leads on the way in and lags on the way out, so a layer is
@@ -57,19 +59,28 @@ export function DepthLayer({
     : [lerp(from, to, 0.35), to];
   const opacityValues = entering ? [fade, 1] : [1, fade];
 
+  const depth = {
+    z: useTransform(progress, motionRange, far(z)),
+    y: useTransform(progress, motionRange, far(y)),
+    rotateX: useTransform(progress, motionRange, far(rotateX)),
+    rotateY: useTransform(progress, motionRange, far(rotateY)),
+    opacity: useTransform(progress, opacityRange, opacityValues)
+  };
+
+  // Outside a pinned scene there is no progress to read, so the content simply
+  // sits at rest — untransformed and fully opaque.
+  if (!active) {
+    return (
+      <div className={className} style={style}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       className={className}
-      style={{
-        ...style,
-        transformStyle: 'preserve-3d',
-        willChange: 'transform, opacity',
-        z: useTransform(progress, motionRange, far(z)),
-        y: useTransform(progress, motionRange, far(y)),
-        rotateX: useTransform(progress, motionRange, far(rotateX)),
-        rotateY: useTransform(progress, motionRange, far(rotateY)),
-        opacity: useTransform(progress, opacityRange, opacityValues)
-      }}
+      style={{ ...style, transformStyle: 'preserve-3d', willChange: 'transform, opacity', ...depth }}
     >
       {children}
     </motion.div>

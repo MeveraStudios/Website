@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMotionValue, useReducedMotion, useScroll, type MotionValue } from 'framer-motion';
+import { SceneActiveContext } from '@/components/scroll/sceneContext';
 
 /** Height of the sticky header the scene pins beneath. */
 const HEADER = '4rem';
@@ -39,6 +40,8 @@ interface PinnedSceneProps {
    * sticky element, which already has it.
    */
   className?: string;
+  /** Spacing applied only when the scene is not pinned. */
+  fallbackClassName?: string;
   /** Distance between the viewer and the z=0 plane. Lower is a wider angle. */
   perspective?: number;
   /**
@@ -53,6 +56,7 @@ export function PinnedScene({
   length = 1,
   id,
   className = '',
+  fallbackClassName = 'py-24',
   perspective = 1600,
   children
 }: PinnedSceneProps) {
@@ -65,30 +69,34 @@ export function PinnedScene({
 
   if (!enabled) {
     return (
-      <section id={id} className={`py-24 relative ${className}`.trim()}>
-        {children(progress)}
-      </section>
+      <SceneActiveContext.Provider value={false}>
+        <section id={id} className={`relative ${fallbackClassName} ${className}`.trim()}>
+          {children(progress)}
+        </section>
+      </SceneActiveContext.Provider>
     );
   }
 
   return (
-    <section
-      id={id}
-      ref={ref}
-      className={`relative ${className}`.trim()}
-      // The wrapper is tall; the child inside it is what stays on screen. The
-      // difference between the two is the scroll budget for the scene.
-      style={{ height: `calc(${(1 + length) * 100}vh)` }}
-    >
-      <div
-        className="sticky flex items-center overflow-hidden"
-        style={{ top: HEADER, height: `calc(100vh - ${HEADER})`, perspective: `${perspective}px` }}
+    <SceneActiveContext.Provider value>
+      <section
+        id={id}
+        ref={ref}
+        className={`relative ${className}`.trim()}
+        // The wrapper is tall; the child inside it is what stays on screen. The
+        // difference between the two is the scroll budget for the scene.
+        style={{ height: `calc(${(1 + length) * 100}vh)` }}
       >
-        <div className="w-full" style={{ transformStyle: 'preserve-3d' }}>
-          {children(progress)}
+        <div
+          className="sticky flex items-center overflow-hidden"
+          style={{ top: HEADER, height: `calc(100vh - ${HEADER})`, perspective: `${perspective}px` }}
+        >
+          <div className="w-full" style={{ transformStyle: 'preserve-3d' }}>
+            {children(progress)}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </SceneActiveContext.Provider>
   );
 }
 

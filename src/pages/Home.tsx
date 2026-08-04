@@ -38,7 +38,7 @@ export function Home() {
         <VoxelField
           accentColors={ACCENT_COLORS}
           disperseViewports={HERO_SCENE_LENGTH}
-          className="opacity-80"
+          className="opacity-30 lg:opacity-80"
         />
       </div>
 

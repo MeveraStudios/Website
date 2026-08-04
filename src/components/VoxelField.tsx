@@ -323,12 +323,14 @@ export function VoxelField({
       camera.perspective({ aspect: clientWidth / Math.max(clientHeight, 1) });
 
       // On wide viewports the cluster sits right of centre so it haloes the
-      // hero's code block instead of sitting behind the headline.
+      // hero's code block instead of sitting behind the headline. Narrow
+      // viewports have no such gap — the copy runs full width — so the cluster
+      // is pushed back and shrunk to stay behind the text rather than in it.
       const wide = clientWidth >= 1024;
       biasX = wide ? 2.9 : 0;
-      mesh.position.y = wide ? 0 : 0.6;
-      mesh.scale.set(wide ? 1 : 0.72);
-      camera.position.z = wide ? 13 : 15;
+      mesh.position.y = wide ? 0 : 0.4;
+      mesh.scale.set(wide ? 1 : 0.6);
+      camera.position.z = wide ? 13 : 19;
     };
 
     const fadeOver = () => Math.max(window.innerHeight * disperseViewports, 320);
