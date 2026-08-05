@@ -1,4 +1,5 @@
-import { Github, MessageCircle } from 'lucide-react';
+import { Github } from 'lucide-react';
+import { DiscordIcon } from '@/components/DiscordIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,9 @@ function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number]
             </a>
           </Button>
         )}
-        {member.discord && (
+        {/* Keyed on the numeric id, not the username: discord.com/users only
+            resolves snowflakes, so a username here would be a dead link. */}
+        {member.discordId && (
           <Button
             variant="ghost"
             size="sm"
@@ -65,12 +68,12 @@ function TeamMemberCard({ member, index }: { member: typeof TEAM_MEMBERS[number]
             style={{ color: member.electricColor }}
           >
             <a
-              href={`https://discord.com/users/${member.discord}`}
+              href={`https://discord.com/users/${member.discordId}`}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`${displayName} Discord`}
+              aria-label={member.discord ? `${displayName} on Discord (${member.discord})` : `${displayName} on Discord`}
             >
-              <MessageCircle className="h-4 w-4" />
+              <DiscordIcon className="h-4 w-4" />
             </a>
           </Button>
         )}

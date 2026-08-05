@@ -117,17 +117,34 @@ export const PROJECTS = projectsData.map(raw => {
 // TEAM MEMBERS - Outsourced to src/data/teams.json
 // =============================================================================
 
-export const TEAM_MEMBERS = teamsData.map(m => ({
-  name: m["github-user"],
-  displayName: (m as any)["display-name"],
-  role: m["role-description"],
-  github: m.github,
-  discord: m["discord-user"],
-  avatar: m.avatar,
-  color: (m as any).color,
-  electric: (m as any).electric,
-  electricColor: (m as any)["electric-color"]
-}));
+/** Fields only some entries in teams.json carry. */
+interface OptionalTeamFields {
+  "display-name"?: string;
+  /**
+   * Numeric Discord snowflake. Required to link to a profile: Discord has no
+   * username-based profile URL, so `discord-user` alone cannot be linked.
+   */
+  "discord-id"?: string;
+  color?: string;
+  electric?: boolean;
+  "electric-color"?: string;
+}
+
+export const TEAM_MEMBERS = teamsData.map(raw => {
+  const m = raw as typeof raw & OptionalTeamFields;
+  return {
+    name: m["github-user"],
+    displayName: m["display-name"],
+    role: m["role-description"],
+    github: m.github,
+    discord: m["discord-user"],
+    discordId: m["discord-id"],
+    avatar: m.avatar,
+    color: m.color,
+    electric: m.electric,
+    electricColor: m["electric-color"]
+  };
+});
 
 // =============================================================================
 // NAVIGATION - Configure header and footer links

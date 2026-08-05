@@ -149,7 +149,7 @@ export function SceneWarp() {
           // has not pinned yet. The first scene has nothing above it, so it is
           // never approached this way.
           if (i > 0 && y >= scene.approachDown && y < scene.start) {
-            jumpTo((scene.start + scene.end) / 2);
+            jumpTo(scene.start + 2);
             return;
           }
         } else if ((i === 0 || scene.flushNext) && y > scene.end && y <= scene.approachUp) {
@@ -158,7 +158,7 @@ export function SceneWarp() {
           // that content be scrolled freely, or a short section below it (Team)
           // becomes impossible to sit in without being yanked back.
           if (i === 0) glideToTop();
-          else jumpTo((scene.start + scene.end) / 2);
+          else jumpTo(scene.end - 2);
           return;
         } else if (i > 0 && !scene.flushPrev && y >= scene.approachDown && y < scene.start) {
           // Leaving the scene upward into ordinary content. Eject clear of the

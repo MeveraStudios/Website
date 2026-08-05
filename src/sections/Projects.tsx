@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { ArrowRight, ExternalLink } from 'lucide-react';
@@ -38,7 +38,7 @@ export function Projects() {
     // pin just holds the finished grid for a short dwell before releasing.
     // Entry and exit blackouts are driven by SceneWarp, which cuts to this
     // scene and then teleports out of it into Community.
-    <PinnedScene id="projects" length={1} perspective={1800}>
+    <PinnedScene id="projects" length={0.5} perspective={1800}>
       {() => (
         <>
           <div className="container mx-auto px-4 relative">
@@ -121,9 +121,33 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
 
   const Animator = ANIMATORS[project.hoverAnimator as string] || DefaultAnimator;
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Measured once per hover rather than per move: the card's own hover
+  // transform would otherwise force a layout read on every mouse event.
+  const boundsRef = useRef<DOMRect | null>(null);
+
+  const beginHover = () => {
+    boundsRef.current = cardRef.current?.getBoundingClientRect() ?? null;
+    setIsHovered(true);
+  };
+
+  // Written straight to the DOM as custom properties. Routing this through
+  // state would re-render the card on every mouse move for a purely visual
+  // effect that CSS can read on its own.
+  const trackPointer = (event: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = boundsRef.current;
+    const el = cardRef.current;
+    if (!bounds || !el) return;
+
+    el.style.setProperty('--pointer-x', `${((event.clientX - bounds.left) / bounds.width) * 100}%`);
+    el.style.setProperty('--pointer-y', `${((event.clientY - bounds.top) / bounds.height) * 100}%`);
+  };
+
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
+      ref={cardRef}
+      onMouseEnter={beginHover}
+      onMouseMove={trackPointer}
       onMouseLeave={() => setIsHovered(false)}
       className="project-card-container relative group rounded-xl h-full"
       style={{ animationDelay: `${index * 100}ms` }}
@@ -136,11 +160,7 @@ function ProjectCard({ project, index }: { project: typeof PROJECTS[number], ind
       />
 
       <div className="project-card-3d relative bg-card dark:bg-zinc-950 rounded-xl border border-border dark:border-white/10 overflow-hidden h-full">
-        <Animator
-          isHovered={isHovered}
-          mousePosition={{ x: 0, y: 0 }}
-          color={project.color}
-        />
+        <Animator isHovered={isHovered} color={project.color} />
 
         {/* Hairline and corner glow in the project's own colour, so the four
             cards read as four projects rather than four copies of one card. */}

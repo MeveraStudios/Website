@@ -11,7 +11,7 @@ export function Community() {
   return (
     // Entered by SceneWarp's teleport out of Projects; releases normally into
     // Team, ending the pinned chain.
-    <PinnedScene length={1} perspective={1200}>
+    <PinnedScene length={0.5} perspective={1200}>
       {() => <CommunityScene />}
     </PinnedScene>
   );
