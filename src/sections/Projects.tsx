@@ -9,7 +9,7 @@ import { PROJECTS } from '@/config/site';
 import { DefaultAnimator } from '@/components/animators/DefaultAnimator';
 import { BbbIcon } from '@/components/BbbIcon';
 import { PinnedScene } from '@/components/scroll/PinnedScene';
-import { DepthLayer } from '@/components/scroll/DepthLayer';
+import { DepthIntro } from '@/components/scroll/DepthIntro';
 import { ImperatSvg, VoxySvg, LotusSvg, ScofiSvg, SynapseSvg } from '@/components/project-svgs';
 
 const ANIMATORS: Record<string, any> = {
@@ -34,56 +34,38 @@ export function Projects() {
   const featured = PROJECTS.filter(p => p.featured);
 
   return (
-    // Cards land by ~60% of the scene; the rest is dwell, so the finished grid
-    // holds on screen for a beat before the page moves on.
-    <PinnedScene id="projects" length={1.4} perspective={1800}>
-      {progress => (
-        <div className="container mx-auto px-4 relative">
-          <DepthLayer
-            progress={progress}
-            range={[0, 0.22]}
-            z={-420}
-            rotateX={22}
-            y={70}
-            className="text-center mb-12"
-          >
+    // The entrance plays on its own the moment the section is on screen; the
+    // pin just holds the finished grid for a short dwell before releasing.
+    // Entry and exit blackouts are driven by SceneWarp, which cuts to this
+    // scene and then teleports out of it into Community.
+    <PinnedScene id="projects" length={1} perspective={1800}>
+      {() => (
+        <>
+          <div className="container mx-auto px-4 relative">
+          <DepthIntro z={-420} rotateX={22} y={70} className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-balance">
               Our Projects
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Frameworks, libraries, and plugins built for the Minecraft ecosystem.
             </p>
-          </DepthLayer>
+          </DepthIntro>
 
-          {/* Cards rise out of depth one after another while the scene is
-              pinned; the trailing card links to the full catalogue. */}
+          {/* Cards pop out of depth in quick succession; the trailing card
+              links to the full catalogue. */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {featured.map((project, index) => (
-              <DepthLayer
-                key={project.id}
-                progress={progress}
-                range={[0.1 + index * 0.05, 0.38 + index * 0.05]}
-                z={-520}
-                rotateX={14}
-                y={70}
-                className="h-full"
-              >
+              <DepthIntro key={project.id} delay={0.15 + index * 0.08} className="h-full">
                 <ProjectCard project={project} index={index} />
-              </DepthLayer>
+              </DepthIntro>
             ))}
 
-            <DepthLayer
-              progress={progress}
-              range={[0.1 + featured.length * 0.05, 0.38 + featured.length * 0.05]}
-              z={-520}
-              rotateX={14}
-              y={70}
-              className="h-full"
-            >
+            <DepthIntro delay={0.15 + featured.length * 0.08} className="h-full">
               <ViewAllCard />
-            </DepthLayer>
+            </DepthIntro>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </PinnedScene>
   );

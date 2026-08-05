@@ -1,30 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useMotionValue, useReducedMotion, useScroll, type MotionValue } from 'framer-motion';
-import { SceneActiveContext } from '@/components/scroll/sceneContext';
+import { useRef, type ReactNode } from 'react';
+import { useMotionValue, useScroll, type MotionValue } from 'framer-motion';
+import { SceneActiveContext, useSceneEnabled } from '@/components/scroll/sceneContext';
 
 /** Height of the sticky header the scene pins beneath. */
 const HEADER = '4rem';
-
-/**
- * Pinned scenes are a desktop affordance. On narrow screens the extra scroll
- * length is a tax rather than an effect, and the depth is wasted on a viewport
- * that cannot show it.
- */
-function useSceneEnabled() {
-  const reduceMotion = useReducedMotion();
-  const [wide, setWide] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia('(min-width: 1024px)');
-    const sync = () => setWide(query.matches);
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
-  }, []);
-
-  return wide && !reduceMotion;
-}
 
 interface PinnedSceneProps {
   /**
@@ -82,6 +61,7 @@ export function PinnedScene({
       <section
         id={id}
         ref={ref}
+        data-scene-warp=""
         className={`relative ${className}`.trim()}
         // The wrapper is tall; the child inside it is what stays on screen. The
         // difference between the two is the scroll budget for the scene.

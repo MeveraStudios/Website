@@ -38,7 +38,8 @@ function HeroScene({ progress }: { progress: MotionValue<number> }) {
   const { resolvedTheme } = useTheme();
 
   return (
-    <div className="container px-4 mx-auto relative z-10 w-full">
+    <>
+      <div className="container px-4 mx-auto relative z-10 w-full">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
         {/* Left: Text Content */}
@@ -104,6 +105,7 @@ function HeroScene({ progress }: { progress: MotionValue<number> }) {
         </DepthLayer>
 
       </div>
-    </div>
+      </div>
+    </>
   );
 }

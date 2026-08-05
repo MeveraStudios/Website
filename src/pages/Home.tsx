@@ -16,6 +16,7 @@ import { Projects } from '@/sections/Projects';
 import { Community } from '@/sections/Community';
 import { Team } from '@/sections/Team';
 import { VoxelField } from '@/components/VoxelField';
+import { SceneWarp } from '@/components/scroll/SceneWarp';
 import { Seo } from '@/components/Seo';
 import { PROJECTS } from '@/config/site';
 
@@ -31,10 +32,6 @@ export function Home() {
       <Seo path="/" title="Home" type="website" />
       {/* Background Effect */}
       <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
-        {/*
-          The cluster opens out over exactly the hero's pinned scroll, so the
-          blocks reach their ambient spread as the hero finishes receding.
-        */}
         <VoxelField
           accentColors={ACCENT_COLORS}
           disperseViewports={HERO_SCENE_LENGTH}
@@ -43,13 +40,14 @@ export function Home() {
       </div>
 
       <Header />
+      <SceneWarp />
 
       <main id="main-content" tabIndex={-1} className="flex-1 relative z-10 outline-none focus-visible:outline-none">
         <Hero />
         <Stats />
         <Features />
-        <Projects />
         <Community />
+        <Projects />
         <Team />
       </main>
 
