@@ -13,12 +13,70 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeSlug from 'rehype-slug';
+import rehypeStringify from 'rehype-stringify';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = join(__dirname, '..');
 const DIST = join(ROOT, 'dist');
 const PUBLIC = join(ROOT, 'public');
+
+const SITE_URL = 'https://mevera.studio';
+
+const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
+
+/**
+ * Renders doc markdown to plain HTML for the crawler-visible body. MDX
+ * component tags survive as unknown elements (browsers and crawlers read the
+ * text inside them); import/export lines and admonition fences are stripped
+ * since they are authoring syntax, not content.
+ */
+const mdProcessor = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeSlug)
+    .use(rehypeStringify, { allowDangerousHtml: true });
+
+async function mdToHtml(source: string): Promise<string> {
+    const cleaned = source
+        .replace(/^import\s.*$/gm, '')
+        .replace(/^export\s.*$/gm, '')
+        .replace(/^:::\w.*$/gm, '')
+        .replace(/^:::\s*$/gm, '');
+    const file = await mdProcessor.process(cleaned);
+    return String(file);
+}
+
+/** Swaps the head tags the SPA shell carries for this page's own values. */
+function rewriteHead(
+    html: string,
+    opts: { title: string; description: string; url: string; type?: string }
+): string {
+    const title = escapeHtml(opts.title);
+    const description = escapeHtml(opts.description);
+    const url = escapeHtml(opts.url);
+
+    html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+    html = html.replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${url}$2`);
+    html = html.replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${url}$2`);
+    html = html.replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${title}$2`);
+    html = html.replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${title}$2`);
+    if (opts.type) {
+        html = html.replace(/(<meta property="og:type" content=")[^"]*(")/, `$1${opts.type}$2`);
+    }
+    if (opts.description) {
+        html = html.replace(/(<meta name="description" content=")[^"]*(")/, `$1${description}$2`);
+        html = html.replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${description}$2`);
+        html = html.replace(/(<meta name="twitter:description" content=")[^"]*(")/, `$1${description}$2`);
+    }
+    return html;
+}
 
 function escapeHtml(s: string): string {
     return s
@@ -97,7 +155,7 @@ function flattenDocs(categories: NavCategory[]): NavDoc[] {
     ]);
 }
 
-function prerender() {
+async function prerender() {
     const start = Date.now();
     console.log('\n🔧 Generating static HTML pages...');
 
@@ -135,28 +193,45 @@ function prerender() {
                 const title = docData.frontmatter?.title || doc.slug;
                 const description = docData.frontmatter?.description || '';
 
+                const routePath = ['/docs', project.id, version.id, ...segments, doc.slug].join('/');
+                const pageUrl = `${SITE_URL}${encodePath(routePath)}`;
+
                 const outDir = join(DIST, 'docs', project.id, version.id, ...segments, doc.slug);
                 mkdirSync(outDir, { recursive: true });
 
-                let html = indexHtml;
+                let html = rewriteHead(indexHtml, {
+                    title: `${title} | Mevera Studios`,
+                    description,
+                    url: pageUrl,
+                    type: 'article'
+                });
 
-                // Replace <title>
-                html = html.replace(
-                    /<title>.*?<\/title>/,
-                    `<title>${escapeHtml(title)} | MeveraStudios</title>`
-                );
-
-                // Replace <meta name="description">
-                if (description) {
-                    html = html.replace(
-                        /<meta name="description" content=".*?"/,
-                        `<meta name="description" content="${escapeHtml(description)}"`
-                    );
-                }
+                // Article structured data, tied to the organization node the
+                // shell already declares.
+                const articleLd = {
+                    '@context': 'https://schema.org',
+                    '@type': 'TechArticle',
+                    headline: title,
+                    ...(description ? { description } : {}),
+                    url: pageUrl,
+                    ...(docData.lastUpdatedAt ? { dateModified: docData.lastUpdatedAt } : {}),
+                    isPartOf: { '@id': `${SITE_URL}/#website` },
+                    author: { '@id': `${SITE_URL}/#organization` }
+                };
 
                 // Inject prerendered data before </head>
-                const injectScript = `\n<script>window.__INITIAL_DATA__ = ${JSON.stringify(docData)}<\/script>`;
+                const injectScript =
+                    `\n<script type="application/ld+json">${JSON.stringify(articleLd)}</script>` +
+                    `\n<script>window.__INITIAL_DATA__ = ${JSON.stringify(docData)}<\/script>`;
                 html = html.replace('</head>', `${injectScript}</head>`);
+
+                // Crawler-visible content: the rendered article sits in the app
+                // root until the SPA bundle mounts and replaces it.
+                const contentHtml = await mdToHtml(docData.content || '');
+                html = html.replace(
+                    '<div id="root"></div>',
+                    `<div id="root"><main><article><h1>${escapeHtml(title)}</h1>\n${contentHtml}</article></main></div>`
+                );
 
                 writeFileSync(join(outDir, 'index.html'), html);
                 htmlCount++;
@@ -168,11 +243,11 @@ function prerender() {
     const docsDir = join(DIST, 'docs');
     if (!existsSync(docsDir)) mkdirSync(docsDir, { recursive: true });
 
-    let docsHtml = indexHtml;
-    docsHtml = docsHtml.replace(
-        /<title>.*?<\/title>/,
-        '<title>Documentation | MeveraStudios</title>'
-    );
+    const docsHtml = rewriteHead(indexHtml, {
+        title: 'Documentation | Mevera Studios',
+        description: 'Documentation for all Mevera Studios libraries: Imperat, Voxy, Lotus, Scofi, and Synapse.',
+        url: `${SITE_URL}/docs`
+    });
     writeFileSync(join(docsDir, 'index.html'), docsHtml);
 
     // Generate /docs/<project>/index.html with meta-refresh redirect to first doc
@@ -184,7 +259,6 @@ function prerender() {
         const projectDir = join(DIST, 'docs', project.id);
         mkdirSync(projectDir, { recursive: true });
 
-        const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
         const targetPath = firstDoc.categoryPath
             ? `${encodePath(firstDoc.categoryPath)}/${encodeURIComponent(firstDoc.slug)}`
             : encodeURIComponent(firstDoc.slug);
@@ -195,7 +269,7 @@ function prerender() {
 <head>
     <meta charset="utf-8">
     <meta name="robots" content="noindex,follow">
-    <title>${escapeHtml(project.name)} | MeveraStudios</title>
+    <title>${escapeHtml(project.name)} | Mevera Studios</title>
     <meta http-equiv="refresh" content="0;url=${redirectTo}">
     <script>location.replace("${redirectTo}")<\/script>
 </head>
@@ -212,4 +286,7 @@ function prerender() {
     console.log(`   📄 Generated ${htmlCount} static doc pages in ${Date.now() - start}ms`);
 }
 
-prerender();
+prerender().catch(err => {
+    console.error('❌ Prerender failed:', err);
+    process.exit(1);
+});
