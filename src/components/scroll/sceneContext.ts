@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
 
 /**
  * False when the enclosing scene is not pinned, so scene-driven children render
@@ -17,7 +16,6 @@ export const useSceneActive = () => useContext(SceneActiveContext);
  * that cannot show it.
  */
 export function useSceneEnabled() {
-  const reduceMotion = useReducedMotion();
   const [wide, setWide] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
   );
@@ -29,5 +27,5 @@ export function useSceneEnabled() {
     return () => query.removeEventListener('change', sync);
   }, []);
 
-  return wide && !reduceMotion;
+  return wide;
 }

@@ -226,13 +226,6 @@
   color: hsl(222 47% 11%);
 }
 
-/* Respect users who prefer reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .code-block.has-focus .line {
-    transition: none;
-  }
-}
-
 /* Inline code */
 :not(pre)>code {
   font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;

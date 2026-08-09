@@ -177,8 +177,7 @@ export function TableOfContents({ items, className }: TableOfContentsProps) {
     if (element) {
       const offset = 100;
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+      window.scrollTo({ top, behavior: 'smooth' });
       // Move keyboard focus to the target so subsequent Tab starts there.
       element.setAttribute('tabindex', '-1');
       element.focus({ preventScroll: true });

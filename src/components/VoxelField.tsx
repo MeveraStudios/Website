@@ -256,8 +256,6 @@ export function VoxelField({
     const container = containerRef.current;
     if (!container) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
     let renderer: Renderer;
     try {
       renderer = new Renderer({ dpr: Math.min(window.devicePixelRatio, MAX_DPR), alpha: true, antialias: true });
@@ -289,7 +287,7 @@ export function VoxelField({
     geometry.addAttribute('aScale', { instanced: 1, size: 1, data: data.scale });
 
     const uniforms = {
-      uAssemble: { value: reduceMotion ? 1 : 0 },
+      uAssemble: { value: 0 },
       uDisperse: { value: 0 },
       uTime: { value: 0 },
       uOpacity: { value: 1 },
@@ -340,16 +338,13 @@ export function VoxelField({
 
     const render = (t: number) => {
       rafId = null;
-      if (!reduceMotion) rafId = requestAnimationFrame(render);
+      rafId = requestAnimationFrame(render);
 
       if (startedAt === null) startedAt = t;
 
-      if (!reduceMotion) {
-        uniforms.uAssemble.value = Math.min((t - startedAt) / ASSEMBLE_MS, 1);
-      }
+      uniforms.uAssemble.value = Math.min((t - startedAt) / ASSEMBLE_MS, 1);
 
-      // Reduced motion gets a still, assembled cluster that never opens out.
-      const disperse = reduceMotion ? 0 : Math.min(scrollRef.current / fadeOver(), 1);
+      const disperse = Math.min(scrollRef.current / fadeOver(), 1);
 
       uniforms.uTime.value = t * 0.001;
       uniforms.uDisperse.value = disperse;
@@ -398,10 +393,8 @@ export function VoxelField({
 
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', onVisibility);
-    if (!reduceMotion) {
-      window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('mousemove', onMouseMove, { passive: true });
-    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
 
     start();
 

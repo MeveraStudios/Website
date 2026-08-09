@@ -99,12 +99,6 @@
     scrollbar-gutter: stable;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
-  }
-
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -239,15 +233,6 @@
       to {
         opacity: 1;
         transform: translateY(0);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .fade-in {
-        animation: none;
-      }
-      .animate-fadein {
-        animation: none;
       }
     }
 

@@ -42,8 +42,7 @@ function ScrollManager() {
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
+    const behavior: ScrollBehavior = 'smooth';
 
     const focusMain = () => {
       const main = document.getElementById('main-content');
